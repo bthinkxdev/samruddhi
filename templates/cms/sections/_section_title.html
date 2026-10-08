@@ -1,0 +1,9 @@
+{% load i18n %}
+{% if section_context.title or fallback_key %}
+<div class="section-header">
+  <h2 class="section-title">
+    {% if section_context.title %}{{ section_context.title }}{% else %}{% trans fallback_key %}{% endif %}
+  </h2>
+  <a href="{% url 'catalog:plp' %}" class="section-cta">{% trans "View All" %}</a>
+</div>
+{% endif %}

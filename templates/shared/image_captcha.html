@@ -1,0 +1,59 @@
+{# Reusable image CAPTCHA markup. Load common/css/image-captcha.css + common/js/image-captcha.js once per page. #}
+{# Required: scope. Optional: field_name, field_id, label, error, input_class, variant, captcha_bust #}
+{% with scope_name=scope|default:"contact" %}
+{% with fname=field_name|default:"image_captcha" %}
+{% with fid=field_id|default:fname %}
+<div
+  class="mb-4 img-captcha"
+  data-image-captcha
+  data-image-captcha-scope="{{ scope_name }}"
+  {% if deferred %}data-image-captcha-deferred="1" hidden{% endif %}
+>
+  <label class="form-label" for="id_{{ fid }}">{{ label|default:"Security check" }} *</label>
+  
+  <div class="d-flex align-items-center mb-3">
+    <img
+      class="border rounded shadow-sm"
+      data-image-captcha-img
+      data-src-base="{% url 'core:image_captcha' scope=scope_name %}"
+      {% if deferred %}src=""{% else %}src="{% url 'core:image_captcha' scope=scope_name %}?t={{ captcha_bust|default:'' }}"{% endif %}
+      width="200"
+      height="56"
+      alt="CAPTCHA image"
+      decoding="async"
+    >
+    <button
+      type="button"
+      class="btn btn-outline-secondary ms-3 d-flex align-items-center justify-content-center"
+      style="height: 56px; width: 56px;"
+      data-image-captcha-refresh
+      aria-label="Refresh CAPTCHA"
+      title="Refresh CAPTCHA"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.6-6.2" stroke-linecap="round"></path>
+        <polyline points="21 3 21 9 15 9" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      </svg>
+    </button>
+  </div>
+  
+  <input
+    type="text"
+    name="{{ fname }}"
+    id="id_{{ fid }}"
+    class="form-control {{ input_class|default:'' }}"
+    data-image-captcha-input
+    maxlength="6"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="characters"
+    spellcheck="false"
+    {% if not deferred %}required{% endif %}
+    placeholder="Type the 6 letters/numbers"
+    value=""
+  >
+  {% if error %}<div class="text-danger small mt-1" role="alert">{{ error }}</div>{% endif %}
+</div>
+{% endwith %}
+{% endwith %}
+{% endwith %}

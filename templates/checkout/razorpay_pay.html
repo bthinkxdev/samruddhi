@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Razorpay Payment" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+      <div class="card shadow-sm p-4 border-0 rounded-3">
+        <div class="mb-3">
+          <i class="ti ti-credit-card text-success fs-1"></i>
+        </div>
+        <h3 class="fw-bold mb-2">{% trans "Complete Your Payment" %}</h3>
+        <p class="text-muted mb-4">{% trans "Order Reference:" %} <strong>{{ order.order_number }}</strong></p>
+
+        <div id="payment-status-msg" class="d-none"></div>
+
+        <div class="bg-light p-3 rounded mb-4 text-start">
+          <div class="d-flex justify-content-between mb-2">
+            <span>{% trans "Payment Method:" %}</span>
+            <span class="fw-semibold">{{ payment_method_name }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span>{% trans "Total Amount:" %}</span>
+            <span class="fw-bold fs-5 text-success">{{ order.currency.symbol }} {{ order.total_amount }}</span>
+          </div>
+        </div>
+
+        {# hidden form to POST payment result to our callback #}
+        <form id="razorpay-form" action="{{ callback_url }}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="order_id" value="{{ order.pk }}">
+          <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+          <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+          <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+        </form>
+
+        <button id="rzp-button" class="btn btn-theme btn-lg w-100 py-3 mb-2">
+          {% trans "Pay Now" %} ({{ order.currency.symbol }} {{ order.total_amount }})
+        </button>
+        <a href="{% url 'checkout:checkout' %}" class="btn btn-link text-muted small">{% trans "Cancel and return to checkout" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="payment-processing-overlay" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-white" style="z-index: 9999; opacity: 0.95;">
+  <div class="d-flex flex-column justify-content-center align-items-center h-100">
+    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <h4 class="fw-bold text-dark">{% trans "Payment Successful!" %}</h4>
+    <p class="text-muted">{% trans "Please wait while we confirm your order..." %}</p>
+  </div>
+</div>
+
+{% if meta_pixel_id %}{{ mpx_failure_params|json_script:"mpx-order-params" }}{% endif %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  // Meta Pixel: abandoned / failed online payments are reported as custom events;
+  // Purchase only ever fires on the confirmation page for a paid order.
+  function mpxPaymentEvent(name, extra) {
+    var node = document.getElementById("mpx-order-params");
+    if (!node || !window.mpx) return;
+    var params = {};
+    try { params = JSON.parse(node.textContent); } catch (e) { return; }
+    Object.keys(extra || {}).forEach(function (key) { params[key] = extra[key]; });
+    window.mpx.track(name, params, true);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var options = {
+      "key": "{{ razorpay_key_id }}",
+      "amount": "{{ amount_in_paise }}",
+      "currency": "{{ currency_code }}",
+      "name": "{{ site_settings.site_name|escapejs }}",
+      "description": "Payment for Order #{{ order.order_number }}",
+      "order_id": "{{ razorpay_order_id }}",
+      "handler": function (response) {
+        document.getElementById("payment-processing-overlay").classList.remove("d-none");
+        document.getElementById("razorpay_payment_id").value = response.razorpay_payment_id;
+        document.getElementById("razorpay_order_id").value = response.razorpay_order_id;
+        document.getElementById("razorpay_signature").value = response.razorpay_signature;
+        document.getElementById("razorpay-form").submit();
+      },
+      "prefill": {
+        "name": "{{ customer_name }}",
+        "email": "{{ customer_email }}",
+        "contact": "{{ customer_phone }}"
+      },
+      "theme": {
+        "color": "#0369A1"
+      },
+      "modal": {
+        "ondismiss": function () {
+          mpxPaymentEvent("PaymentCancelled", {});
+          var statusDiv = document.getElementById("payment-status-msg");
+          if (statusDiv) {
+            statusDiv.innerHTML = '<div class="alert alert-warning mb-3">{% trans "Payment window was closed. Click Pay Now below to try again." %}</div>';
+            statusDiv.classList.remove("d-none");
+          }
+        }
+      }
+    };
+
+    var prefillMethod = "{{ prefill_method }}";
+    if (prefillMethod) {
+      options.prefill.method = prefillMethod;
+    }
+
+    var rzp = new Razorpay(options);
+
+    rzp.on('payment.failed', function (response) {
+      mpxPaymentEvent("PaymentFailed", {
+        failure_reason: (response.error && (response.error.reason || response.error.code)) || "unknown"
+      });
+      var statusDiv = document.getElementById("payment-status-msg");
+      if (statusDiv) {
+        var errReason = (response.error && response.error.description) ? response.error.description : "{% trans 'Payment attempt failed. Please try again.' %}";
+        statusDiv.innerHTML = '<div class="alert alert-danger mb-3"><strong>{% trans "Payment Failed:" %}</strong> ' + errReason + '</div>';
+        statusDiv.classList.remove("d-none");
+      }
+    });
+
+    document.getElementById('rzp-button').onclick = function (e) {
+      e.preventDefault();
+      rzp.open();
+    };
+  });
+</script>
+{% endblock %}

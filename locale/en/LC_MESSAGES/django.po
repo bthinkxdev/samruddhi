@@ -1,0 +1,55 @@
+# Minimal English locale for storefront {% trans %} tags.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Samruddhi"
+msgstr "Samruddhi"
+
+msgid "Luxury Flowers & Gifts"
+msgstr "Luxury Flowers & Gifts"
+
+msgid "Shop Now"
+msgstr "Shop Now"
+
+msgid "Add to Cart"
+msgstr "Add to Cart"
+
+msgid "Same Day"
+msgstr "Same Day"
+
+msgid "Subscribe"
+msgstr "Subscribe"
+
+msgid "Join Our Newsletter"
+msgstr "Join Our Newsletter"
+
+msgid "Shop by Occasion"
+msgstr "Shop by Occasion"
+
+msgid "Shop by Category"
+msgstr "Shop by Category"
+
+msgid "Featured Brands"
+msgstr "Featured Brands"
+
+msgid "Customer Reviews"
+msgstr "Customer Reviews"
+
+msgid "Follow Us"
+msgstr "Follow Us"
+
+msgid "Get exclusive offers and gifting inspiration."
+msgstr "Get exclusive offers and gifting inspiration."
+
+msgid "My Account"
+msgstr "My Account"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Cart"
+msgstr "Cart"
+
+msgid "Wishlist"
+msgstr "Wishlist"

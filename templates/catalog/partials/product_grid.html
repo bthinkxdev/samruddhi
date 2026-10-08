@@ -1,0 +1,42 @@
+{% load i18n catalog_tags %}
+<div class="row g-3 product-grid-inner">
+  {% for product in plp.results %}
+  <div class="col-6 col-md-4 col-lg-3 product-grid-item">
+    {% include "catalog/partials/product_card.html" with product=product %}
+  </div>
+  {% empty %}
+  <div class="col-12 text-center py-5">
+    <p class="text-muted mb-3">{% trans "No products match your filters." %}</p>
+    <a href="{{ request.path }}"
+       class="btn btn-outline-theme btn-sm">{% trans "Clear filters" %}</a>
+  </div>
+  {% endfor %}
+</div>
+{% if plp.has_next or plp.has_previous %}
+<nav class="mt-4 d-flex justify-content-center gap-2 plp-pagination" aria-label="{% trans 'Pagination' %}">
+  {% if plp.has_previous %}
+  <a class="btn btn-sm btn-outline-theme"
+     href="{{ request.path }}?{% query_with page=plp.page|add:'-1' %}"
+     hx-get="{{ request.path }}?{% query_with page=plp.page|add:'-1' %}"
+     hx-target="#product-grid"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     hx-indicator="#product-grid">{% trans "Previous" %}</a>
+  {% endif %}
+  <span class="align-self-center small text-muted">{% blocktrans with page=plp.page total=plp.total_pages %}Page {{ page }} of {{ total }}{% endblocktrans %}</span>
+  {% if plp.has_next %}
+  <a class="btn btn-sm btn-outline-theme"
+     href="{{ request.path }}?{% query_with page=plp.page|add:'1' %}"
+     hx-get="{{ request.path }}?{% query_with page=plp.page|add:'1' %}"
+     hx-target="#product-grid"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     hx-indicator="#product-grid">{% trans "Next" %}</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+<h1 id="jm-page-title" class="section-title jm-page-title mb-0" hx-swap-oob="true">{% if active_collection %}{{ active_collection.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
+<p id="jm-plp-count" class="section-subtitle jm-plp-count" hx-swap-oob="true">
+  {{ plp.total_count|default:"0" }} {% trans "products" %}
+</p>

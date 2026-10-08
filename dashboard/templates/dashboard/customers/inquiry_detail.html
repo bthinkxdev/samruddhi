@@ -1,0 +1,40 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col d-flex align-items-center">
+    <a href="{% url 'dashboard:inquiry-list' %}" class="btn btn-outline-secondary me-3">
+      <i class="ti ti-arrow-left"></i> Back
+    </a>
+    <h2 class="h4 mb-0 text-gray-800">Inquiry Details</h2>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8 mx-auto">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+        <h5 class="card-title mb-0">From: {{ inquiry.name }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-4">
+          <h6 class="text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Contact Information</h6>
+          <p class="mb-0"><strong>Email:</strong> <a href="mailto:{{ inquiry.email }}">{{ inquiry.email }}</a></p>
+          <p class="mb-0 text-muted small"><strong>Received:</strong> {{ inquiry.created_at|date:"F j, Y, g:i a" }}</p>
+        </div>
+
+
+        <div>
+          <h6 class="text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Message</h6>
+          <div class="p-3 bg-light rounded" style="white-space: pre-wrap; font-size: 0.95rem;">{{ inquiry.message }}</div>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top-0 pb-4 pt-0">
+        <a href="mailto:{{ inquiry.email }}?subject=Re: Your Inquiry to {{ site_settings.site_name }}" class="btn btn-primary">
+          <i class="ti ti-mail-forward"></i> Reply via Email
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

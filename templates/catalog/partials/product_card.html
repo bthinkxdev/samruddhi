@@ -1,0 +1,158 @@
+{% load i18n static storefront_tags %}
+{% with display_variant=product.display_variant %}
+{% with eff_stock=display_variant.stock_quantity|default_if_none:product.stock_quantity eff_thresh=display_variant.low_stock_threshold|default_if_none:product.low_stock_threshold eff_price=product.display_price|default:product.effective_base_price eff_base=product.effective_base_price eff_mrp=product.effective_mrp %}
+<article class="jm-product-card card h-100" data-product-id="{{ product.pk }}" data-product-name="{{ product.name }}"
+  data-product-url="{% url 'catalog:pdp' slug=product.slug %}"
+  data-product-price="{% money_label eff_price display_currency %}"
+  data-product-stock="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}"
+  data-product-badge="{% if product.is_featured %}{% trans 'Featured' %}{% elif product.is_bestseller %}{% trans 'Bestseller' %}{% elif product.is_new_arrival %}{% trans 'New' %}{% endif %}"
+  {% with img=product.primary_images.0 %}
+  data-product-image="{% if img and img.image %}{{ img.image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
+  {% endwith %}
+  data-variant-id="{{ display_variant.pk|default:'' }}"
+  data-stock-quantity="{{ eff_stock }}"
+  data-is-out-of-stock="{% if eff_stock <= 0 %}true{% else %}false{% endif %}"
+  data-in-cart="{% if cart_product_ids and product.pk in cart_product_ids %}true{% else %}false{% endif %}"
+  data-product-variants="{{ product.quick_view_variants_json }}">
+  {# Media: only the image sits inside .ratio so Bootstrap does not stretch badge/actions into a full-bleed blocker. #}
+  <div class="jm-product-card__media">
+    {% with img_main=product.primary_images.0 img_hover=product.primary_images.1 %}
+    <a href="{% url 'catalog:pdp' slug=product.slug %}" class="jm-product-card__img-link ratio ratio-1x1 {% if img_hover and img_hover.image %}has-hover-img{% endif %}" tabindex="-1"
+      aria-hidden="true">
+      {% if img_main and img_main.image %}
+      <img src="{{ img_main.image.url }}" alt="{{ img_main.alt_text|default:product.name }}"
+        class="object-fit-contain jm-product-card__img-main" width="400" height="400" loading="lazy"
+        onerror="this.onerror=null;this.src='{% static 'img/product-placeholder.svg' %}';this.classList.add('product-card-img--placeholder');">
+      {% if img_hover and img_hover.image %}
+      <img src="{{ img_hover.image.url }}" alt="{{ img_hover.alt_text|default:product.name }}"
+        class="object-fit-contain jm-product-card__img-hover" width="400" height="400" loading="lazy">
+      {% endif %}
+      {% else %}
+      <img src="{% static 'img/product-placeholder.svg' %}" alt="{{ product.name }}"
+        class="object-fit-contain product-card-img--placeholder" width="400" height="400" loading="lazy">
+      {% endif %}
+    </a>
+    {% endwith %}
+
+    <div class="jm-product-card__badges">
+      {% if product.is_flash_sale %}
+      <span class="product-badge product-badge--flash">{% if product.flash_discount_percentage %}-{{ product.flash_discount_percentage|floatformat:0 }}%{% else %}{% trans "Sale" %}{% endif %}</span>
+      {% endif %}
+
+      {% if force_badge == 'featured' %}
+      <span class="product-badge product-badge--same-day">{% trans "Featured" %}</span>
+      {% elif force_badge == 'bestseller' %}
+      <span class="product-badge product-badge--express">{% trans "Bestseller" %}</span>
+      {% elif force_badge == 'new' %}
+      <span class="product-badge product-badge--new">{% trans "New" %}</span>
+      {% else %}
+      <!--
+      {% if product.is_featured %}
+      <span class="product-badge product-badge--same-day">{% trans "Featured" %}</span>
+      {% elif product.is_bestseller %}
+      <span class="product-badge product-badge--express">{% trans "Bestseller" %}</span>
+      {% elif product.is_new_arrival %}
+      <span class="product-badge product-badge--new">{% trans "New" %}</span>
+      {% endif %}
+      -->
+      {% endif %}
+    </div>
+
+    <div class="jm-product-card__hover">
+      <button type="button" class="jm-product-card__icon-btn" data-jm-quick-view aria-label="{% trans 'Quick View' %}"
+        title="{% trans 'Quick View' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
+      <form method="post" action="{% url 'cart:wishlist-toggle' %}" hx-post="{% url 'cart:wishlist-toggle' %}"
+        hx-swap="none">
+        {% csrf_token %}
+        <input type="hidden" name="product_id" value="{{ product.pk }}">
+        <button type="submit"
+          class="jm-product-card__icon-btn jm-product-card__wish {% if wishlist_product_ids and product.pk in wishlist_product_ids %}is-active{% endif %}"
+          aria-label="{% trans 'Wishlist' %}" title="{% trans 'Wishlist' %}"
+          aria-pressed="{% if wishlist_product_ids and product.pk in wishlist_product_ids %}true{% else %}false{% endif %}">
+          <svg viewBox="0 0 24 24"
+            fill="{% if wishlist_product_ids and product.pk in wishlist_product_ids %}currentColor{% else %}none{% endif %}"
+            stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path
+              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card-body jm-product-card__body d-flex flex-column">
+    <div class="jm-product-card__meta">
+      {% if product.average_rating %}
+      <span class="jm-product-card__rating"
+        aria-label="{% trans 'Rating' %} {{ product.average_rating|floatformat:1 }}">
+        <span class="jm-product-card__rating-badge">
+          <span class="jm-product-card__rating-score">{{ product.average_rating|floatformat:1 }}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor"
+              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        </span>
+        {% if product.review_count %}<span class="jm-product-card__rating-count">| {{ product.review_count }}</span>{% endif %}
+      </span>
+      {% else %}
+      <span class="jm-product-card__rating jm-product-card__rating--muted">{% trans "New" %}</span>
+      {% endif %}
+      <span class="jm-product-card__stock {% if eff_stock <= 0 %}is-out{% elif eff_stock <= eff_thresh %}is-low{% else %}is-in{% endif %}"
+        title="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}">
+        {% if eff_stock <= 0 %}{% trans "Out of Stock" %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans "In Stock" %}{% endif %}
+      </span>
+    </div>
+
+    <h3 class="card-title">{{ product.name }}</h3>
+
+    <div class="jm-product-card__pricing">
+      {% if product.is_flash_sale %}
+      <p class="product-price jm-product-card__price--sale mb-0">
+        {% money_label eff_price display_currency %}
+      </p>
+      <p class="jm-product-card__was mb-0">
+        <span class="text-decoration-line-through">{% money_label product.original_price|default:eff_base display_currency %}</span>
+      </p>
+      {% else %}
+      <p class="product-price mb-0">
+        {% money_label eff_price display_currency %}
+      </p>
+      {% if eff_mrp and eff_mrp > eff_base %}
+      <p class="jm-product-card__was mb-0">
+        <span class="text-decoration-line-through text-muted">{% money_label eff_mrp display_currency %}</span>
+      </p>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <a class="stretched-link jm-product-card__stretch" href="{% url 'catalog:pdp' slug=product.slug %}"
+      aria-label="{% blocktrans with name=product.name %}View {{ name }}{% endblocktrans %}"></a>
+
+    {% if request.resolver_match.url_name != 'homepage' %}
+    <div
+      class="jm-product-card__cart mt-auto {% if cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}">
+      <button type="button" class="jm-product-card__atc" data-jm-add-to-cart {% if eff_stock <= 0 %}disabled{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="9" cy="21" r="1" />
+          <circle cx="20" cy="21" r="1" />
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+        <span>{% if eff_stock > 0 %}{% trans "Add to Cart" %}{% else %}{% trans "Unavailable" %}{% endif %}</span>
+      </button>
+    </div>
+    {% if cart_product_ids and product.pk in cart_product_ids %}
+    <a href="{% url 'cart:page' %}"
+      class="btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart">
+      <span>{% trans "View Cart" %}</span>
+    </a>
+    {% endif %}
+    {% endif %}
+  </div>
+</article>
+{% endwith %}
+{% endwith %}

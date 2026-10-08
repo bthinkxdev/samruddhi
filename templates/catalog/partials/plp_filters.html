@@ -1,0 +1,107 @@
+{% load i18n %}
+{{ subcollections_map|json_script:"subcollections-data" }}
+<form class="plp-filters card p-3" method="get" action="{{ request.path }}" hx-get="{{ request.path }}"
+  hx-target="#product-grid" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#product-grid"
+  hx-trigger="submit">
+  <h2 class="h6 plp-filters-header">{% trans "Filters" %}</h2>
+  <div class="plp-filters-body">
+    {% if not active_collection %}
+    <div class="mb-3">
+      <label class="form-label small">{% trans "Collection" %}</label>
+      <select name="collection" class="form-select form-select-sm" onchange="updateSubcollections(this)">
+        <option value="">{% trans "All" %}</option>
+        {% for item in collections %}
+        <option value="{{ item.pk }}" {% if filters.collection_id == item.pk or filters.parent_collection_id == item.pk or active_collection.pk == item.pk or active_collection.parent_id == item.pk %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% else %}
+    <input type="hidden" name="collection" value="{{ active_collection.pk }}">
+    {% endif %}
+
+    <div class="mb-3 subcollection-wrapper" style="{% if not subcollections %}display: none;{% endif %}">
+      <label class="form-label small">{% trans "Sub-collection" %}</label>
+      <select name="subcollection" class="form-select form-select-sm">
+        <option value="">{% trans "All Sub-collections" %}</option>
+        {% for sub in subcollections %}
+        <option value="{{ sub.pk }}" {% if filters.subcollection_id == sub.pk %}selected{% endif %}>{{ sub.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small">{% trans "Brand" %}</label>
+      <select name="brand" class="form-select form-select-sm">
+        <option value="">{% trans "All" %}</option>
+        {% for brand in brands %}
+        <option value="{{ brand.pk }}" {% if filters.brand_id == brand.pk %}selected{% endif %}>{{ brand.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label small">{% trans "Price" %}</label>
+      <div class="input-group input-group-sm">
+        <input type="number" name="min_price" class="form-control" placeholder="Min" value="{{ request.GET.min_price }}">
+        <input type="number" name="max_price" class="form-control" placeholder="Max" value="{{ request.GET.max_price }}">
+      </div>
+    </div>
+    <div class="form-check mb-1 ms-1"><input class="form-check-input" type="checkbox" name="featured" value="1" id="f-ft" {% if filters.featured %}checked{% endif %}><label class="form-check-label small" for="f-ft">{% trans "Featured" %}</label></div>
+    <div class="form-check mb-1 ms-1"><input class="form-check-input" type="checkbox" name="bestseller" value="1" id="f-bs" {% if filters.bestseller %}checked{% endif %}><label class="form-check-label small" for="f-bs">{% trans "Bestseller" %}</label></div>
+    <div class="form-check mb-3 ms-1"><input class="form-check-input" type="checkbox" name="in_stock" value="1" id="f-stock" {% if filters.in_stock %}checked{% endif %}><label class="form-check-label small" for="f-stock">{% trans "In Stock" %}</label></div>
+    <div class="mb-2">
+      <label class="form-label small">{% trans "Sort" %}</label>
+      <select name="sort" class="form-select form-select-sm">
+        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>{% trans "Newest" %}</option>
+        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>{% trans "Price: Low to High" %}</option>
+        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>{% trans "Price: High to Low" %}
+        </option>
+        <option value="rating" {% if sort == 'rating' %}selected{% endif %}>{% trans "Top Rated" %}</option>
+      </select>
+    </div>
+  </div>
+  <div class="d-flex gap-2 plp-filters-footer pt-2">
+    <button type="submit" class="btn btn-theme btn-sm flex-grow-1" data-bs-dismiss="offcanvas">{% trans "Apply" %}</button>
+    <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm flex-grow-1 text-center d-inline-flex align-items-center justify-content-center">{% trans "Clear" %}</a>
+  </div>
+</form>
+<script>
+if (typeof window.updateSubcollections !== 'function') {
+  window.updateSubcollections = function(selectElem) {
+    const form = selectElem.closest('form');
+    const wrapper = form.querySelector('.subcollection-wrapper');
+    const subSelect = form.querySelector('select[name=subcollection]');
+    
+    const scriptTag = document.getElementById('subcollections-data');
+    if (!scriptTag) return;
+    
+    let subcollectionsMap = {};
+    try {
+      subcollectionsMap = JSON.parse(scriptTag.textContent);
+    } catch (e) {
+      console.error("Error parsing subcollections map", e);
+      return;
+    }
+    
+    const collectionId = selectElem.value;
+    const subs = subcollectionsMap[collectionId] || [];
+    
+    while (subSelect.options.length > 1) {
+      subSelect.remove(1);
+    }
+    
+    subs.forEach(sub => {
+      const option = document.createElement('option');
+      option.value = sub.pk;
+      option.textContent = sub.name;
+      subSelect.appendChild(option);
+    });
+    
+    if (subs.length > 0) {
+      wrapper.style.display = 'block';
+    } else {
+      wrapper.style.display = 'none';
+      subSelect.value = '';
+    }
+  };
+}
+</script>

@@ -1,0 +1,47 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{{ plural_name }}{% endblock %}
+{% block page_title %}{{ plural_name }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ create_url }}" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Add {{ singular_name }}</a>
+{% endblock %}
+
+{% block content %}
+<p class="text-secondary small">Drag a section by its handle to change the order it appears on the home page. The new order is saved automatically.</p>
+<div class="card table-responsive">
+  <table class="table mb-0 align-middle">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 48px;"></th>
+        <th>Type</th>
+        <th>Title</th>
+        <th>Active</th>
+        <th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody data-sortable data-reorder-url="{% url 'dashboard:homepagesection-reorder' %}" data-csrf="{{ csrf_token }}">
+      {% for obj in objects %}
+      <tr data-id="{{ obj.pk }}">
+        <td><button type="button" class="drag-handle" title="Drag to reorder (or use the arrow keys)" aria-label="Drag to reorder"><i class="ti ti-grip-vertical"></i></button></td>
+        <td>{{ obj.get_section_type_display }}</td>
+        <td>{{ obj.title|default:"—" }}</td>
+        <td>{% if obj.is_active %}<span class="badge bg-success-subtle text-success">Yes</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">No</span>{% endif %}</td>
+        <td class="text-end">
+          <a href="{% url 'dashboard:homepagesection-update' obj.pk %}" class="btn btn-sm btn-light" title="Edit"><i class="ti ti-edit"></i></a>
+          <a href="{% url 'dashboard:homepagesection-delete' obj.pk %}" class="btn btn-sm btn-light text-danger" title="Delete"><i class="ti ti-trash"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-secondary py-5">No sections yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div id="sortable-status" class="small mt-2" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/sortable-list.js' %}"></script>
+{% endblock %}

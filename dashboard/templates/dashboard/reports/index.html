@@ -1,0 +1,107 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block breadcrumbs %}<p class="mb-0 text-secondary">Analytics over pre-aggregated report tables</p>{% endblock %}
+{% block page_actions %}
+<form method="post" action="{% url 'dashboard:reports-recompute' %}" class="d-inline">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-secondary"><i class="ti ti-refresh me-1"></i>Recompute (yesterday)</button>
+</form>
+<a href="{% url 'dashboard:reports-export' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}&state={{ state_filter|urlencode }}&hsn_code={{ hsn_code_filter|urlencode }}" class="btn btn-primary"><i class="ti ti-download me-1"></i>Export CSV</a>
+{% endblock %}
+
+{% block content %}
+{{ sales_series|json_script:"sales-chart-data" }}
+
+<div class="row">
+  <div class="col-12">
+    <form method="get" class="row g-2 align-items-end mb-3">
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1">From</label>
+        <input type="date" name="start" value="{{ start|date:'Y-m-d' }}" class="form-control" />
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1">To</label>
+        <input type="date" name="end" value="{{ end|date:'Y-m-d' }}" class="form-control" />
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1">State</label>
+        <select name="state" class="form-select">
+          <option value="">All States</option>
+          {% for st in states %}
+            <option value="{{ st.name }}" {% if state_filter == st.name %}selected{% endif %}>{{ st.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1">HSN Code</label>
+        <input type="text" name="hsn_code" value="{{ hsn_code_filter }}" class="form-control" placeholder="e.g. 1234" />
+      </div>
+      <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Apply</button>
+        {% if request.GET.start or request.GET.end or request.session.reports_start or request.session.reports_end or request.GET.state or request.GET.hsn_code %}
+        <a href="{% url 'dashboard:reports' %}?clear=1" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Revenue (range)</h6><h3 class="fw-bold mb-0">{{ total_revenue|floatformat:2 }}</h3></div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Orders (range)</h6><h3 class="fw-bold mb-0">{{ total_orders }}</h3></div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Today's Revenue</h6><h3 class="fw-bold mb-0">{{ summary.today_revenue|floatformat:2 }}</h3></div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Low Stock</h6><h3 class="fw-bold mb-0">{{ summary.low_stock_alert_count }}</h3></div></div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="card"><div class="card-body p-4">
+      <h2 class="fs-5 mb-3">Sales Overview</h2>
+      <div id="salesChart"></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Daily Sales</h3></div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light"><tr><th>Date</th><th>Orders</th><th>Revenue</th><th>AOV</th></tr></thead>
+          <tbody>
+            {% for r in sales %}
+            <tr><td>{{ r.report_date|date:"M d, Y" }}</td><td>{{ r.order_count }}</td><td>{{ r.revenue|floatformat:2 }}</td><td>{{ r.average_order_value|floatformat:2 }}</td></tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-secondary py-4">No sales data in range.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Customers</h3></div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light"><tr><th>Date</th><th>New</th><th>Returning</th><th>Active</th></tr></thead>
+          <tbody>
+            {% for c in customers %}
+            <tr><td>{{ c.report_date|date:"M d, Y" }}</td><td>{{ c.new_customers }}</td><td>{{ c.returning_customers }}</td><td>{{ c.total_active_customers }}</td></tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-secondary py-4">No customer data in range.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

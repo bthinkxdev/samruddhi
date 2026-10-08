@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Profile" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4 p-md-5">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 fw-bold mb-0">{% trans "Edit Profile" %}</h1>
+            <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary btn-sm">{% trans "Back to Dashboard" %}</a>
+          </div>
+
+          <form method="post" action="{% url 'accounts:edit-profile' %}">
+            {% csrf_token %}
+            
+            <h2 class="h6 mb-3 text-muted text-uppercase" style="letter-spacing: 0.5px;">{% trans "Personal Details" %}</h2>
+            
+            <div class="mb-3">
+              <label for="{{ form.name.id_for_label }}" class="form-label small fw-semibold">{% trans "Full Name" %}</label>
+              {{ form.name }}
+              {% if form.name.errors %}
+              <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            
+            <div class="mb-3">
+              <label for="{{ form.email.id_for_label }}" class="form-label small fw-semibold">{% trans "Email Address" %}</label>
+              {{ form.email }}
+              <div class="form-text small">{% trans "Your email address cannot be changed here." %}</div>
+            </div>
+            
+            <div class="mb-4">
+              <label for="{{ form.phone.id_for_label }}" class="form-label small fw-semibold">{% trans "Phone Number" %}</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+              <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+              {% endif %}
+            </div>
+            
+            <hr class="mb-4">
+            <h2 class="h6 mb-3 text-muted text-uppercase" style="letter-spacing: 0.5px;">{% trans "Default Delivery Address" %}</h2>
+            
+            <div class="mb-3">
+              <label for="{{ form.address_line1.id_for_label }}" class="form-label small fw-semibold">{% trans "Address Line 1" %}</label>
+              {{ form.address_line1 }}
+              {% if form.address_line1.errors %}
+              <div class="text-danger small mt-1">{{ form.address_line1.errors.0 }}</div>
+              {% endif %}
+            </div>
+            
+            <div class="mb-3">
+              <label for="{{ form.address_line2.id_for_label }}" class="form-label small fw-semibold">{% trans "Address Line 2 (Optional)" %}</label>
+              {{ form.address_line2 }}
+              {% if form.address_line2.errors %}
+              <div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>
+              {% endif %}
+            </div>
+            
+            <div class="mb-3">
+              <label for="{{ form.city.id_for_label }}" class="form-label small fw-semibold">{% trans "City" %}</label>
+              {{ form.city }}
+              {% if form.city.errors %}
+              <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="row g-2 mb-4">
+              <div class="col-md-6">
+                <label for="{{ form.state.id_for_label }}" class="form-label small fw-semibold">{% trans "State / Province" %}</label>
+                {{ form.state }}
+                {% if form.state.errors %}
+                <div class="text-danger small mt-1">{{ form.state.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <label for="{{ form.pincode.id_for_label }}" class="form-label small fw-semibold">{% trans "PIN / Postal Code" %}</label>
+                {{ form.pincode }}
+                {% if form.pincode.errors %}
+                <div class="text-danger small mt-1">{{ form.pincode.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-theme py-2 fw-medium">{% trans "Save Changes" %}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

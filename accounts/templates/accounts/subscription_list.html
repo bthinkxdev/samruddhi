@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "My Subscriptions" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title h4 mb-0">{% trans "My Subscriptions" %}</h1>
+    <a href="{% url 'accounts:subscription-create' %}" class="btn btn-theme">{% trans "New Subscription" %}</a>
+  </div>
+
+  {% if subscriptions %}
+  <div class="row g-3">
+    {% for sub in subscriptions %}
+    <div class="col-12 col-md-6">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="fw-semibold mb-1">{{ sub.product.name }}</p>
+            <p class="small text-muted mb-1">
+              {{ sub.recurring_schedule.get_frequency_display }} ·
+              {% trans "Next run" %}: {{ sub.recurring_schedule.next_run_date }}
+            </p>
+            <p class="small text-muted mb-0">{% trans "Qty" %}: {{ sub.quantity }}</p>
+          </div>
+          <span class="badge bg-theme">{{ sub.get_status_display }}</span>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          {% if sub.status == "active" %}
+          <form method="post" action="{% url 'accounts:subscription-pause' sub.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-theme btn-sm">{% trans "Pause" %}</button>
+          </form>
+          {% elif sub.status == "paused" %}
+          <form method="post" action="{% url 'accounts:subscription-resume' sub.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-theme btn-sm">{% trans "Resume" %}</button>
+          </form>
+          {% endif %}
+          {% if sub.status != "cancelled" %}
+          <form method="post" action="{% url 'accounts:subscription-cancel' sub.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Cancel" %}</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card p-4 text-center">
+    <p class="mb-3 text-muted">{% trans "You have no active subscriptions." %}</p>
+    <a href="{% url 'accounts:subscription-create' %}" class="btn btn-theme">{% trans "Start a Subscription" %}</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

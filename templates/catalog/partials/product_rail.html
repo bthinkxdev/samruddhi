@@ -1,0 +1,26 @@
+{% load i18n %}
+<section class="jm-section jm-rail-section">
+  <div class="container">
+    <div class="section-header jm-section-header">
+      {% if rail_title %}<h2 class="section-title">{{ rail_title }}</h2>{% endif %}
+      <a href="{% url 'catalog:plp' %}{% if view_all_query %}?{{ view_all_query }}{% endif %}" class="section-cta">{% trans "View All" %}</a>
+    </div>
+    <div class="jm-featured__rail">
+      <button type="button" class="jm-rail-arrow jm-rail-arrow--prev" data-rail-scroll="prev" aria-label="{% trans 'Previous products' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="product-rail-scroll jm-product-rail__track" role="list" data-rail-track>
+        {% for product in products %}
+        <div class="product-rail-item" role="listitem">
+          {% include "catalog/partials/product_card.html" with product=product force_badge=force_badge %}
+        </div>
+        {% empty %}
+        <p class="text-muted small px-2">{% trans "No products available." %}</p>
+        {% endfor %}
+      </div>
+      <button type="button" class="jm-rail-arrow jm-rail-arrow--next" data-rail-scroll="next" aria-label="{% trans 'Next products' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+</section>

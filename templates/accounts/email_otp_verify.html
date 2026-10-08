@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify OTP Code" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5 d-flex align-items-center justify-content-center" style="min-height: 75vh;">
+  <div class="row justify-content-center w-100">
+    <div class="col-md-6 col-lg-5">
+      <div class="position-relative">
+        <div class="otp-glow-bubble-1"></div>
+        <div class="otp-glow-bubble-2"></div>
+        
+        <div class="card otp-card p-4 p-sm-5 border-0 shadow-lg position-relative">
+          
+          <div class="text-center mb-4">
+            <div class="otp-icon-container mb-3 d-inline-flex align-items-center justify-content-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="otp-icon">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                <circle cx="12" cy="16" r="1.5" />
+              </svg>
+            </div>
+            <h1 class="h4 fw-bold text-slate-800 mb-2">{% trans "Verification Code" %}</h1>
+            <p class="text-muted small px-3 mb-0">
+              {% trans "We've sent a 4-digit secure code to your email" %}<br>
+              <span class="fw-semibold text-slate-900">{{ email }}</span>
+            </p>
+          </div>
+
+          {% if form.non_field_errors or form.otp_code.errors %}
+          <div class="alert alert-danger-custom d-flex align-items-center gap-2 p-3 mb-4" role="alert">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div class="small">
+              {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+              {% for error in form.otp_code.errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <form method="post" id="otp-verify-form" action="{% url 'accounts:verify-email-otp' %}?email={{ email|urlencode }}&purpose={{ purpose|urlencode }}{% if next %}&next={{ next|urlencode }}{% endif %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+            
+            <div style="display:none !important;">
+              {{ form.email }}
+              {{ form.otp_code }}
+            </div>
+
+            <div class="mb-4 text-center">
+              <label class="form-label text-slate-800 fw-semibold small mb-3" for="id_otp_code">
+                {% trans "Enter 4-Digit Code" %}
+              </label>
+              <div class="otp-inputs-wrapper d-flex justify-content-center gap-3">
+                <input type="text" maxlength="1" class="otp-digit-field form-control" pattern="[0-9]" inputmode="numeric" autocomplete="off" />
+                <input type="text" maxlength="1" class="otp-digit-field form-control" pattern="[0-9]" inputmode="numeric" autocomplete="off" />
+                <input type="text" maxlength="1" class="otp-digit-field form-control" pattern="[0-9]" inputmode="numeric" autocomplete="off" />
+                <input type="text" maxlength="1" class="otp-digit-field form-control" pattern="[0-9]" inputmode="numeric" autocomplete="off" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-theme-premium w-100 py-3 mb-3 d-flex align-items-center justify-content-center gap-2">
+              <span>{% trans "Verify & Proceed" %}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </form>
+
+          <div class="text-center mt-3">
+            <div id="resend-status-msg" class="alert alert-success d-none py-2 small mb-3" role="alert"></div>
+            <div id="countdown-wrapper" class="small text-muted py-2 d-flex align-items-center justify-content-center gap-2">
+              <span class="spinner-grow spinner-grow-sm text-theme-accent" role="status" style="width: 8px; height: 8px; animation-duration: 1.5s;"></span>
+              <span>{% trans "Resend code in" %} <strong id="timer-display" class="text-theme">01:00</strong></span>
+            </div>
+            <a href="javascript:void(0);" id="resend-btn" class="btn btn-link btn-resend-link small fw-bold text-decoration-none d-none">
+              {% trans "Resend Code" %}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .otp-glow-bubble-1 {
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(212, 165, 116, 0.2) 0%, rgba(212, 165, 116, 0) 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .otp-glow-bubble-2 {
+    position: absolute;
+    bottom: -60px;
+    right: -40px;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(30, 41, 59, 0.05) 0%, rgba(30, 41, 59, 0) 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .otp-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 24px !important;
+    z-index: 1;
+  }
+  .otp-icon-container {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: rgba(3, 105, 161, 0.12);
+    color: var(--jm-accent);
+    animation: floatIcon 3.5s ease-in-out infinite;
+  }
+  @keyframes floatIcon {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .alert-danger-custom {
+    background-color: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+    border-radius: 12px;
+  }
+  .otp-digit-field {
+    width: 62px;
+    height: 62px;
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    text-align: center;
+    color: #1E293B;
+    border: 2px solid #E2E8F0 !important;
+    border-radius: 16px !important;
+    background-color: #F8FAFC !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    padding: 0 !important;
+  }
+  .otp-digit-field:focus {
+    color: #1E293B;
+    border-color: var(--jm-accent) !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 0 0 4px rgba(3, 105, 161, 0.15) !important;
+    transform: translateY(-3px);
+    outline: none;
+  }
+  .otp-digit-field.filled {
+    border-color: rgba(3, 105, 161, 0.45) !important;
+    background-color: var(--jm-accent-soft) !important;
+  }
+  .btn-theme-premium {
+    background: var(--jm-accent);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 16px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 20px -6px rgba(3, 105, 161, 0.35);
+  }
+  .btn-theme-premium:hover {
+    background: var(--jm-accent-dark);
+    color: #FFFFFF;
+    box-shadow: 0 10px 24px -4px rgba(3, 105, 161, 0.4);
+    transform: translateY(-2px);
+  }
+  .btn-theme-premium:hover .arrow-icon {
+    transform: translateX(4px);
+  }
+  .arrow-icon {
+    transition: transform 0.25s ease;
+  }
+  .btn-resend-link {
+    color: var(--jm-accent);
+    font-weight: 700;
+    transition: color 0.2s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+  }
+  .btn-resend-link:hover {
+    color: var(--jm-accent-dark);
+    background-color: var(--jm-accent-soft);
+  }
+  .text-slate-800 {
+    color: #1E293B;
+  }
+  .text-slate-900 {
+    color: #0F172A;
+  }
+  .text-theme-accent {
+    background-color: var(--jm-accent);
+  }
+  .text-theme {
+    color: var(--jm-accent) !important;
+  }
+  @media (max-width: 480px) {
+    .otp-digit-field {
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem !important;
+      border-radius: 12px !important;
+    }
+    .otp-inputs-wrapper {
+      gap: 0.5rem !important;
+    }
+    .otp-card {
+      padding: 1.5rem !important;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var duration = 60; 
+    var display = document.querySelector('#timer-display');
+    var countdownWrapper = document.querySelector('#countdown-wrapper');
+    var resendBtn = document.querySelector('#resend-btn');
+    var resendStatusMsg = document.querySelector('#resend-status-msg');
+    var interval = null;
+
+    function startTimer() {
+      if (interval) clearInterval(interval);
+      var timer = duration;
+      display.textContent = "01:00";
+      countdownWrapper.classList.remove('d-none');
+      resendBtn.classList.add('d-none');
+      
+      interval = setInterval(function () {
+        var minutes = parseInt(timer / 60, 10);
+        var seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+          clearInterval(interval);
+          countdownWrapper.classList.add('d-none');
+          resendBtn.classList.remove('d-none');
+        }
+      }, 1000);
+    }
+
+    startTimer();
+
+    resendBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      resendBtn.style.pointerEvents = 'none';
+      resendBtn.textContent = '{% trans "Sending..." %}';
+
+      fetch("{% url 'accounts:resend-email-otp' %}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+          email: "{{ email|escapejs }}",
+          purpose: "{{ purpose|default:'login'|escapejs }}"
+        })
+      })
+      .then(function(response) {
+        return response.json().then(function(data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function(result) {
+        resendBtn.style.pointerEvents = 'auto';
+        resendBtn.textContent = '{% trans "Resend Code" %}';
+
+        if (result.ok && result.data.success) {
+          if (resendStatusMsg) {
+            resendStatusMsg.className = 'alert alert-success py-2 small mb-3';
+            resendStatusMsg.textContent = result.data.message || '{% trans "A new verification code has been sent to your email." %}';
+            resendStatusMsg.classList.remove('d-none');
+            setTimeout(function() { resendStatusMsg.classList.add('d-none'); }, 5000);
+          }
+          startTimer();
+        } else {
+          if (resendStatusMsg) {
+            resendStatusMsg.className = 'alert alert-danger py-2 small mb-3';
+            resendStatusMsg.textContent = result.data.message || '{% trans "Failed to resend code. Please try again." %}';
+            resendStatusMsg.classList.remove('d-none');
+          }
+        }
+      })
+      .catch(function() {
+        resendBtn.style.pointerEvents = 'auto';
+        resendBtn.textContent = '{% trans "Resend Code" %}';
+        if (resendStatusMsg) {
+          resendStatusMsg.className = 'alert alert-danger py-2 small mb-3';
+          resendStatusMsg.textContent = '{% trans "An error occurred. Please try again." %}';
+          resendStatusMsg.classList.remove('d-none');
+        }
+      });
+    });
+
+    var hiddenOtpInput = document.querySelector('#id_otp_code');
+    var digitFields = document.querySelectorAll('.otp-digit-field');
+    var otpForm = document.querySelector('#otp-verify-form');
+
+    if (digitFields.length > 0) {
+      digitFields[0].focus();
+    }
+
+    if (hiddenOtpInput && hiddenOtpInput.value) {
+      var val = hiddenOtpInput.value.trim().substring(0, 4);
+      for (var i = 0; i < val.length; i++) {
+        if (digitFields[i]) {
+          digitFields[i].value = val[i];
+          digitFields[i].classList.add('filled');
+        }
+      }
+    }
+
+    function updateHiddenInput() {
+      var fullCode = '';
+      digitFields.forEach(function(field) {
+        fullCode += field.value;
+      });
+      if (hiddenOtpInput) {
+        hiddenOtpInput.value = fullCode;
+      }
+      return fullCode;
+    }
+
+    digitFields.forEach(function(field, idx) {
+      field.addEventListener('input', function(e) {
+        var cleanVal = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = cleanVal;
+
+        if (cleanVal) {
+          field.classList.add('filled');
+          if (idx < digitFields.length - 1) {
+            digitFields[idx + 1].focus();
+          }
+        } else {
+          field.classList.remove('filled');
+        }
+        updateHiddenInput();
+      });
+
+      field.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace') {
+          if (!field.value) {
+            if (idx > 0) {
+              digitFields[idx - 1].focus();
+              digitFields[idx - 1].value = '';
+              digitFields[idx - 1].classList.remove('filled');
+            }
+          } else {
+            field.value = '';
+            field.classList.remove('filled');
+          }
+          updateHiddenInput();
+          e.preventDefault();
+        } else if (e.key === 'ArrowLeft' && idx > 0) {
+          digitFields[idx - 1].focus();
+          e.preventDefault();
+        } else if (e.key === 'ArrowRight' && idx < digitFields.length - 1) {
+          digitFields[idx + 1].focus();
+          e.preventDefault();
+        }
+      });
+
+      field.addEventListener('paste', function(e) {
+        e.preventDefault();
+        var pasteData = (e.clipboardData || window.clipboardData).getData('text').trim();
+        var numericData = pasteData.replace(/[^0-9]/g, '').substring(0, 4);
+        
+        if (numericData.length > 0) {
+          for (var i = 0; i < numericData.length; i++) {
+            if (digitFields[i]) {
+              digitFields[i].value = numericData[i];
+              digitFields[i].classList.add('filled');
+            }
+          }
+          updateHiddenInput();
+          
+          if (numericData.length === 4) {
+            digitFields[3].focus();
+          } else if (digitFields[numericData.length]) {
+            digitFields[numericData.length].focus();
+          }
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

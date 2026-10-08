@@ -1,0 +1,35 @@
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | migrations
+  | staticfiles
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip = ["migrations", ".venv", "venv"]
+known_first_party = [
+    "config",
+    "core",
+    "accounts",
+    "catalog",
+    "gifting",
+    "cart",
+    "checkout",
+    "orders",
+    "payments",
+    "delivery",
+    "recurring",
+    "corporate",
+    "marketing",
+    "cms",
+    "notifications",
+    "reports",
+]

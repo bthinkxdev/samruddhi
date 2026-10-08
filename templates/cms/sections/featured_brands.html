@@ -1,0 +1,39 @@
+{% load i18n %}
+<section class="jm-section jm-brands" id="featured-brands" style="scroll-margin-top: 150px;">
+  <div class="container">
+    <div class="jm-brands__header">
+      <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Trusted by Leading Brands" %}{% endif %}</h2>
+    </div>
+    <div class="jm-brands__rail" aria-label="{% trans 'Featured brands' %}">
+      <ul class="jm-brands__track" role="list">
+        {% for brand in section_context.brands %}
+        <li class="jm-brand" role="listitem">
+          <a href="{% url 'catalog:plp' %}?brand={{ brand.pk }}" class="jm-brand__link" aria-label="{{ brand.name }}">
+            {% if brand.logo %}
+            <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" loading="lazy" decoding="async" width="140" height="56">
+            {% else %}
+            <span class="jm-brand__fallback">{{ brand.name }}</span>
+            {% endif %}
+          </a>
+        </li>
+        {% empty %}
+        <li class="text-muted small">{% trans "Brands coming soon." %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#featured-brands' || window.location.search.includes('ref=brands')) {
+      // Small delay to allow the page and sticky header to fully layout before scrolling
+      setTimeout(function() {
+        var el = document.getElementById('featured-brands');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 300);
+    }
+  });
+</script>

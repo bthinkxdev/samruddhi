@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Order tracking" %} — {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container page-container tracking-page">
+  <div class="mb-4">
+    <a href="{% url 'orders:detail' order.pk %}" class="btn btn-outline-secondary btn-sm"><i class="ti ti-arrow-left"></i> {% trans "Back to Order" %}</a>
+  </div>
+  <h1 class="section-title mb-1">{% trans "Order" %} {{ order.order_number }}</h1>
+  <p class="section-subtitle mb-4">
+    {% trans "Current status" %}:
+    <strong class="text-theme">{{ order.get_order_status_display }}</strong>
+  </p>
+
+  {% if order.delivery_slot_booking %}
+  <div class="checkout-step mb-4">
+    <h2 class="h6 mb-2">{% trans "Delivery" %}</h2>
+    <p class="small mb-0 text-muted">
+      {{ order.delivery_slot_booking.delivery_date }}
+      — {{ order.delivery_slot_booking.slot.name }}
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="checkout-step">
+    <h2 class="h6 mb-3">{% trans "Tracking Timeline" %}</h2>
+    <div class="tracking-timeline">
+      {% for entry in status_history %}
+      <div class="tracking-step {% if forloop.last %}is-current{% else %}is-complete{% endif %}">
+        <time class="small text-muted d-block" datetime="{{ entry.changed_at|date:'c' }}">{{ entry.changed_at }}</time>
+        <span class="small fw-medium">{{ entry.get_to_status_display|default:entry.to_status }}</span>
+        {% if entry.note %}<p class="small text-muted mb-0">{{ entry.note }}</p>{% endif %}
+      </div>
+      {% empty %}
+      <p class="text-muted small">{% trans "No status updates yet." %}</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

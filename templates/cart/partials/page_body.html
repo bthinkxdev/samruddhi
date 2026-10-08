@@ -1,0 +1,130 @@
+{% load i18n %}
+{% load static %}
+<div id="cart-page-body" hx-get="{% url 'cart:page' %}" hx-trigger="cartUpdated from:body" hx-select="#cart-page-body" hx-swap="outerHTML">
+{% if error and not error_item_id %}
+<div class="alert alert-danger py-2 small mb-3" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if summary and summary.lines %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="checkout-step p-0 overflow-hidden">
+      <ul class="list-unstyled mb-0">
+        {% for line in summary.lines %}
+        <li class="cart-page-line d-flex gap-3 p-3{% if not forloop.last %} border-bottom{% endif %}">
+          <div class="cart-line__img-wrap flex-shrink-0" style="width:80px;height:80px;">
+            {% with line.product.primary_images|first as primary_image %}
+            {% if primary_image %}
+            <img src="{{ primary_image.image.url }}" alt="{{ line.product.name }}" class="cart-line__img" loading="lazy">
+            {% else %}
+            <img src="{% static 'img/product-placeholder.svg' %}" alt="{{ line.product.name }}" class="cart-line__img cart-line__img--placeholder">
+            {% endif %}
+            {% endwith %}
+          </div>
+          <div class="flex-grow-1" style="min-width: 0;">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <a href="{% url 'catalog:pdp' slug=line.product.slug %}{% if line.variant %}?variant_id={{ line.variant.id }}{% endif %}" class="cart-line__name text-dark text-truncate d-block" style="min-width: 0;">{{ line.product.name }}</a>
+              <span class="fw-semibold flex-shrink-0">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
+            </div>
+            {% if line.variant %}<div class="cart-line__meta">{{ line.variant.name }}</div>{% endif %}
+            {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
+            {% if not line.product.is_in_stock or max_stock <= 0 %}
+            <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
+            {% elif line.quantity > max_stock %}
+            <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+            {% elif error_item_id == line.item.pk and error %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+            {% endif %}
+            {% if line.gift_snapshot %}<div class="small text-theme mb-1">{% trans "Gift customized" %}</div>{% endif %}
+
+            <div class="d-flex align-items-center justify-content-between mt-2">
+              <div class="qty-stepper d-flex align-items-center border rounded-pill overflow-hidden" style="width: fit-content;">
+                <form method="post" action="{% url 'cart:quantity' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+                  <input type="hidden" name="delta" value="-1">
+                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Decrease quantity' %}" {% if line.quantity <= 1 %}disabled{% endif %}>
+                    &minus;
+                  </button>
+                </form>
+                <span class="qty-stepper__value">{{ line.quantity }}</span>
+                <form method="post" action="{% url 'cart:quantity' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+                  <input type="hidden" name="delta" value="1">
+                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}">&plus;</button>
+                </form>
+              </div>
+              {% endwith %}
+
+              <form method="post" action="{% url 'cart:page-remove' %}">
+                {% csrf_token %}
+                <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+                <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:page-remove' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Delete item' %}" title="{% trans 'Delete item' %}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if summary.coupon_code or has_active_coupons %}
+    <div class="checkout-step">
+      <h2>{% trans "Promo code" %}</h2>
+      {% if summary.coupon_code %}
+      <div class="d-flex justify-content-between align-items-center bg-light rounded-3 px-3 py-2">
+        <span class="small fw-semibold text-theme">{{ summary.coupon_code }}</span>
+        <form method="post" action="{% url 'cart:coupon-remove' %}">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:coupon-remove' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form">{% trans "Remove" %}</button>
+        </form>
+      </div>
+      {% elif has_active_coupons %}
+      <form method="post" action="{% url 'cart:coupon-apply' %}" class="d-flex gap-2">
+        {% csrf_token %}
+        <input type="text" name="code" class="form-control form-control-sm" placeholder="{% trans 'Enter coupon code' %}">
+        <button type="button" class="btn btn-outline-theme btn-sm text-nowrap" hx-post="{% url 'cart:coupon-apply' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form">{% trans "Apply" %}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="checkout-step">
+      <h2>{% trans "Order Summary" %}</h2>
+      <div class="cart-summary-row"><span>{% trans "Subtotal" %}</span><span>{{ display_currency.symbol }} {{ summary.subtotal }}</span></div>
+      {% if summary.coupon_discount %}
+      <div class="cart-summary-row text-success"><span>{% trans "Coupon" %}</span><span>-{{ display_currency.symbol }} {{ summary.coupon_discount }}</span></div>
+      {% endif %}
+      <div class="cart-summary-row">
+        <span>{% trans "Delivery charges" %}</span>
+        <span>{% if summary.delivery_charge %}{{ display_currency.symbol }} {{ summary.delivery_charge }}{% else %}{% trans "Calculated at checkout" %}{% endif %}</span>
+      </div>
+      <div class="cart-summary-row cart-summary-total"><span>{% trans "Total" %}</span><span class="text-theme">{{ display_currency.symbol }} {{ summary.grand_total }}</span></div>
+      {% if summary.has_stock_issues %}
+      <button class="btn btn-theme w-100 py-2 mt-3 d-flex justify-content-between align-items-center px-3" disabled style="cursor: not-allowed;" onclick="event.preventDefault();">
+        <span>{% trans "Proceed to Checkout" %}</span>
+        <span>{{ display_currency.symbol }} {{ summary.grand_total }}</span>
+      </button>
+      <div class="text-danger small mt-2 text-center">{% trans "Some items are out of stock. Please remove them to checkout." %}</div>
+      {% else %}
+      <a href="{% url 'checkout:checkout' %}?mode=cart" class="btn btn-theme w-100 py-2 mt-3 d-flex justify-content-between align-items-center px-3">
+        <span>{% trans "Proceed to Checkout" %}</span>
+        <span>{{ display_currency.symbol }} {{ summary.grand_total }}</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" class="mb-3 mx-auto"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+  <p class="text-muted mb-3">{% trans "Your cart is empty." %}</p>
+  <a href="{% url 'catalog:plp' %}" class="btn btn-outline-theme">{% trans "Continue Shopping" %}</a>
+</div>
+{% endif %}
+</div>

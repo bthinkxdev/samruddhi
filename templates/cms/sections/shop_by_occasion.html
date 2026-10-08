@@ -1,0 +1,22 @@
+{% load i18n %}
+<section class="container mb-4">
+  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Gifts for Every Moment" show_cta=False %}
+  <div class="chip-scroll" role="list">
+    {% for occasion in section_context.occasions %}
+    <a href="{% url 'catalog:plp' %}?occasion={{ occasion.pk }}" class="occasion-chip text-decoration-none" role="listitem">
+      <span class="occasion-chip__icon">
+        {% if occasion.icon %}
+        <img src="{{ occasion.icon.url }}" alt="{{ occasion.name }}" class="occasion-chip__img" width="72" height="72" loading="lazy">
+        {% else %}
+        🎁
+        {% endif %}
+      </span>
+      <span class="occasion-chip__label">{{ occasion.name }}</span>
+    </a>
+    {% endfor %}
+    <a href="{% url 'catalog:plp' %}" class="occasion-chip text-decoration-none" role="listitem">
+      <span class="occasion-chip__icon">👀</span>
+      <span class="occasion-chip__label">{% trans "View All" %}</span>
+    </a>
+  </div>
+</section>

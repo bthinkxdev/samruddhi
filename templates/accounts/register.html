@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Register" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card p-4">
+        <h1 class="section-title h4 mb-3">{% trans "Create account" %}</h1>
+        {% if errors %}
+        <div class="alert alert-danger py-2" role="alert">{{ errors }}</div>
+        {% endif %}
+        <form method="post" action="{% url 'accounts:register' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="id_name">{% trans "Full name" %}</label>
+            <input type="text" name="name" id="id_name" class="form-control" required maxlength="150"
+                   value="{{ form.name.value|default:'' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_email">{% trans "Email" %}</label>
+            <input type="email" name="email" id="id_email" class="form-control" required
+                   value="{{ form.email.value|default:'' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_password">{% trans "Password" %}</label>
+            <input type="password" name="password" id="id_password" class="form-control" required minlength="8">
+          </div>
+          <button type="submit" class="btn btn-theme w-100 mb-3">{% trans "Register" %}</button>
+        </form>
+        <p class="small text-muted mb-0 text-center">
+          {% trans "Already have an account?" %}
+          <a href="{% url 'accounts:login-email' %}">{% trans "Login" %}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

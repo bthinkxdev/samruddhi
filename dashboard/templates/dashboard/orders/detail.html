@@ -1,0 +1,262 @@
+{% extends "dashboard/base.html" %}
+{% load dashboard_extras %}
+
+{% block title %}Order {{ order.order_number }}{% endblock %}
+{% block page_title %}Order {{ order.order_number }}{% endblock %}
+{% block breadcrumbs %}
+<p class="mb-0 text-secondary">
+  {% if order.confirmed_at %}
+    Confirmed {{ order.confirmed_at|date:"M d, Y H:i" }}
+  {% else %}
+    Placed {{ order.created_at|date:"M d, Y H:i" }}
+  {% endif %}
+</p>
+{% endblock %}
+{% block page_actions %}
+<a href="{% url 'dashboard:order-invoice' order.pk %}" class="btn btn-outline-secondary me-2" target="_blank"><i class="ti ti-file-invoice me-1"></i>View / Download Invoice</a>
+<a href="{% url 'dashboard:order-list' %}" class="btn btn-light"><i class="ti ti-arrow-left me-1"></i>Back to orders</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+        <h3 class="h5 mb-0">Line Items</h3>
+        <span class="badge {{ order.order_status|order_status_badge }}">{{ order.get_order_status_display }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light"><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr></thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ item.product.name }}</td>
+              <td>{{ item.variant_name|default:"—" }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ item.unit_price|floatformat:2 }}</td>
+              <td>{{ item.quantity|floatformat:0 }} × {{ item.unit_price|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-secondary py-4">No items.</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="4" class="text-end">Subtotal</td><td>{{ order.subtotal|floatformat:2 }}</td></tr>
+            <tr><td colspan="4" class="text-end">Coupon discount</td><td>-{{ order.coupon_discount|floatformat:2 }}</td></tr>
+            <tr><td colspan="4" class="text-end">Delivery</td><td>{{ order.delivery_charge|floatformat:2 }}</td></tr>
+            <tr class="fw-bold"><td colspan="4" class="text-end">Total</td><td>{{ order.total_amount|floatformat:2 }} {% if order.currency %}{{ order.currency.code }}{% endif %}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Status History</h3></div>
+      <ul class="list-group list-group-flush">
+        {% for h in history %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><span class="text-secondary">{{ h.from_status }}</span> <i class="ti ti-arrow-right mx-1"></i> <strong>{{ h.to_status }}</strong>
+            {% if h.note %}<div class="small text-muted">{{ h.note }}</div>{% endif %}
+          </div>
+          <div class="text-end small text-secondary">{{ h.changed_at|date:"M d, H:i" }}<br>{{ h.changed_by|default:"system" }}</div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-secondary py-4">No status changes recorded.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Payments</h3></div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light"><tr><th>Gateway</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
+          <tbody>
+            {% for pay in payments %}
+            <tr>
+              <td>{{ pay.gateway_key }}</td>
+              <td>{{ pay.amount|floatformat:2 }} {{ pay.currency.code }}</td>
+              <td><span class="badge bg-secondary-subtle text-secondary">{{ pay.get_status_display }}</span></td>
+              <td class="small text-muted">{{ pay.external_transaction_id|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-secondary py-4">No payment records.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if order.delhivery_shipment %}
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+        <h3 class="h5 mb-0">Delhivery Logistics</h3>
+        {% with status=order.delhivery_shipment.tracking_status|lower %}
+        {% if status == 'delivered' or status == 'out for delivery' %}
+        <span class="badge bg-success-subtle text-success">{{ order.delhivery_shipment.tracking_status }}</span>
+        {% elif status == 'error' or 'error' in status or status == 'cancelled' or 'rto' in status %}
+        <span class="badge bg-danger-subtle text-danger">{{ order.delhivery_shipment.tracking_status }}</span>
+        {% elif status == 'in transit' or status == 'shipped' or status == 'dispatched' %}
+        <span class="badge bg-primary-subtle text-primary">{{ order.delhivery_shipment.tracking_status }}</span>
+        {% else %}
+        <span class="badge bg-warning-subtle text-warning">{{ order.delhivery_shipment.tracking_status }}</span>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <span class="text-secondary small d-block mb-1">Waybill Number</span>
+            <strong>{{ order.delhivery_shipment.waybill_number|default:"Pending Allocation" }}</strong>
+            {% if order.delhivery_shipment.waybill_number %}
+            <div class="mt-2">
+              <a href="https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="ti ti-external-link me-1"></i>Open Courier Portal</a>
+            </div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 border-start">
+            <span class="text-secondary small d-block mb-1">Current Status</span>
+            <span class="fw-medium">{{ order.delhivery_shipment.tracking_status }}</span>
+          </div>
+          {% if order.delhivery_shipment.error_message %}
+          <div class="col-12">
+            <div class="alert alert-danger bg-danger-subtle text-danger border-danger-subtle small mb-0 mt-2" role="alert">
+              <strong><i class="ti ti-alert-circle me-1"></i>Last Logs/Error:</strong> {{ order.delhivery_shipment.error_message }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Update Tracking ID</h3></div>
+      <div class="card-body p-4">
+        <form method="post" action="{% url 'dashboard:order-tracking-update' order.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Waybill Number</label>
+            <input type="text" name="waybill_number" class="form-control" value="{{ order.delhivery_shipment.waybill_number|default:'' }}" placeholder="Enter Tracking ID">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Save Tracking ID</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Update Status</h3></div>
+      <div class="card-body p-4">
+        {% if allowed_choices %}
+        <form method="post" action="{% url 'dashboard:order-transition' order.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">New status</label>
+            <select name="new_status" class="form-select" required>
+              {% for value, label in allowed_choices %}
+                <option value="{{ value }}" {% if value == order.order_status %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Note (optional)</label>
+            <textarea name="note" rows="2" class="form-control"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Apply transition</button>
+        </form>
+        {% elif order.order_status == "picked_up" or order.order_status == "in_transit" or order.order_status == "out_for_delivery" %}
+        <p class="text-secondary mb-0">Status is <strong>{{ order.get_order_status_display }}</strong> — updates automatically from Delhivery. No manual action available.</p>
+        {% else %}
+        <p class="text-secondary mb-0">This order is in a terminal state ({{ order.get_order_status_display }}). No further transitions are allowed.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if payments %}
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Update Payment</h3></div>
+      <div class="card-body p-4">
+        <form method="post" action="{% url 'dashboard:order-payment-transition' order.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Payment status</label>
+            <select name="new_status" class="form-select" required>
+              {% for value, label in payment_statuses %}
+                <option value="{{ value }}" {% if value == payments.last.status %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Update Payment</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Delivery address</h3></div>
+      <div class="card-body p-4">
+        {% if address_editable %}
+        <form method="post" action="{% url 'dashboard:order-address-update' order.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            {{ address_form.name }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            {{ address_form.email }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Phone</label>
+            {{ address_form.phone }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Address line 1</label>
+            {{ address_form.line1 }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Address line 2</label>
+            {{ address_form.line2 }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">City</label>
+            {{ address_form.city }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">State</label>
+            {{ address_form.state }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Pincode</label>
+            {{ address_form.pincode }}
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Save Address</button>
+        </form>
+        {% else %}
+        <p class="text-secondary small mb-3">This order is {{ order.get_order_status_display }} — the delivery address can no longer be edited.</p>
+        <div class="small">
+          {% for key, value in order.delivery_address_snapshot.items %}
+            {% if key != 'label' %}
+            <div><span class="text-secondary">{{ key }}:</span> {{ value }}</div>
+            {% endif %}
+          {% empty %}<p class="text-secondary mb-0">No snapshot.</p>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if pod %}
+    <div class="card">
+      <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Proof of Delivery</h3></div>
+      <div class="card-body p-4 small">
+        <p class="mb-1">Recipient: {{ pod.recipient_name }}</p>
+        <p class="mb-0">Delivered: {{ pod.delivered_at|date:"M d, Y H:i" }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% load i18n %}
+<section id="newsletter" class="jm-newsletter">
+  <div class="container">
+    <div class="jm-newsletter__card">
+      <div class="jm-newsletter__copy">
+        <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Stay Informed" %}{% endif %}</h2>
+        <p class="section-subtitle mb-0">{% trans "Latest product drops, styling tips, and exclusive activewear offers — no spam." %}</p>
+      </div>
+      <form id="jm-newsletter-form" class="jm-newsletter__form" method="post" action="{% url 'marketing:newsletter-subscribe' %}" novalidate>
+        {% csrf_token %}
+        <label class="visually-hidden" for="jm-newsletter-email">{% trans "Email" %}</label>
+        <input id="jm-newsletter-email" type="text" name="email" class="form-control" placeholder="{{ section_context.placeholder|default:'Email address' }}" aria-label="{% trans 'Email' %}">
+        <button type="submit" class="btn btn-theme">{% trans "Subscribe" %}</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('jm-newsletter-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok && response.status !== 400) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (btn) btn.disabled = false;
+            
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '1060';
+                document.body.appendChild(container);
+            }
+            
+            let bgClass = 'bg-success';
+            if (data.status === 'error' || data.status === 'danger') {
+                bgClass = 'bg-danger';
+            } else if (data.status === 'info') {
+                bgClass = 'bg-success';
+            }
+            
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                  <div class="d-flex">
+                    <div class="toast-body">
+                      ${data.message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                  </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = toastHtml.trim();
+            const toastEl = tempDiv.firstChild;
+            container.appendChild(toastEl);
+            
+            if (window.bootstrap && bootstrap.Toast) {
+                const bsToast = new bootstrap.Toast(toastEl, { autohide: false });
+                bsToast.show();
+            } else {
+                toastEl.classList.add('show');
+            }
+            
+            if (data.status === 'success') {
+                form.reset();
+            }
+        })
+        .catch(error => {
+            if (btn) btn.disabled = false;
+            console.error('Newsletter subscription error:', error);
+        });
+    });
+});
+</script>

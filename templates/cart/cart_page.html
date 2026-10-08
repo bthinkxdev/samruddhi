@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Cart" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container checkout-page jm-page">
+  <h1 class="section-title jm-page-title">{% trans "Cart" %}</h1>
+  {% include "cart/partials/page_body.html" %}
+</div>
+{% endblock %}

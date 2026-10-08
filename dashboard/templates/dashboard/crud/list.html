@@ -1,0 +1,124 @@
+{% extends "dashboard/base.html" %}
+{% load dashboard_extras %}
+
+{% block title %}{{ plural_name }}{% endblock %}
+{% block page_title %}{{ plural_name }}{% endblock %}
+
+{% block page_actions %}
+  {% if can_create %}
+  <a href="{{ create_url }}" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Add {{ singular_name }}</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    {% if searchable %}
+    <form method="get" class="row g-2 align-items-center mb-3">
+      <div class="col-12 col-md-4">
+        <div class="input-group">
+          <input type="text" id="searchInput" name="q" value="{{ search_query }}" class="form-control border-end-0"
+                 placeholder="Search {{ plural_name|lower }}..." />
+          <button type="button" class="input-group-text bg-transparent border-start-0 {% if search_query %}border-end-0{% endif %} text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
+          {% if search_query %}
+          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="document.getElementById('searchInput').value=''; this.form.submit();" title="Clear search"><i class="ti ti-x"></i></button>
+          {% endif %}
+        </div>
+      </div>
+      {% if filter_by_active_status %}
+      <div class="col-6 col-md-auto">
+        <select name="status" class="form-select">
+          <option value="">All statuses</option>
+          <option value="active" {% if current_status == "active" %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if current_status == "inactive" %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      {% endif %}
+      {% if filter_by_featured_status %}
+      <div class="col-6 col-md-auto">
+        <select name="featured" class="form-select">
+          <option value="">All statuses</option>
+          <option value="yes" {% if current_featured == "yes" %}selected{% endif %}>Featured</option>
+          <option value="no" {% if current_featured == "no" %}selected{% endif %}>Not featured</option>
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-6 col-md-auto d-flex align-items-center gap-2">
+        {% if filter_by_active_status or filter_by_featured_status %}
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        {% endif %}
+        {% if search_query or current_status or current_featured %}
+        <a href="?" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+
+    <div class="card table-responsive">
+      <table class="table mb-0 text-nowrap table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+            {% if can_view or can_edit or can_delete %}<th class="text-end">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for obj in objects %}
+          <tr>
+            {% for col in columns %}
+            <td>
+              {% cell_value obj col as value %}
+              {% if col.type == "bool" %}
+                {% if value %}<span class="badge bg-success-subtle text-success">Yes</span>
+                {% else %}<span class="badge bg-secondary-subtle text-secondary">No</span>{% endif %}
+              {% elif col.type == "money" %}
+                {{ value|floatformat:2 }}
+              {% elif col.type == "image" %}
+                {% if value %}<img src="{{ value.url }}" class="avatar avatar-md rounded" alt="" />
+                {% else %}<span class="avatar avatar-md avatar-secondary rounded d-inline-flex"><span class="avatar-initials rounded">–</span></span>{% endif %}
+              {% elif col.type == "badge" %}
+                {% if value == "Approved" or value == "approved" or value == "Active" or value == "active" or value == "Paid" or value == "paid" or value == "Delivered" or value == "delivered" %}
+                  <span class="badge bg-success-subtle text-success">{{ value }}</span>
+                {% elif value == "Pending" or value == "pending" or value == "Processing" or value == "processing" %}
+                  <span class="badge bg-warning-subtle text-warning">{{ value }}</span>
+                {% elif value == "Rejected" or value == "rejected" or value == "Cancelled" or value == "cancelled" or value == "Failed" or value == "failed" %}
+                  <span class="badge bg-danger-subtle text-danger">{{ value }}</span>
+                {% else %}
+                  <span class="badge bg-primary-subtle text-primary">{{ value }}</span>
+                {% endif %}
+              {% elif col.type == "datetime" %}
+                {{ value|date:"M d, Y H:i" }}
+              {% else %}
+                {{ value|default_if_none:"" }}
+              {% endif %}
+            </td>
+            {% endfor %}
+            {% if can_view or can_edit or can_delete %}
+            <td class="text-end">
+              {% if can_view %}
+              <a href="{% row_action_url url_basename 'detail' obj.pk %}" class="btn btn-sm btn-light" title="View"><i class="ti ti-eye"></i></a>
+              {% endif %}
+              {% if can_edit %}
+              <a href="{% row_action_url url_basename 'update' obj.pk %}" class="btn btn-sm btn-light" title="Edit"><i class="ti ti-edit"></i></a>
+              {% endif %}
+              {% if can_delete %}
+              <a href="{% row_action_url url_basename 'delete' obj.pk %}" class="btn btn-sm btn-light text-danger" title="Delete"><i class="ti ti-trash"></i></a>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{{ columns|length|add:1 }}" class="text-center text-secondary py-5">
+              No {{ plural_name|lower }} found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% include "dashboard/partials/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}

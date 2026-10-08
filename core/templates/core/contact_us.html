@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{{ seo_title }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-4">
+  <h1 class="section-title mb-4">
+    {% trans "Contact Us" %}
+  </h1>
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card p-4 h-100">
+        <h6 class="mb-4">
+          {% trans "Send us a message" %}
+        </h6>
+
+        <form method="post" action="{% url 'core:submit-inquiry' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-medium">{% trans "Name" %}</label>
+            {{ form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">{% trans "Email" %}</label>
+            {{ form.email }}
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-medium">{% trans "Message" %}</label>
+            {{ form.message }}
+          </div>
+
+          {% include "shared/image_captcha.html" with scope="contact" field_id="image_captcha_contact" label="Security check" captcha_bust=captcha_bust %}
+
+          <button type="submit" class="btn btn-theme">
+            {% trans "Enquiry" %}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="d-flex flex-column gap-4">
+        <div class="card p-4">
+          <h6 class="mb-3">{% trans "Get in touch" %}</h6>
+          {% include "includes/jm_locations.html" %}
+          <p class="small text-muted mb-0 mt-3">
+            {% trans "Email" %}: <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a>
+          </p>
+        </div>
+
+        <div class="card p-4">
+          <h6 class="mb-3">{% trans "Need quick answers?" %}</h6>
+          <p class="mb-3">{% trans "Check our frequently asked questions for common queries about ordering, delivery,and payments." %}</p>
+          <a href="{% url 'core:faq' %}" class="btn btn-outline-theme">{% trans "Visit FAQ" %}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'common/js/image-captcha.js' %}" defer></script>
+{% endblock %}

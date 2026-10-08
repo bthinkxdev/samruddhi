@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+{% load i18n static storefront_tags %}
+
+{% block extra_head %}
+{{ block.super }}
+<script type="application/ld+json">{{ product_json_ld }}</script>
+{% endblock %}
+
+{% block content %}
+<div class="container page-container product-detail jm-page jm-pdp" data-product-id="{{ product.pk }}">
+  <nav aria-label="breadcrumb" class="jm-breadcrumb mb-2 mb-md-3">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'catalog:plp' %}">{% trans "Shop" %}</a></li>
+      {% with collection=product.collections.all|first %}
+      {% if collection %}<li class="breadcrumb-item"><a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>{% endif %}
+      {% endwith %}
+      <li class="breadcrumb-item active d-none d-md-inline" aria-current="page">{{ product.name|truncatechars:40 }}</li>
+    </ol>
+  </nav>
+
+  <div class="row g-3 g-lg-5 jm-pdp__hero">
+    <div class="col-lg-6">
+      {% include "catalog/partials/pdp_gallery.html" %}
+    </div>
+
+    <div class="col-lg-6 jm-pdp-buybox pdp-info">
+      <p class="jm-pdp-buybox__meta pdp-meta">
+        {% with collection=product.collections.all|first %}{% if collection %}{{ collection.name }}{% endif %}{% endwith %}{% if product.brand %}{% if product.collections.all %} · {% endif %}{{ product.brand.name }}{% endif %}
+      </p>
+      <h1 class="jm-pdp-buybox__title">{{ product.name }}</h1>
+
+      <div class="jm-pdp-buybox__price-row">
+        <p class="pdp-price jm-pdp-buybox__price" id="pdp-price">
+          {% if price_data.is_flash_sale == "true" %}
+          <span class="was" id="pdp-price-original">{% money_label price_data.original_price display_currency %}</span>
+          {% elif price_data.has_mrp_discount == "true" %}
+          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px;">{% money_label price_data.mrp display_currency %}</span>
+          {% else %}
+          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px; display: none;"></span>
+          {% endif %}
+          <span id="pdp-price-value">{% money_label price_data.price display_currency %}</span>
+        </p>
+        <p class="jm-pdp-buybox__stock {% if not price_data.is_in_stock %}is-out{% elif price_data.stock_quantity <= price_data.low_stock_threshold %}is-low{% else %}is-in{% endif %}"
+          id="pdp-stock-text">
+          {% if not price_data.is_in_stock %}
+          {% trans "Out of stock" %}
+          {% elif price_data.stock_quantity <= price_data.low_stock_threshold %}
+          Only {{ price_data.stock_quantity }} left
+          {% else %}
+          {% trans "In stock" %}
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="jm-pdp-buybox__options">
+
+        {% if product.variant_list %}
+        <div class="jm-pdp-field mb-3">
+          <div class="d-flex justify-content-between align-items-end mb-2">
+            <label class="jm-pdp-field__label mb-0">{% trans "Size" %}</label>
+            {% if product.size_chart and product.size_chart.is_active %}
+            <a href="#" data-bs-toggle="modal" data-bs-target="#sizeGuideModal" class="text-decoration-none text-dark small" style="font-weight: 500; text-underline-offset: 4px; text-decoration: underline !important;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-grid me-1" viewBox="0 0 16 16" style="margin-top: -2px;">
+                <path d="M5 1v8H1V1h4zM1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1zm13 2v5H9V2h5zM9 1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9zM5 11v4H1v-4h4zM1 10a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H1zm13 2v2H9v-2h5zM9 11a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9z"/>
+              </svg>
+              {% trans "Size Guide" %}
+            </a>
+            {% endif %}
+          </div>
+          <div class="d-flex flex-wrap gap-2" id="variant-select-group"
+            data-price-url="{% url 'catalog:variant-price' product_id=product.pk %}"
+            data-currency-symbol="{{ display_currency.symbol }}">
+            {% for v in product.variant_list %}
+            <input type="radio" class="btn-check variant-radio" name="variant_option" id="variant_{{ v.pk }}"
+              value="{{ v.pk }}" autocomplete="off" {% if v.pk == selected_variant_id or not selected_variant_id and forloop.first %}checked{% endif %}>
+            <label class="btn btn-outline-dark rounded-pill px-4 position-relative overflow-hidden"
+              for="variant_{{ v.pk }}" {% if v.stock_quantity <= 0 %}style="color: #adb5bd; border-color: #dee2e6;" {% endif %}>
+              {{ v.name }}
+              {% if v.stock_quantity <= 0 %} <span
+                style="position: absolute; width: 150%; height: 1px; background: currentColor; top: 50%; left: -25%; transform: rotate(-20deg); opacity: 0.5;">
+                </span>
+                {% endif %}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+
+      </div>
+
+      <div id="purchase-actions-wrap">
+        <div id="purchase-actions" class="jm-pdp-buybox__purchase" hx-get="{{ request.path }}"
+          hx-select="#purchase-actions" hx-swap="outerHTML" hx-include=".pdp-variant-id-input"
+          hx-trigger="pageshow from:window, cartItemAdded from:body, cartUpdated from:body">
+
+          <div id="pdp-stock-error-msg" class="text-danger small mb-2 d-none"></div>
+
+          <div id="pdp-add-to-cart-group" class="jm-pdp-buybox__row {% if is_in_cart %}d-none{% endif %}">
+            <div class="qty-stepper jm-pdp-qty" aria-label="{% trans 'Quantity' %}" {% if not price_data.is_in_stock %}style="opacity: 0.5;" {% endif %}>
+              <button class="qty-stepper__btn" type="button"
+                onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(-1);"
+                aria-label="{% trans 'Decrease quantity' %}">&minus;</button>
+              <input type="number" id="pdp-qty" class="qty-stepper__value pdp-qty-input"
+                data-max-stock="{{ price_data.stock_quantity|default_if_none:product.stock_quantity }}"
+                value="1" min="1" readonly aria-label="{% trans 'Quantity' %}">
+              <button class="qty-stepper__btn" type="button"
+                onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(1);"
+                aria-label="{% trans 'Increase quantity' %}">&plus;</button>
+            </div>
+
+            <form id="buy-form" method="post" action="{% url 'cart:add' %}" class="jm-pdp-buybox__atc flex-grow-1"
+              hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ product.pk }}">
+              <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
+              <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
+              <button type="{% if price_data.is_in_stock %}submit{% else %}button{% endif %}"
+                class="btn btn-outline-theme w-100 jm-pdp-btn {% if not price_data.is_in_stock %}disabled{% endif %}" {% if not price_data.is_in_stock %}style="cursor: not-allowed; opacity: 0.6; pointer-events: auto;"
+                onclick="event.preventDefault(); return false;" {% endif %}>
+                {% if price_data.is_in_stock %}{% trans "Add to Cart" %}{% else %}{% trans "Sold out" %}{% endif %}
+              </button>
+            </form>
+
+            <form method="post" action="{% url 'cart:wishlist-toggle' %}" class="jm-pdp-wish"
+              hx-post="{% url 'cart:wishlist-toggle' %}" hx-swap="none">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ product.pk }}">
+              <button type="submit" class="jm-pdp-wish__btn jm-wish-btn {% if is_in_wishlist %}is-active{% endif %}"
+                aria-label="{% trans 'Wishlist' %}" aria-pressed="{% if is_in_wishlist %}true{% else %}false{% endif %}"
+                data-jm-wish-btn data-product-id="{{ product.pk }}">
+                <svg width="20" height="20" viewBox="0 0 24 24"
+                  fill="{% if is_in_wishlist %}currentColor{% else %}none{% endif %}" stroke="currentColor"
+                  stroke-width="2" aria-hidden="true">
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
+            </form>
+          </div>
+
+          <div id="pdp-view-cart-group" class="jm-pdp-buybox__row {% if not is_in_cart %}d-none{% endif %}">
+            <a href="{% url 'cart:page' %}" class="btn btn-outline-theme flex-grow-1 jm-pdp-btn">
+              {% trans "View Cart" %}
+            </a>
+            <form method="post" action="{% url 'cart:wishlist-toggle' %}" class="jm-pdp-wish"
+              hx-post="{% url 'cart:wishlist-toggle' %}" hx-swap="none">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ product.pk }}">
+              <button type="submit" class="jm-pdp-wish__btn jm-wish-btn {% if is_in_wishlist %}is-active{% endif %}"
+                aria-label="{% trans 'Wishlist' %}" aria-pressed="{% if is_in_wishlist %}true{% else %}false{% endif %}"
+                data-jm-wish-btn data-product-id="{{ product.pk }}">
+                <svg width="20" height="20" viewBox="0 0 24 24"
+                  fill="{% if is_in_wishlist %}currentColor{% else %}none{% endif %}" stroke="currentColor"
+                  stroke-width="2" aria-hidden="true">
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
+            </form>
+          </div>
+
+          <div class="jm-pdp-buybox__cta-row {% if not price_data.is_in_stock %}d-none{% endif %}">
+            <form id="buy-now-form" method="post" action="{% url 'cart:add' %}" class="flex-grow-1"
+              hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ product.pk }}">
+              <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
+              <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
+              <button type="submit" name="buy_now" value="true"
+                class="btn btn-theme w-100 jm-pdp-btn jm-pdp-btn--primary" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>
+                {% trans "Buy Now" %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Mobile sticky CTA — single horizontal row; shown only when buy box leaves viewport #}
+  <div class="jm-pdp-sticky jm-pdp-sticky--pill" aria-hidden="true">
+    <div class="d-flex align-items-center gap-2 gap-md-3" style="flex: 1 1 auto; min-width: 0;">
+      {% if product.images.exists %}
+      <img src="{{ product.images.first.image.url }}" alt="" class="rounded"
+        style="width: 32px; height: 42px; object-fit: cover; flex: 0 0 auto;">
+      {% endif %}
+      <div class="d-flex flex-column text-start" style="line-height: 1.2; flex: 1 1 auto; min-width: 0;">
+        <span class="small fw-bold text-truncate text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ product.name }}</span>
+        <span class="small text-muted text-truncate" id="pdp-sticky-variant-name" style="font-size: 0.75rem;">
+          {% if target_variant %}{{ target_variant.name }}{% elif product.variant_list %}{{ product.variant_list.0.name }}{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 gap-lg-3 ms-auto" style="flex: 0 0 auto;">
+      <div class="jm-pdp-sticky__price d-none d-sm-block" id="pdp-sticky-price"
+        style="font-size: 0.85rem; font-weight: 500;">{% money_label price_data.price display_currency %}</div>
+      <div class="jm-pdp-sticky__actions" id="pdp-sticky-actions-group" style="flex: 0 0 auto;">
+        <form id="sticky-buy-form" method="post" action="{% url 'cart:add' %}"
+          class="jm-pdp-sticky__atc {% if is_in_cart %}d-none{% endif %}" hx-post="{% url 'cart:add' %}"
+          hx-target="#cart-drawer-body" hx-swap="innerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.pk }}">
+          <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
+          <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
+          <button type="{% if price_data.is_in_stock %}submit{% else %}button{% endif %}"
+            class="btn jm-pdp-sticky__btn {% if not price_data.is_in_stock %}disabled{% endif %}" {% if not price_data.is_in_stock %}style="cursor: not-allowed; opacity: 0.6; pointer-events: auto;"
+            onclick="event.preventDefault(); return false;" {% endif %}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag me-2"
+              viewBox="0 0 16 16">
+              <path
+                d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" />
+            </svg>
+            <span class="btn-text">{% if price_data.is_in_stock %}{% trans "Add to cart" %}{% else %}{% trans "Sold out" %}{% endif %}</span>
+          </button>
+        </form>
+
+        <div id="pdp-sticky-view-cart-btn" class="jm-pdp-sticky__atc {% if not is_in_cart %}d-none{% endif %}">
+          <a href="{% url 'cart:page' %}" class="btn btn-outline-theme jm-pdp-sticky__btn">{% trans "Cart" %}</a>
+        </div>
+
+        <form id="sticky-buy-now-form" method="post" action="{% url 'cart:add' %}"
+          class="jm-pdp-sticky__buy {% if not price_data.is_in_stock %}d-none{% endif %}" hx-post="{% url 'cart:add' %}"
+          hx-target="#cart-drawer-body" hx-swap="innerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.pk }}">
+          <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
+          <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
+          <button type="submit" name="buy_now" value="true" class="btn btn-theme jm-pdp-sticky__btn" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>{% trans "Buy Now" %}</button>
+        </form>
+      </div>
+
+    </div> <!-- close ms-auto -->
+  </div> <!-- close jm-pdp-sticky -->
+
+  {% if product.specifications.all %}
+  <section class="jm-pdp-section mt-4 mt-lg-5 pt-4 border-top">
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="accordion" id="productSpecsAccordion">
+          {% for spec in product.specifications.all %}
+          <div class="accordion-item mb-2 border rounded-3 overflow-hidden" style="background-color: #fafafa;">
+            <h2 class="accordion-header" id="headingSpec{{ forloop.counter }}">
+              <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseSpec{{ forloop.counter }}" aria-expanded="false"
+                aria-controls="collapseSpec{{ forloop.counter }}"
+                style="background-color: transparent; box-shadow: none;">
+                {{ spec.name }}
+              </button>
+            </h2>
+            <div id="collapseSpec{{ forloop.counter }}" class="accordion-collapse collapse"
+              aria-labelledby="headingSpec{{ forloop.counter }}">
+              <div class="accordion-body text-muted pt-0 pb-3">
+                {{ spec.value|linebreaksbr }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="jm-pdp-section mt-4 mt-lg-5 pt-4 border-top" id="reviews">
+    <div
+      class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
+      <h2 class="section-title h5 mb-0">{% trans "Reviews" %}</h2>
+      {% if has_delivered_order %}
+      <p class="text-muted small mb-0">
+        {% trans "You can review this product from your" %}
+        <a href="{% url 'orders:list' %}" class="text-decoration-underline">{% trans "Order History" %}</a>.
+      </p>
+      {% endif %}
+    </div>
+
+    {% for review in product.approved_reviews %}
+    <div class="jm-pdp-review">
+      <div class="jm-pdp-review__head">
+        <div>
+          <strong>{{ review.title }}</strong>
+          <span class="jm-pdp-review__meta">
+            {{ review.customer.user.get_full_name|default:review.customer.user.username|default:"Customer" }}
+            · {{ review.created_at|date:"M d, Y" }}
+          </span>
+        </div>
+        <span class="jm-pdp-review__rating">★ {{ review.rating }}</span>
+      </div>
+      <p class="jm-pdp-review__body">{{ review.body }}</p>
+    </div>
+    {% empty %}
+    <p class="text-muted small mb-0">{% trans "No reviews yet." %}</p>
+    {% endfor %}
+  </section>
+
+  {% if related_products %}
+  <section class="jm-pdp-section mt-4 mt-lg-5 pt-4 border-top">
+    <h2 class="section-title h5 mb-3">{% trans "Related Products" %}</h2>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4" role="list">
+      {% for related_product in related_products %}
+      <div class="col" role="listitem">
+        {% include "catalog/partials/product_card.html" with product=related_product %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+  {% if product.size_chart and product.size_chart.is_active %}
+  <div class="modal fade" id="sizeGuideModal" tabindex="-1" aria-labelledby="sizeGuideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fs-4 fw-bold" id="sizeGuideModalLabel">{% trans "Size Guide" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <style>
+            .size-chart-content {
+              font-size: 0.95rem;
+              color: #334155;
+            }
+            .size-chart-content table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              margin-bottom: 1.5rem;
+              background-color: #fff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+              border: 1px solid #e2e8f0;
+            }
+            .size-chart-content table th,
+            .size-chart-content table td {
+              padding: 14px 16px;
+              text-align: center;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .size-chart-content table td:not(:last-child),
+            .size-chart-content table th:not(:last-child) {
+              border-right: 1px solid #f1f5f9;
+            }
+            .size-chart-content table th,
+            .size-chart-content table tr:first-child td {
+              background-color: #f8fafc;
+              font-weight: 600;
+              text-transform: uppercase;
+              font-size: 0.75rem;
+              letter-spacing: 0.05em;
+              color: #475569;
+            }
+            .size-chart-content table tr:last-child td {
+              border-bottom: none;
+            }
+            .size-chart-content table tbody tr {
+              transition: background-color 0.15s ease;
+            }
+            .size-chart-content table tbody tr:hover {
+              background-color: #f8fafc;
+            }
+          </style>
+
+          {% if product.size_chart.image %}
+            <div class="text-center mb-4">
+              <img src="{{ product.size_chart.image.url }}" alt="{% trans 'Size Guide' %}" class="img-fluid rounded w-100" style="max-height: 70vh; object-fit: contain;">
+            </div>
+          {% endif %}
+          
+          {% if product.size_chart.content_html %}
+            <div class="size-chart-content table-responsive">
+              {{ product.size_chart.content_html|safe }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+
+
+    function syncStickyState() {
+      const addGroup = document.getElementById("pdp-add-to-cart-group");
+      const stickyBuyForm = document.getElementById("sticky-buy-form");
+      const stickyViewCartBtn = document.getElementById("pdp-sticky-view-cart-btn");
+
+      if (addGroup && stickyBuyForm && stickyViewCartBtn) {
+        const inCart = addGroup.classList.contains("d-none");
+        if (inCart) {
+          stickyBuyForm.classList.add("d-none");
+          stickyViewCartBtn.classList.remove("d-none");
+        } else {
+          stickyBuyForm.classList.remove("d-none");
+          stickyViewCartBtn.classList.add("d-none");
+        }
+      }
+    }
+
+    document.body.addEventListener("htmx:afterSettle", function (e) {
+      if (e.target.id === "purchase-actions") {
+        syncStickyState();
+      }
+    });
+
+    syncStickyState();
+
+    const purchaseActionsWrap = document.getElementById("purchase-actions-wrap");
+    const stickyBar = document.querySelector(".jm-pdp-sticky");
+    if (purchaseActionsWrap && stickyBar) {
+      const observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          const show = !entry.isIntersecting;
+          stickyBar.classList.toggle("is-visible", show);
+          stickyBar.setAttribute("aria-hidden", show ? "false" : "true");
+          document.body.classList.toggle("jm-pdp-sticky-open", show);
+        });
+      }, { root: null, threshold: 0, rootMargin: "0px 0px -40px 0px" });
+      observer.observe(purchaseActionsWrap);
+    }
+  });
+
+  document.addEventListener("submit", function (e) {
+    const elt = e.target;
+    if (elt && elt.tagName === "FORM" && ["buy-form", "buy-now-form", "sticky-buy-form", "sticky-buy-now-form"].includes(elt.id)) {
+      const qtyInput = elt.querySelector(".pdp-qty-input");
+      if (qtyInput) {
+        const qty = parseInt(qtyInput.value, 10);
+        const maxStock = parseInt("{{ product.stock_quantity|default:0 }}", 10);
+        if (maxStock > 0 && qty > maxStock) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          let toastContainer = document.querySelector(".toast-container");
+          if (!toastContainer) {
+            toastContainer = document.createElement("div");
+            toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
+            toastContainer.style.zIndex = "1060";
+            document.body.appendChild(toastContainer);
+          }
+
+          const toastEl = document.createElement("div");
+          toastEl.className = "toast align-items-center text-white bg-danger border-0";
+          toastEl.setAttribute("role", "alert");
+          toastEl.setAttribute("aria-live", "assertive");
+          toastEl.setAttribute("aria-atomic", "true");
+
+          const extraMessage = '{% trans "Please contact support for larger orders." %}';
+
+          toastEl.innerHTML =
+            '<div class="d-flex"><div class="toast-body">{% trans "Sorry, only" %} ' +
+            maxStock +
+            ' {% trans "items are currently in stock." %}<br><small>' +
+            extraMessage +
+            '</small></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+
+          toastContainer.appendChild(toastEl);
+          const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+          toast.show();
+          toastEl.addEventListener("hidden.bs.toast", function () {
+            toastEl.remove();
+          });
+        }
+      }
+    }
+  }, true);
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pdp.js' %}?v=3"></script>
+{% endblock %}

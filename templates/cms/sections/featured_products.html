@@ -1,0 +1,30 @@
+{% load i18n %}
+<section class="jm-section jm-featured">
+  <div class="container">
+    <div class="section-header jm-section-header">
+      <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Featured Products" %}{% endif %}</h2>
+      <a href="{% url 'catalog:plp' %}?featured=1" class="section-cta">{% trans "View All" %}</a>
+    </div>
+    <div class="jm-featured__layout">
+      <div class="jm-featured__rail">
+        <button type="button" class="jm-rail-arrow jm-rail-arrow--prev" data-rail-scroll="prev" aria-label="{% trans 'Previous products' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="product-rail-scroll jm-featured__track jm-product-rail__track" role="list" data-rail-track>
+          {% for product in section_context.products %}
+          <div class="product-rail-item" role="listitem">
+            {% include "catalog/partials/product_card.html" with product=product force_badge='featured' %}
+          </div>
+          {% empty %}
+          <p class="text-muted small px-2">{% trans "No products available." %}</p>
+          {% endfor %}
+        </div>
+        <button type="button" class="jm-rail-arrow jm-rail-arrow--next" data-rail-scroll="next" aria-label="{% trans 'Next products' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      {% include "cms/sections/small-banner.html" %}
+    </div>
+  </div>
+</section>

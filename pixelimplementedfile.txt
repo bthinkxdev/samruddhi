@@ -1,0 +1,8 @@
+Risk	File	What changed
+High	cart/views.py	Add to cart now builds an event, including the buy-now redirect path. Remove (drawer and page) was refactored into one helper. Quantity +/- now reads the previous quantity first. Wishlist toggle does one extra product lookup. A redundant local import was removed.
+High	checkout/views.py	The checkout page context has a new key and an is_buy_now variable. Place-order saves tracking onto the order after place_order. The Razorpay pay page and callback failure paths changed. The confirmation view changed.
+High	orders/services.py and checkout/services.py	transition_order_status now flags the first time an order becomes a sale and dispatches a server-side event. place_order does the same for COD. Both are wrapped so errors shouldn't propagate.
+Medium	templates/base.html, core/context_processors.py, core/templatetags/storefront_tags.py	These run on every storefront page. The template tag only renders when the pixel is enabled.
+Medium	templates/checkout/razorpay_pay.html	New JS helper and event calls added inside the existing Razorpay handlers.
+Low	catalog/views.py (PLP, PDP), cms/views.py, accounts/views.py (register, login), marketing/views.py (newsletter), core/views.py (contact)	One extra context key or one queue_event call each.
+Low	config/settings/base.py, core/tasks.py, .env.example	New settings and a new Celery task.

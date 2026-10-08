@@ -1,0 +1,56 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Payments{% endblock %}
+{% block page_title %}Payments{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <form method="get" class="row g-2 align-items-center mb-3">
+      <div class="col-12 col-md-4">
+        <div class="input-group">
+          <input type="text" id="searchInput" name="q" value="{{ search_query }}" class="form-control border-end-0"
+                 placeholder="Search order number..." />
+          <button type="button" class="input-group-text bg-transparent border-start-0 {% if search_query %}border-end-0{% endif %} text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
+          {% if search_query %}
+          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="document.getElementById('searchInput').value=''; this.form.submit();" title="Clear search"><i class="ti ti-x"></i></button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-6 col-md-auto">
+        <select name="status" class="form-select">
+          <option value="">All statuses</option>
+          {% for value, label in statuses %}
+          <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-auto d-flex align-items-center gap-2">
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        {% if search_query or current_status %}
+        <a href="{% url 'dashboard:payment-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+
+    <div class="card table-responsive">
+      <table class="table mb-0 text-nowrap table-hover align-middle">
+        <thead class="table-light"><tr><th>Order</th><th>Gateway</th><th>Amount</th><th>Status</th><th>Reference</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for pay in objects %}
+          <tr>
+            <td><a href="{% url 'dashboard:order-detail' pay.order_id %}">{{ pay.order.order_number }}</a></td>
+            <td>{{ pay.gateway_key }}</td>
+            <td>{{ pay.amount|floatformat:2 }} {{ pay.currency.code }}</td>
+            <td><span class="badge bg-secondary-subtle text-secondary">{{ pay.get_status_display }}</span></td>
+            <td class="small text-muted">{{ pay.external_transaction_id|default:"—" }}</td>
+            <td>{{ pay.created_at|date:"M d, Y H:i" }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="6" class="text-center text-secondary py-5">No payment transactions.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "dashboard/partials/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}

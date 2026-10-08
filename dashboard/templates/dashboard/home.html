@@ -1,0 +1,205 @@
+{% extends "dashboard/base.html" %}
+{% load static dashboard_extras %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumbs %}<p class="mb-0 text-secondary">Overview of store performance</p>{% endblock %}
+
+{% block content %}
+{{ sales_series|json_script:"sales-chart-data" }}
+{{ customer_split|json_script:"customer-chart-data" }}
+
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi-tile tile-rose">
+      <div class="kpi-icon"><i class="ti ti-cash"></i></div>
+      <p class="kpi-label">Today's Revenue</p>
+      <h3 class="kpi-value">{{ currency_symbol }} {{ summary.today_revenue|floatformat:0 }}</h3>
+      {% if revenue_delta is not None %}
+      <span class="trend {% if revenue_delta >= 0 %}trend-up{% else %}trend-down{% endif %}">
+        <i class="ti {% if revenue_delta >= 0 %}ti-trending-up{% else %}ti-trending-down{% endif %}"></i>
+        {{ revenue_delta }}% vs yesterday
+      </span>
+      {% else %}<span class="kpi-sub">vs yesterday</span>{% endif %}
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi-tile tile-green">
+      <div class="kpi-icon"><i class="ti ti-shopping-cart"></i></div>
+      <p class="kpi-label">Today's Orders</p>
+      <h3 class="kpi-value">{{ summary.today_order_count }}</h3>
+      {% if order_delta is not None %}
+      <span class="trend {% if order_delta >= 0 %}trend-up{% else %}trend-down{% endif %}">
+        <i class="ti {% if order_delta >= 0 %}ti-trending-up{% else %}ti-trending-down{% endif %}"></i>
+        {{ order_delta }}% vs yesterday
+      </span>
+      {% else %}<span class="kpi-sub">vs yesterday</span>{% endif %}
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi-tile tile-blue">
+      <div class="kpi-icon"><i class="ti ti-users"></i></div>
+      <p class="kpi-label">Customers</p>
+      <h3 class="kpi-value">{{ counts.customer_count }}</h3>
+      <span class="kpi-sub">{{ counts.order_count }} orders all-time</span>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi-tile tile-amber">
+      <div class="kpi-icon"><i class="ti ti-alert-triangle"></i></div>
+      <p class="kpi-label">Low Stock</p>
+      <h3 class="kpi-value">{{ summary.low_stock_alert_count }}</h3>
+      <span class="kpi-sub">{{ counts.product_count }} active products</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4 col-md-6">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="stat-value">{{ currency_symbol }} {{ total_revenue|floatformat:0 }}</h3>
+          <p class="stat-label">Total Revenue</p>
+          <a href="{% url 'dashboard:reports' %}" class="stat-link">View reports <i class="ti ti-arrow-right"></i></a>
+        </div>
+        <span class="stat-icon icon-rose"><i class="ti ti-report-money"></i></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="stat-value">{{ total_orders }}</h3>
+          <p class="stat-label">Total Orders</p>
+          <a href="{% url 'dashboard:order-list' %}" class="stat-link">View orders <i class="ti ti-arrow-right"></i></a>
+        </div>
+        <span class="stat-icon icon-blue"><i class="ti ti-package"></i></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="stat-value">{{ currency_symbol }} {{ avg_order_value|floatformat:0 }}</h3>
+          <p class="stat-label">Avg. Order Value</p>
+          <a href="{% url 'dashboard:reports' %}" class="stat-link">View reports <i class="ti ti-arrow-right"></i></a>
+        </div>
+        <span class="stat-icon icon-amber"><i class="ti ti-receipt-2"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-8">
+    <div class="card h-100">
+      <div class="card-header panel-header">
+        <div>
+          <h3 class="panel-title">Sales Overview</h3>
+          <p class="panel-sub">Revenue &amp; orders · last 14 days</p>
+        </div>
+      </div>
+      <div class="card-body pt-2"><div id="salesChart"></div></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header panel-header">
+        <div>
+          <h3 class="panel-title">Customers Overview</h3>
+          <p class="panel-sub">New vs returning</p>
+        </div>
+      </div>
+      <div class="card-body text-center">
+        <div id="customerChart"></div>
+        <div class="row overview-stats mt-3">
+          <div class="col-4"><h4>{{ counts.product_count }}</h4><span>Products</span></div>
+          <div class="col-4"><h4>{{ counts.customer_count }}</h4><span>Customers</span></div>
+          <div class="col-4"><h4>{{ counts.order_count }}</h4><span>Orders</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header panel-header">
+        <h4 class="panel-title">Top Selling Products</h4>
+        <a href="{% url 'dashboard:product-list' %}?status=top" class="panel-link">View all</a>
+      </div>
+      <div class="card-body p-0">
+        {% for p in top_products %}
+        <div class="list-row">
+          {% if p.image %}<img src="{{ p.image }}" class="thumb" alt="">{% else %}<span class="thumb thumb-fallback">{{ p.name|first|upper }}</span>{% endif %}
+          <div class="list-main">
+            <p class="list-title">{{ p.name }}</p>
+            <p class="list-meta">{{ currency_symbol }} {{ p.revenue|floatformat:0 }} · {{ p.units }} sold</p>
+          </div>
+          <span class="share-badge">{{ p.share }}%</span>
+        </div>
+        {% empty %}
+        <p class="empty-state">No sales data yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header panel-header">
+        <h4 class="panel-title">Low Stock Products</h4>
+        <a href="{% url 'dashboard:product-list' %}?status=low" class="panel-link">View all</a>
+      </div>
+      <div class="card-body p-0">
+        {% for prod in low_stock %}
+        <div class="list-row">
+          {% if prod.image %}<img src="{{ prod.image }}" class="thumb" alt="">{% else %}<span class="thumb thumb-fallback">{{ prod.name|first|upper }}</span>{% endif %}
+          <div class="list-main">
+            <p class="list-title">{{ prod.name }}</p>
+            <p class="list-meta">SKU: {{ prod.sku }}</p>
+          </div>
+          <div class="text-end">
+            <span class="stock-count">{{ prod.stock|stringformat:"02d" }}</span>
+            <span class="stock-label">in stock</span>
+          </div>
+        </div>
+        {% empty %}
+        <p class="empty-state">All products well stocked</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header panel-header">
+        <h4 class="panel-title">Recent Orders</h4>
+        <a href="{% url 'dashboard:order-list' %}" class="panel-link">View all</a>
+      </div>
+      <div class="card-body p-0">
+        {% for order in recent_orders %}
+        <div class="list-row">
+          <span class="thumb thumb-fallback">{{ order.customer_profile|default:"G"|stringformat:"s"|first|upper }}</span>
+          <div class="list-main">
+            <a href="{% url 'dashboard:order-detail' order.pk %}" class="list-title link">{{ order.order_number }}</a>
+            <p class="list-meta">{{ order.customer_profile|default:"Guest" }} · {{ currency_symbol }} {{ order.total_amount|floatformat:0 }}</p>
+          </div>
+          <span class="pill {{ order.order_status|status_pill }}">{{ order.get_order_status_display }}</span>
+        </div>
+        {% empty %}
+        <p class="empty-state">No orders yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

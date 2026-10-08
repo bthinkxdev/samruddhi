@@ -1,0 +1,92 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{% if form_mode == "edit" %}Edit{% else %}Add{% endif %} {{ singular_name }}{% endblock %}
+{% block page_title %}{% if form_mode == "edit" %}Edit{% else %}Add{% endif %} {{ singular_name }}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+  <div class="row g-3">
+    <div class="col-12 col-xl-8">
+      <div class="card mb-3">
+        <div class="card-header panel-header"><h3 class="panel-title">Collection details</h3></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.name %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.slug %}</div>
+            <div class="col-12">{% include "dashboard/partials/_field.html" with field=form.description %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.parent %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.display_order %}</div>
+            <div class="col-12">{% include "dashboard/partials/_field.html" with field=form.is_active %}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header panel-header"><h3 class="panel-title">Images</h3></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.image %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.banner_image %}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header panel-header">
+          <div>
+            <h3 class="panel-title">Products</h3>
+            <p class="panel-sub">Search by name or SKU and add products to this collection</p>
+          </div>
+          <span class="badge bg-primary-subtle text-primary" id="collection-product-count">0</span>
+        </div>
+        <div class="card-body" id="collection-products"
+          data-search-url="{% url 'dashboard:collection-product-search' %}">
+          <div class="position-relative mb-3">
+            <input type="search" class="form-control" id="collection-product-search"
+              placeholder="Search products to add…" autocomplete="off" />
+            <div class="list-group position-absolute w-100 shadow-sm collection-product-results" id="collection-product-results" hidden></div>
+          </div>
+          <ul class="list-group" id="collection-product-list"></ul>
+          <p class="text-secondary small mb-0 mt-2" id="collection-product-empty">No products in this collection yet.</p>
+          <div id="collection-product-inputs"></div>
+          {% for error in form.products.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+      <div class="card mb-3">
+        <div class="card-header panel-header"><h3 class="panel-title">Home page</h3></div>
+        <div class="card-body">
+          {% include "dashboard/partials/_field.html" with field=form.show_on_homepage %}
+          <div id="homepage-limit-wrap">
+            {% include "dashboard/partials/_field.html" with field=form.homepage_product_limit %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header panel-header"><h3 class="panel-title">Search engine listing</h3></div>
+        <div class="card-body">
+          {% include "dashboard/partials/_field.html" with field=form.meta_title %}
+          {% include "dashboard/partials/_field.html" with field=form.meta_description %}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{{ cancel_url }}" class="btn btn-light">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{{ selected_products|json_script:"collection-selected-products" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/collection-form.js' %}"></script>
+{% endblock %}

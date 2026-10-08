@@ -1,0 +1,178 @@
+{% extends "dashboard/base.html" %}
+{% load dashboard_extras %}
+
+{% block title %}Orders{% endblock %}
+{% block page_title %}Orders{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if current_view == 'orders' %}active{% endif %}" href="{% url 'dashboard:order-list' %}">Orders</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if current_view == 'abandoned' %}active{% endif %}" href="{% url 'dashboard:order-list' %}?view=abandoned">
+      Abandoned Checkouts
+      {% if abandoned_count %}<span class="badge bg-secondary-subtle text-secondary ms-1">{{ abandoned_count }}</span>{% endif %}
+    </a>
+  </li>
+</ul>
+{% include "dashboard/partials/_active_filters.html" %}
+<div class="row">
+  <div class="col-12">
+    <form method="get" class="row g-2 align-items-center mb-3">
+      {% if current_view == "abandoned" %}<input type="hidden" name="view" value="abandoned">{% endif %}
+      <div class="col-12 col-md-4">
+        <div class="input-group">
+          <input type="text" id="searchInput" name="q" value="{{ search_query }}" class="form-control border-end-0"
+            placeholder="Search order #, customer, phone..." />
+          <button type="button" class="input-group-text bg-transparent border-start-0 {% if search_query %}border-end-0{% endif %} text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
+          {% if search_query %}
+          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="document.getElementById('searchInput').value=''; this.form.submit();" title="Clear search"><i class="ti ti-x"></i></button>
+          {% endif %}
+        </div>
+      </div>
+      {% if current_view == "orders" %}
+      <div class="col-6 col-md-auto">
+        <select name="status" class="form-select">
+          <option value="">All order statuses</option>
+          {% for value, label in statuses %}
+          <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-6 col-md-auto">
+        <select name="payment_status" class="form-select">
+          <option value="">All payment statuses</option>
+          {% for value, label in payment_statuses %}
+          <option value="{{ value }}" {% if value == current_payment_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        {% if current_status or current_payment_status %}
+        <a href="{% url 'dashboard:order-list' %}{% if current_view == 'abandoned' %}?view=abandoned{% endif %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
+        {% endif %}
+      </div>
+      <div class="col-12 col-md-auto ms-md-auto d-flex gap-2 justify-content-start justify-content-md-end" id="bulk-action-buttons">
+        <button type="submit" form="bulk-print-form" class="btn btn-primary flex-fill flex-md-grow-0"><i class="ti ti-printer"></i> Bulk Print</button>
+        <button type="button" id="clear-selection-btn" class="btn btn-outline-secondary flex-fill flex-md-grow-0 d-none"><i class="ti ti-x"></i> Clear</button>
+      </div>
+    </form>
+
+    <form id="bulk-print-form" method="post" action="{% url 'dashboard:order-bulk-invoice' %}" target="_blank">
+      {% csrf_token %}
+      <div class="card table-responsive">
+        <table class="table mb-0 text-nowrap table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="select-all-orders"></th>
+              <th>Order #</th><th>Customer</th><th>Status</th><th>Payment</th><th>Total</th><th>Order Date</th><th class="text-center">Invoice</th><th class="text-end">Actions</th>
+            </tr>
+          </thead>
+        <tbody>
+          {% for order in objects %}
+          <tr>
+            <td><input type="checkbox" class="form-check-input order-checkbox" name="order_ids" value="{{ order.pk }}"></td>
+            <td><a href="{% url 'dashboard:order-detail' order.pk %}">{{ order.order_number }}</a></td>
+            <td>
+              {{ order.customer_display_name }}
+              {% if order.is_guest_order %}
+              <span class="badge bg-secondary-subtle text-secondary">Guest</span>
+              {% else %}
+              <span class="badge bg-success-subtle text-success">Logged</span>
+              {% endif %}
+            </td>
+            <td><span class="badge {{ order.order_status|order_status_badge }}">{{ order.get_order_status_display }}</span></td>
+            <td>
+              {% if order.payment_status_display == 'Success' or order.payment_status_display == 'Paid' %}
+              <span class="badge bg-success-subtle text-success">{{ order.payment_status_display }}</span>
+              {% elif order.payment_status_display == 'Failed' %}
+              <span class="badge bg-danger-subtle text-danger">{{ order.payment_status_display }}</span>
+              {% else %}
+              <span class="badge bg-warning-subtle text-warning">{{ order.payment_status_display }}</span>
+              {% endif %}
+            </td>
+            <td>{{ order.total_amount|floatformat:2 }} {% if order.currency %}{{ order.currency.code }}{% endif %}</td>
+            <td>
+              {% if order.confirmed_at %}
+                {{ order.confirmed_at|date:"M d, Y H:i" }}
+              {% else %}
+                <span class="text-secondary" title="Placed Date (Not Confirmed)">{{ order.created_at|date:"M d, Y H:i" }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <a href="{% url 'dashboard:order-invoice' order.pk %}" class="btn btn-sm btn-outline-secondary" title="View Invoice" target="_blank"><i class="ti ti-file-invoice"></i> View</a>
+            </td>
+            <td class="text-end">
+              <a href="{% url 'dashboard:order-detail' order.pk %}" class="btn btn-sm btn-light" title="View Order"><i class="ti ti-eye"></i></a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-secondary py-5">No orders found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    </form>
+    {% include "dashboard/partials/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all-orders');
+    const clearBtn = document.getElementById('clear-selection-btn');
+
+    function toggleClearBtn() {
+        if (!clearBtn) return;
+        const checkedCount = document.querySelectorAll('.order-checkbox:checked').length;
+        if (checkedCount > 0) {
+            clearBtn.classList.remove('d-none');
+        } else {
+            clearBtn.classList.add('d-none');
+        }
+    }
+    
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.addEventListener('change', function(e) {
+            if (e.target.id === 'select-all-orders') {
+                const checkboxes = document.querySelectorAll('.order-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = e.target.checked;
+                });
+            }
+            toggleClearBtn();
+        });
+    }
+    
+    const form = document.getElementById('bulk-print-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const checked = document.querySelectorAll('.order-checkbox:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one order to print.');
+            }
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.order-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            if (selectAll) {
+                selectAll.checked = false;
+            }
+            toggleClearBtn();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% load i18n %}
+{% if section_context.banner.url and section_context.banner.image %}
+<section class="jm-section">
+  <div class="container">
+    <a href="{{ section_context.banner.url }}" class="jm-promo-banner">
+      <img src="{{ section_context.banner.image }}" alt="{{ section_context.banner.title }}" width="1200" height="320" loading="lazy">
+    </a>
+  </div>
+</section>
+{% else %}
+<section class="jm-section">
+  <div class="container">
+    <aside class="jm-promo jm-promo--wide">
+      <div class="jm-promo__inner">
+        <p class="jm-promo__eyebrow">{% trans "Expert Care" %}</p>
+        <h3 class="jm-promo__title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Phone Repair & Support" %}{% endif %}</h3>
+        <p class="jm-promo__text">{% trans "Screen cracks, battery issues, or software trouble — get expert repair help in store or message us on WhatsApp." %}</p>
+        <a href="{% url 'core:contact-us' %}" class="btn btn-theme">{% trans "Contact Us" %}</a>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endif %}

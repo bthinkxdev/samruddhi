@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load i18n storefront_tags %}
+
+{% block title %}{% trans "My Orders" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title mb-0">{% trans "My Orders" %}</h1>
+    <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary btn-sm">{% trans "Back to Dashboard" %}</a>
+  </div>
+
+  {% if orders %}
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <div class="d-flex flex-column gap-3">
+        {% for order in orders %}
+        <div class="card border border-light rounded-3 mb-3 shadow-sm bg-white" style="transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 .5rem 1rem rgba(0,0,0,.08)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 .125rem .25rem rgba(0,0,0,.075)';">
+          <div class="card-body p-3 p-md-4">
+            <div class="row align-items-center">
+              <div class="col-md-3 mb-2 mb-md-0">
+                <span class="text-muted small text-uppercase fw-semibold d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{% trans "Order Number" %}</span>
+                <span class="fw-bold text-dark fs-6">#{{ order.order_number }}</span>
+              </div>
+              <div class="col-md-3 mb-2 mb-md-0">
+                <span class="text-muted small text-uppercase fw-semibold d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{% trans "Order Date" %}</span>
+                <span class="text-dark">{{ order.confirmed_at|default:order.created_at|date:"M d, Y" }}</span>
+              </div>
+              <div class="col-md-2 mb-2 mb-md-0">
+                <span class="text-muted small text-uppercase fw-semibold d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{% trans "Total" %}</span>
+                <span class="fw-bold text-dark">{% money_label order.total_amount order.currency %}</span>
+              </div>
+              <div class="col-md-2 mb-3 mb-md-0">
+                <span class="text-muted small text-uppercase fw-semibold d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{% trans "Status" %}</span>
+                <span class="badge bg-light text-dark border px-2 py-1 fw-normal">{{ order.get_order_status_display|default:order.order_status }}</span>
+              </div>
+              <div class="col-md-2 text-md-end">
+                <a href="{% url 'orders:detail' order_id=order.pk %}" class="btn btn-outline-theme btn-sm w-100 mb-2 fw-medium">{% trans "View Details" %}</a>
+                <a href="{% if order.delhivery_shipment.waybill_number %}https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}{% else %}https://www.delhivery.com/tracking{% endif %}" target="_blank" class="btn btn-light border btn-sm w-100">{% trans "Track" %}</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if pagination.total_pages > 1 %}
+      <nav class="mt-4" aria-label="Orders pagination">
+        <ul class="pagination justify-content-center">
+          {% if pagination.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.page|add:'-1' }}">{% trans "Previous" %}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">{% trans "Previous" %}</span></li>
+          {% endif %}
+          
+          <li class="page-item active" aria-current="page">
+            <span class="page-link">{{ pagination.page }} of {{ pagination.total_pages }}</span>
+          </li>
+          
+          {% if pagination.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.page|add:'1' }}">{% trans "Next" %}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">{% trans "Next" %}</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card p-5 text-center shadow-sm border-0 rounded-3">
+    <p class="text-muted mb-3">{% trans "You haven't placed any orders yet." %}</p>
+    <div>
+      <a href="{% url 'catalog:plp' %}" class="btn btn-theme">{% trans "Start shopping" %}</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

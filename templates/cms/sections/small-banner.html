@@ -1,0 +1,150 @@
+{% load i18n static %}
+<style>
+@media (min-width: 992px) {
+  .jm-featured__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
+    align-items: stretch;
+  }
+}
+@media (max-width: 991px) {
+  .jm-featured__layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .jm-wholesale--banner {
+    min-height: 220px !important;
+  }
+}
+
+.jm-wholesale--banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 420px; 
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  background-color: #f8f9fa;
+}
+.jm-wholesale__bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  z-index: 1;
+}
+.jm-wholesale__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  padding: 1.15rem;
+}
+.jm-wholesale__copy {
+  background: rgba(255, 255, 255, 0.96);
+  width: 100%;
+  max-width: 280px;
+  padding: 1.5rem 1.25rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(22, 50, 79, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.jm-wholesale__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #d11242;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+.jm-wholesale__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #111;
+}
+.jm-wholesale__text {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 16px;
+}
+.jm-wholesale__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  text-align: left;
+}
+.jm-wholesale__list li {
+  font-size: 0.8rem;
+  color: #444;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+.jm-wholesale__list li svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: #198754;
+  flex-shrink: 0;
+}
+.jm-wholesale--banner .btn-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  border-radius: 24px;
+  margin-top: auto;
+  transition: all 0.2s ease;
+}
+.jm-wholesale--banner .btn-theme:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+</style>
+<aside class="jm-wholesale jm-wholesale--banner">
+  <img class="jm-wholesale__bg"
+       src="{% static 'img/wholesale_banner.png' %}"
+       alt=""
+       width="1200"
+       height="600"
+       loading="lazy"
+       decoding="async"
+       aria-hidden="true">
+  <div class="jm-wholesale__inner">
+    <div class="jm-wholesale__copy">
+      
+      {% if request.user.is_authenticated %}
+        <p class="jm-wholesale__eyebrow">{% trans "Your Account" %}</p>
+        <h3 class="jm-wholesale__title">{% trans "Welcome Back!" %}</h3>
+        <p class="jm-wholesale__text">{% trans "Thanks for being a valued member. Track your recent orders and explore new arrivals." %}</p>
+        <a href="{% url 'accounts:dashboard' %}" class="btn btn-theme fw-bold">{% trans "My Account" %} →</a>
+      {% else %}
+        <p class="jm-wholesale__eyebrow">{% blocktrans with name=site_settings.site_name %}Welcome to {{ name }}{% endblocktrans %}</p>
+        <h3 class="jm-wholesale__title">{% trans "Upgrade Your Experience" %}</h3>
+        <p class="jm-wholesale__text">{% trans "Log in for faster checkout, exclusive deals, and order tracking." %}</p>
+        <ul class="jm-wholesale__list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> {% trans "Faster Checkout" %}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> {% trans "Track Orders" %}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> {% trans "Exclusive Deals" %}</li>
+        </ul>
+        <a href="{% url 'accounts:login-email-otp' %}" class="btn btn-theme fw-bold">{% trans "Login" %} →</a>
+      {% endif %}
+      
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "My Wishlist" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container jm-page">
+  <h1 class="section-title jm-page-title">{% trans "My Wishlist" %}</h1>
+
+  {% if items %}
+  <div class="row product-grid-inner g-3 justify-content-start">
+    {% for item in items %}
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 product-grid-item d-flex">
+      <div class="wishlist-card h-100 w-100">
+        {% include "catalog/partials/product_card.html" with product=item.product %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card border-0 p-4 text-center mx-auto" style="max-width: 500px;">
+    <p class="mb-3 text-muted">{% trans "Your wishlist is empty." %}</p>
+    <a href="{% url 'cms:homepage' %}" class="btn btn-theme">{% trans "Choose Products" %}</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

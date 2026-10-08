@@ -1,0 +1,73 @@
+{% extends "dashboard/crud/form.html" %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const productsSelect = document.getElementById("id_products");
+    if (!productsSelect) return;
+
+    const selectedContainer = document.createElement("div");
+    selectedContainer.className = "selected-products-list mt-3";
+    
+    productsSelect.parentNode.appendChild(selectedContainer);
+
+    function updateSelectedList() {
+      selectedContainer.innerHTML = "";
+      const selectedOptions = Array.from(productsSelect.selectedOptions);
+      
+      if (selectedOptions.length === 0) {
+        return;
+      }
+      
+      const listTitle = document.createElement("h6");
+      listTitle.className = "mb-2 text-muted";
+      listTitle.textContent = "Selected Products:";
+      selectedContainer.appendChild(listTitle);
+
+      const listGroup = document.createElement("ul");
+      listGroup.className = "list-group";
+      
+      selectedOptions.forEach(option => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-center py-2";
+        li.textContent = option.text;
+        
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-sm btn-outline-danger p-1";
+        removeBtn.style.lineHeight = "1";
+        removeBtn.innerHTML = '<i class="ti ti-trash"></i>';
+        removeBtn.onclick = function() {
+          option.selected = false;
+          productsSelect.dispatchEvent(new Event('change'));
+          updateSelectedList();
+        };
+        
+        li.appendChild(removeBtn);
+        listGroup.appendChild(li);
+      });
+      
+      selectedContainer.appendChild(listGroup);
+    }
+
+    productsSelect.addEventListener("mousedown", function(e) {
+      e.preventDefault();
+      
+      const option = e.target;
+      if (option.tagName === 'OPTION') {
+        option.selected = !option.selected;
+        
+        const originalScrollTop = productsSelect.scrollTop;
+        productsSelect.focus();
+        productsSelect.dispatchEvent(new Event('change'));
+        
+        setTimeout(() => { productsSelect.scrollTop = originalScrollTop; }, 0);
+      }
+    });
+
+    productsSelect.addEventListener("change", updateSelectedList);
+    updateSelectedList();
+  });
+</script>
+{% endblock %}

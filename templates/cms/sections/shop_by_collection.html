@@ -1,0 +1,25 @@
+{% load i18n %}
+<section class="jm-section jm-collections" id="jm-collections">
+  <div class="container">
+    <div class="jm-collection-scroll" aria-label="{% trans 'Shop by collection' %}">
+      {% for collection in section_context.collections %}
+      <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}" class="jm-collection-chip">
+        <span class="jm-collection-chip__icon">
+          {% if collection.image %}
+          <img src="{{ collection.image.url }}" alt="" width="64" height="64" loading="lazy" decoding="async">
+          {% endif %}
+        </span>
+        <span class="jm-collection-chip__label">{{ collection.name }}</span>
+      </a>
+      {% endfor %}
+      <a href="{% url 'catalog:plp' %}" class="jm-collection-chip jm-collection-chip--all">
+        <span class="jm-collection-chip__icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><rect x="28" y="8" width="12" height="12" rx="2"/><rect x="8" y="28" width="12" height="12" rx="2"/><rect x="28" y="28" width="12" height="12" rx="2"/></svg>
+        </span>
+        <span class="jm-collection-chip__label">{% trans "View All Products" %}</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+{% include "cms/sections/_trust_strip.html" %}

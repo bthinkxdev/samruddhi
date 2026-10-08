@@ -1,0 +1,24 @@
+{% load i18n %}
+{% if section_context.cards %}
+<section class="container mb-5">
+  {% if section_context.title %}
+  <div class="section-header">
+    <h2 class="section-title">{{ section_context.title }}</h2>
+  </div>
+  {% endif %}
+  <div class="row g-3 g-md-4">
+    {% for card in section_context.cards %}
+    <div class="col-12 col-md-4">
+      <a href="{{ card.url|default:'#' }}" class="feature-card d-block text-decoration-none rounded overflow-hidden">
+        {% if card.image %}
+        <img src="{{ card.image }}" alt="{{ card.title }}" class="feature-card__img" width="600" height="360" loading="lazy">
+        {% endif %}
+        <span class="feature-card__body">
+          <span class="feature-card__title">{{ card.title }}</span>
+        </span>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

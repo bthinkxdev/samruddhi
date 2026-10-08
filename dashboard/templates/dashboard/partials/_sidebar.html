@@ -1,0 +1,143 @@
+{% load static %}
+<aside id="sidebar" class="sidebar">
+  <div class="logo-area">
+    <a href="{% url 'dashboard:home' %}" class="d-inline-flex align-items-center">
+      <img src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}" alt="{{ site_settings.site_name }}" width="28" height="28"
+        style="border-radius: 50%; object-fit: contain;" />
+      <span class="logo-text ms-2 fw-semibold">{{ site_settings.site_name }} Admin</span>
+    </a>
+  </div>
+  <ul class="nav flex-column">
+    <li class="px-4 py-2"><small class="nav-text text-secondary text-uppercase">Main</small></li>
+    <li>
+      <a class="nav-link {% if nav_section == 'home' %}active{% endif %}" href="{% url 'dashboard:home' %}">
+        <i class="ti ti-home"></i><span class="nav-text">Dashboard</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'orders' %}active{% endif %}" href="{% url 'dashboard:order-list' %}">
+        <i class="ti ti-shopping-cart"></i><span class="nav-text">Orders</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'reports' %}active{% endif %}" href="{% url 'dashboard:reports' %}">
+        <i class="ti ti-chart-bar"></i><span class="nav-text">Reports</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Catalog</small></li>
+    <li>
+      <a class="nav-link {% if nav_section == 'products' %}active{% endif %}" href="{% url 'dashboard:product-list' %}">
+        <i class="ti ti-box-seam"></i><span class="nav-text">Products</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'collections' %}active{% endif %}"
+        href="{% url 'dashboard:collection-list' %}">
+        <i class="ti ti-category"></i><span class="nav-text">Collections</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'size_charts' %}active{% endif %}"
+        href="{% url 'dashboard:sizechart-list' %}">
+        <i class="ti ti-ruler-measure"></i><span class="nav-text">Size Charts</span>
+      </a>
+    </li>
+
+    <li>
+      <a class="nav-link {% if nav_section == 'brands' %}active{% endif %}" href="{% url 'dashboard:brand-list' %}">
+        <i class="ti ti-tag"></i><span class="nav-text">Brands</span>
+      </a>
+    </li>
+
+    <li>
+      <a class="nav-link {% if nav_section == 'reviews' %}active{% endif %}" href="{% url 'dashboard:review-list' %}">
+        <i class="ti ti-star"></i><span class="nav-text">Reviews</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Customers</small></li>
+    <li>
+      <a class="nav-link {% if nav_section == 'customers' %}active{% endif %}"
+        href="{% url 'dashboard:customer-list' %}">
+        <i class="ti ti-user"></i><span class="nav-text">Customers</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'inquiries' %}active{% endif %}"
+        href="{% url 'dashboard:inquiry-list' %}">
+        <i class="ti ti-messages"></i><span class="nav-text">Inquiries</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Marketing</small></li>
+    <li>
+      <a class="nav-link {% if nav_section == 'coupons' %}active{% endif %}" href="{% url 'dashboard:coupon-list' %}">
+        <i class="ti ti-ticket"></i><span class="nav-text">Coupons</span>
+      </a>
+    </li>
+
+    <li>
+      <a class="nav-link {% if nav_section == 'flashsales' %}active{% endif %}"
+        href="{% url 'dashboard:flashsale-list' %}">
+        <i class="ti ti-bolt"></i><span class="nav-text">Flash Sales</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'newsletter' %}active{% endif %}"
+        href="{% url 'dashboard:newsletter-list' %}">
+        <i class="ti ti-mail"></i><span class="nav-text">Newsletter</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Content</small></li>
+    <li>
+      <a class="nav-link {% if nav_section == 'homepage' %}active{% endif %}"
+        href="{% url 'dashboard:homepagesection-list' %}">
+        <i class="ti ti-layout-dashboard"></i><span class="nav-text">Homepage</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'heroslides' %}active{% endif %}"
+        href="{% url 'dashboard:heroslide-list' %}">
+        <i class="ti ti-photo"></i><span class="nav-text">Hero Slides</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'blog' %}active{% endif %}" href="{% url 'dashboard:blogpost-list' %}">
+        <i class="ti ti-article"></i><span class="nav-text">Blog</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'pages' %}active{% endif %}" href="{% url 'dashboard:page-list' %}">
+        <i class="ti ti-file-text"></i><span class="nav-text">Pages</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'faqs' %}active{% endif %}" href="{% url 'dashboard:faq-list' %}">
+        <i class="ti ti-help"></i><span class="nav-text">FAQs</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Operations</small></li>
+
+
+    <li>
+      <a class="nav-link {% if nav_section == 'payments' %}active{% endif %}" href="{% url 'dashboard:payment-list' %}">
+        <i class="ti ti-cash"></i><span class="nav-text">Payments</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'settings' %}active{% endif %}" href="{% url 'dashboard:settings' %}">
+        <i class="ti ti-settings"></i><span class="nav-text">Settings</span>
+      </a>
+    </li>
+
+    <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Account</small></li>
+    <li>
+      <a class="nav-link" href="{% url 'dashboard:logout' %}">
+        <i class="ti ti-logout"></i><span class="nav-text">Log out</span>
+      </a>
+    </li>
+  </ul>
+</aside>

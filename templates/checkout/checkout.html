@@ -1,0 +1,531 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Checkout" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+  .ts-control {
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    min-height: 31px;
+    border: 1px solid #dee2e6;
+  }
+  .ts-control.focus {
+    border-color: #0369A1;
+    box-shadow: 0 0 0 0.25rem rgba(3, 105, 161, 0.25);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page-container checkout-page jm-page" hx-get="{% url 'checkout:checkout' %}" hx-trigger="cartUpdated from:body" hx-select=".checkout-page" hx-swap="outerHTML">
+  {% if not summary.lines %}
+  <div class="text-center py-5 mt-5">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" class="mb-3 mx-auto"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    <h2 class="h4 text-dark mb-3">{% trans "Your cart is empty" %}</h2>
+    <p class="text-muted mb-4">{% trans "You need to add items to your cart before you can checkout." %}</p>
+    <a href="{% url 'catalog:plp' %}" class="btn btn-theme px-4">{% trans "Continue Shopping" %}</a>
+  </div>
+  {% else %}
+  <h1 class="section-title jm-page-title">{% trans "Checkout" %}</h1>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <form id="checkout-form" method="post" action="{% url 'checkout:place-order' %}"
+        hx-post="{% url 'checkout:place-order' %}" hx-target="#checkout-result" hx-swap="innerHTML" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="idempotency_key" value="{{ checkout_session.pk }}-{{ summary.grand_total }}-{{ summary.lines|length }}-{{ request.user.pk|default:'guest' }}">
+
+        <div class="checkout-step mb-4">
+          <h2>{% trans "Contact Information" %}</h2>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small">{% trans "Full Name" %} <span class="text-danger">*</span></label>
+              <input type="text" name="guest_name" class="form-control form-control-sm" value="{% if checkout_session.customer_profile %}{{ checkout_session.customer_profile.user.get_full_name|default:checkout_session.customer_profile.user.first_name|default:checkout_session.customer_profile.user.username }}{% elif request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.first_name|default:request.user.username }}{% endif %}">
+              <div id="error-guest_name" class="text-danger small mt-1"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">{% trans "Email Address" %} <span class="text-danger">*</span></label>
+              <input type="email" name="guest_email" class="form-control form-control-sm" value="{% if checkout_session.customer_profile %}{{ checkout_session.customer_profile.user.email }}{% elif request.user.is_authenticated %}{{ request.user.email }}{% endif %}">
+              <div id="error-guest_email" class="text-danger small mt-1"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small">{% trans "Phone Number" %} <span class="text-danger">*</span></label>
+            <input type="tel" name="guest_phone" class="form-control form-control-sm" value="{{ checkout_session.customer_profile.phone|default:'' }}">
+            <div id="error-guest_phone" class="text-danger small mt-1"></div>
+          </div>
+        </div>
+
+        <div class="checkout-step mb-4">
+          <h2>{% trans "Delivery Address" %}</h2>
+
+          {% if addresses %}
+          <div class="mb-4">
+            <label class="form-label small fw-bold">{% trans "Choose a saved address:" %}</label>
+            {% for address in addresses %}
+            <div class="form-check mb-2">
+              <input class="form-check-input address-radio" type="radio" name="address_id" value="{{ address.pk }}"
+                id="addr-{{ address.pk }}" {% if forloop.first %}checked{% endif %}>
+              <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}</label>
+            </div>
+            {% endfor %}
+            <div class="form-check mb-2">
+              <input class="form-check-input address-radio" type="radio" name="address_id" value="" id="addr-new">
+              <label class="form-check-label small fw-bold text-theme" for="addr-new">+ {% trans "Add a new address" %}</label>
+            </div>
+          </div>
+          {% endif %}
+
+          <div id="new-address-form-fields" class="mt-2" {% if addresses %}style="display: none;"{% endif %}>
+            <label class="form-label small fw-bold mb-3">{% trans "Enter Delivery Address Details:" %}</label>
+            <div class="mb-3">
+              <label class="form-label small">{% trans "Address Line 1" %} <span class="text-danger">*</span></label>
+              <input type="text" name="guest_address_line1" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.line1|default:'' }}{% endif %}">
+              <div id="error-guest_address_line1" class="text-danger small mt-1"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">{% trans "Address Line 2 (Optional)" %}</label>
+              <input type="text" name="guest_address_line2" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.line2|default:'' }}{% endif %}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">{% trans "City" %} <span class="text-danger">*</span></label>
+              <input type="text" name="guest_city" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.city|default:'' }}{% endif %}">
+              <div id="error-guest_city" class="text-danger small mt-1"></div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small">{% trans "State" %} <span class="text-danger">*</span></label>
+                <select name="guest_state" id="guest_state" class="form-select form-select-sm" placeholder="{% trans 'Search and select state...' %}">
+                  <option value="">{% trans "Search and select state..." %}</option>
+                  {% with current_state=checkout_session.address.state|default:'' %}
+                  {% for state in indian_states %}
+                  <option value="{{ state }}" {% if current_state == state %}selected{% endif %}>{{ state }}</option>
+                  {% endfor %}
+                  {% endwith %}
+                </select>
+                <div id="error-guest_state" class="text-danger small mt-1"></div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">{% trans "PIN / Postal Code" %} <span class="text-danger">*</span></label>
+                <input type="text" name="guest_pincode" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.pincode|default:'' }}{% endif %}">
+                <div id="error-guest_pincode" class="text-danger small mt-1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="checkout-step">
+          <h2>{% trans "Payment Method" %}</h2>
+          {% for key, adapter in payment_gateways.items %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="gateway_key" value="{{ key }}" id="gw-{{ key }}" 
+              hx-post="{% url 'checkout:update-delivery-charge' %}"
+              hx-target="#order-summary-container"
+              hx-select="#order-summary-container"
+              hx-swap="outerHTML"
+              {% if selected_gateway_key == key %}checked{% elif not selected_gateway_key and forloop.first %}checked{% endif %}>
+            <label class="form-check-label small" for="gw-{{ key }}">
+              {{ adapter.display_name }}
+              {% if key == 'cod' and settings.cod_delivery_charge > 0 %}
+                ({{ display_currency.symbol|default:"₹" }}{{ settings.cod_delivery_charge|floatformat:0 }} {% trans "extra charge" %})
+              {% endif %}
+            </label>
+          </div>
+          {% endfor %}
+          <div id="error-gateway_key" class="text-danger small mt-1"></div>
+
+        </div>
+
+      </form>
+      <div id="checkout-result" class="mt-3"></div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body" hx-select="#order-summary-container" hx-swap="outerHTML">
+        {% if messages %}
+        <div class="mb-3">
+          {% for message in messages %}
+          <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} py-2 small mb-2" role="alert">
+            {{ message }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="mb-0">{% trans "Order Summary" %}</h2>
+          {% if is_buy_now and summary.lines %}
+            {% with first_line=summary.lines|first %}
+            <a href="{% url 'catalog:pdp' slug=first_line.product.slug %}{% if first_line.variant %}?variant_id={{ first_line.variant.id }}{% endif %}" class="text-decoration-none small text-theme fw-semibold">{% trans "Edit Item" %}</a>
+            {% endwith %}
+          {% else %}
+            <a href="#" class="text-decoration-none small text-theme fw-semibold" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">{% trans "Edit Cart" %}</a>
+          {% endif %}
+        </div>
+        {% for line in summary.lines %}
+        <div class="d-flex align-items-center justify-content-between py-2 border-bottom gap-2">
+          <div class="d-flex align-items-center gap-2 text-truncate" style="min-width: 0;">
+            {% with line.product.primary_images|first as primary_image %}
+            <div class="flex-shrink-0 bg-light border rounded" style="width: 48px; height: 48px; overflow: hidden;">
+              {% if primary_image %}
+              <img src="{{ primary_image.image.url }}" alt="{{ line.product.name }}"
+                style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              <svg width="48" height="48" class="text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1" style="padding: 10px;">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              {% endif %}
+            </div>
+            {% endwith %}
+            <div class="text-truncate" style="min-width: 0;">
+              <div class="text-truncate fw-medium" style="font-size: 0.875rem;">
+                {{ line.product.name }}
+              </div>
+              {% if line.variant %}
+              <div class="text-muted" style="font-size: 0.75rem;">{{ line.variant.name }}</div>
+              {% endif %}
+              <div class="text-muted" style="font-size: 0.75rem;">{% trans "Qty:" %} {{ line.quantity }} &times; {{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
+              
+              {% if line.is_out_of_stock %}
+              <div class="text-danger fw-semibold mt-1" style="font-size: 0.75rem;">{% trans "Out of stock" %}</div>
+              {% elif line.exceeds_stock %}
+              <div class="text-danger fw-semibold mt-1" style="font-size: 0.75rem;">{% trans "Only" %} {{ line.max_stock }} {% trans "items available in stock." %}</div>
+              {% endif %}
+            </div>
+          </div>
+          <span class="flex-shrink-0 fw-semibold" style="font-size: 0.875rem;">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
+        </div>
+        {% endfor %}
+
+        {% if summary.delivery_charge > 0 %}
+        <div class="d-flex justify-content-between py-2 border-bottom text-muted" style="font-size: 0.875rem;">
+          <span>{% trans "Delivery Charge (COD)" %}</span>
+          <span>{{ display_currency.symbol }} {{ summary.delivery_charge }}</span>
+        </div>
+        {% endif %}
+
+        {% if summary.coupon_code %}
+        <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+          <span class="small fw-semibold text-theme">{{ summary.coupon_code }}</span>
+          <form method="post" action="{% url 'checkout:coupon-remove' %}">
+            {% csrf_token %}
+            <button type="button" class="btn btn-link text-danger p-0 ms-2" style="font-size: 0.8rem; text-decoration: none;" hx-post="{% url 'checkout:coupon-remove' %}" hx-target="#order-summary-container" hx-select="#order-summary-container" hx-swap="outerHTML" hx-include="closest form">{% trans "Remove" %}</button>
+          </form>
+        </div>
+        {% elif has_active_coupons %}
+        <form method="post" action="{% url 'checkout:coupon-apply' %}" class="d-flex gap-2 py-3 border-bottom">
+          {% csrf_token %}
+          <input type="text" name="code" class="form-control form-control-sm" placeholder="{% trans 'Enter coupon code' %}">
+          <button type="button" class="btn btn-dark btn-sm px-3" hx-post="{% url 'checkout:coupon-apply' %}" hx-target="#order-summary-container" hx-select="#order-summary-container" hx-swap="outerHTML" hx-include="closest form">{% trans "Apply" %}</button>
+        </form>
+        {% endif %}
+        <div class="d-flex justify-content-between fw-semibold mt-3 pt-2 border-top">
+          <span>{% trans "Total" %}</span>
+          <span class="text-theme">{{ display_currency.symbol }} {{ summary.grand_total }}</span>
+        </div>
+        {% if summary.has_stock_issues %}
+          <button type="button" class="btn btn-theme w-100 py-2 mt-3" disabled style="cursor: not-allowed;">{% trans "Place Order & Pay" %}</button>
+          {% if is_buy_now %}
+            {% if summary.has_out_of_stock_items %}
+              <div class="text-danger small mt-2 text-center">{% trans "This product just went out of stock due to high demand." %}</div>
+              {% with first_line=summary.lines|first %}
+              <a href="{% url 'catalog:pdp' slug=first_line.product.slug %}{% if first_line.variant %}?variant_id={{ first_line.variant.id }}{% endif %}" class="btn btn-outline-dark w-100 py-2 mt-2">{% trans "Return to Product Page" %}</a>
+              {% endwith %}
+            {% elif summary.has_exceeds_stock_items %}
+              {% with first_line=summary.lines|first %}
+              <div class="text-danger small mt-2 text-center">{% trans "Only" %} {{ first_line.max_stock }} {% trans "items left in stock." %}</div>
+              <form method="post" action="{% url 'checkout:fix-stock' %}" hx-post="{% url 'checkout:fix-stock' %}" hx-target="#order-summary-container" hx-select="#order-summary-container" hx-swap="outerHTML" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark w-100 py-2">{% trans "Update Quantity to" %} {{ first_line.max_stock }} ({% trans "Max Available" %})</button>
+              </form>
+              {% endwith %}
+            {% endif %}
+          {% else %}
+            {% if summary.has_exceeds_stock_items and not summary.has_out_of_stock_items %}
+              <div class="text-danger small mt-2 text-center">{% trans "Some items exceed available stock." %}</div>
+              <form method="post" action="{% url 'checkout:fix-stock' %}" hx-post="{% url 'checkout:fix-stock' %}" hx-target="#order-summary-container" hx-select="#order-summary-container" hx-swap="outerHTML" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark w-100 py-2">{% trans "Update Items to Max Available Stock" %}</button>
+              </form>
+            {% else %}
+              <div class="text-danger small mt-2 text-center">{% trans "Some items are out of stock. Please click 'Edit Cart' to remove them." %}</div>
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <button type="submit" form="checkout-form" class="btn btn-theme w-100 py-2 mt-3">{% trans "Place Order & Pay" %}</button>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div id="order-processing-overlay" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-white" style="z-index: 9999; opacity: 0.95;">
+  <div class="d-flex flex-column justify-content-center align-items-center h-100">
+    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading....</span>
+    </div>
+    <h4 class="fw-bold text-dark">{% trans "Confirming Order!" %}</h4>
+    <p class="text-muted">{% trans "Please wait while we confirm your order..." %}</p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var addressRadios = document.querySelectorAll('.address-radio');
+    var newAddressFields = document.getElementById('new-address-form-fields');
+    if (addressRadios.length > 0 && newAddressFields) {
+      addressRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          if (document.getElementById('addr-new') && document.getElementById('addr-new').checked) {
+            newAddressFields.style.display = 'block';
+          } else {
+            newAddressFields.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    var checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm) {
+      function validateCheckoutForm() {
+        var isValid = true;
+        var guestNameEl = checkoutForm.querySelector('input[name="guest_name"]');
+        var guestEmailEl = checkoutForm.querySelector('input[name="guest_email"]');
+        var guestPhoneEl = checkoutForm.querySelector('input[name="guest_phone"]');
+        
+        var guestName = guestNameEl ? guestNameEl.value.trim() : '';
+        var guestEmail = guestEmailEl ? guestEmailEl.value.trim() : '';
+        var guestPhone = guestPhoneEl ? guestPhoneEl.value.trim() : '';
+        
+        var errorIds = ['error-guest_name', 'error-guest_email', 'error-guest_phone', 'error-guest_address_line1', 'error-guest_city', 'error-guest_state', 'error-guest_pincode'];
+        errorIds.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.innerText = '';
+        });
+
+        if (!guestName) {
+          document.getElementById('error-guest_name').innerText = 'Name is required.';
+          isValid = false;
+        } else if (/^\d+$/.test(guestName)) {
+          document.getElementById('error-guest_name').innerText = 'Name cannot consist of numbers only.';
+          isValid = false;
+        } else if (/^[^a-zA-Z0-9]+$/.test(guestName)) {
+          document.getElementById('error-guest_name').innerText = 'Name cannot consist of special characters only.';
+          isValid = false;
+        } else if (!/[a-zA-Z]/.test(guestName)) {
+          document.getElementById('error-guest_name').innerText = 'Name cannot consist of only numbers and special characters.';
+          isValid = false;
+        }
+
+        if (!guestEmail) {
+          document.getElementById('error-guest_email').innerText = 'Email is required.';
+          isValid = false;
+        } else if (!/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(guestEmail) || guestEmail.includes('@.')) {
+          document.getElementById('error-guest_email').innerText = 'Enter a valid email address.';
+          isValid = false;
+        }
+
+        if (!guestPhone) {
+          document.getElementById('error-guest_phone').innerText = 'Phone is required.';
+          isValid = false;
+        } else if (!/^\+?\d+$/.test(guestPhone)) {
+          document.getElementById('error-guest_phone').innerText = 'Phone number can only contain numbers.';
+          isValid = false;
+        } else if (!/^\+?\d{10,15}$/.test(guestPhone)) {
+          document.getElementById('error-guest_phone').innerText = 'Enter a valid phone number.';
+          isValid = false;
+        }
+
+        var selectedAddr = document.querySelector('input[name="address_id"]:checked');
+        var usingNewAddress = !selectedAddr || selectedAddr.value === '';
+
+        if (usingNewAddress) {
+          var line1 = checkoutForm.querySelector('input[name="guest_address_line1"]')?.value.trim() || '';
+          var city = checkoutForm.querySelector('input[name="guest_city"]')?.value.trim() || '';
+          var state = checkoutForm.querySelector('[name="guest_state"]')?.value.trim() || '';
+          var pincode = checkoutForm.querySelector('input[name="guest_pincode"]')?.value.trim() || '';
+
+          if (!line1) {
+            document.getElementById('error-guest_address_line1').innerText = 'Address Line 1 is required.';
+            isValid = false;
+          } else if (/^\d+$/.test(line1)) {
+            document.getElementById('error-guest_address_line1').innerText = 'Address cannot consist of numbers only.';
+            isValid = false;
+          } else if (/^[^a-zA-Z0-9]+$/.test(line1)) {
+            document.getElementById('error-guest_address_line1').innerText = 'Address cannot consist of special characters only.';
+            isValid = false;
+          } else if (!/[a-zA-Z]/.test(line1)) {
+            document.getElementById('error-guest_address_line1').innerText = 'Enter a valid address containing letters.';
+            isValid = false;
+          }
+
+          if (!city) {
+            document.getElementById('error-guest_city').innerText = 'City is required.';
+            isValid = false;
+          } else if (/^\d+$/.test(city)) {
+            document.getElementById('error-guest_city').innerText = 'City cannot consist of numbers only.';
+            isValid = false;
+          } else if (/^[^a-zA-Z0-9]+$/.test(city)) {
+            document.getElementById('error-guest_city').innerText = 'City cannot consist of special characters only.';
+            isValid = false;
+          } else if (!/[a-zA-Z]/.test(city)) {
+            document.getElementById('error-guest_city').innerText = 'Enter a valid city containing letters.';
+            isValid = false;
+          }
+
+          if (!state) {
+            document.getElementById('error-guest_state').innerText = 'State is required.';
+            isValid = false;
+          } else if (/^\d+$/.test(state)) {
+            document.getElementById('error-guest_state').innerText = 'State cannot consist of numbers only.';
+            isValid = false;
+          } else if (/^[^a-zA-Z0-9]+$/.test(state)) {
+            document.getElementById('error-guest_state').innerText = 'State cannot consist of special characters only.';
+            isValid = false;
+          } else if (!/[a-zA-Z]/.test(state)) {
+            document.getElementById('error-guest_state').innerText = 'Enter a valid state containing letters.';
+            isValid = false;
+          }
+
+          if (!pincode) {
+            document.getElementById('error-guest_pincode').innerText = 'PIN / Postal Code is required.';
+            isValid = false;
+          } else if (/^[a-zA-Z\s]+$/.test(pincode)) {
+            document.getElementById('error-guest_pincode').innerText = 'Postal code cannot contain alphabets only.';
+            isValid = false;
+          } else if (/^[^a-zA-Z0-9]+$/.test(pincode)) {
+            document.getElementById('error-guest_pincode').innerText = 'Postal code cannot contain special characters only.';
+            isValid = false;
+          } else if (!/^\d+$/.test(pincode)) {
+            document.getElementById('error-guest_pincode').innerText = 'Postal code can only contain numbers.';
+            isValid = false;
+          } else if (pincode.length < 3) {
+            document.getElementById('error-guest_pincode').innerText = 'Enter a valid postal code.';
+            isValid = false;
+          }
+        }
+        return isValid;
+      }
+
+      checkoutForm.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.detail.elt === checkoutForm) {
+          if (!validateCheckoutForm()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+          var selectedGateway = document.querySelector('input[name="gateway_key"]:checked');
+          if (selectedGateway && selectedGateway.value === 'cod') {
+            document.getElementById('order-processing-overlay').classList.remove('d-none');
+          }
+        }
+      });
+
+      checkoutForm.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.elt === checkoutForm) {
+          document.getElementById('order-processing-overlay').classList.add('d-none');
+        }
+      });
+      checkoutForm.addEventListener('htmx:responseError', function(event) {
+        document.getElementById('order-processing-overlay').classList.add('d-none');
+      });
+      checkoutForm.addEventListener('htmx:sendError', function(event) {
+        document.getElementById('order-processing-overlay').classList.add('d-none');
+      });
+    }
+
+    function setupInputListener(selector, errorId, checkFn) {
+      var input = document.querySelector(selector);
+      if (input) {
+        input.addEventListener('input', function(e) {
+          var val = e.target.value;
+          var errorDiv = document.getElementById(errorId);
+          if (val.length === 0) {
+            errorDiv.innerText = '';
+            return;
+          }
+          var errMsg = checkFn(val.trim());
+          errorDiv.innerText = errMsg || '';
+        });
+      }
+    }
+
+    setupInputListener('input[name="guest_name"]', 'error-guest_name', function(val) {
+      if (/^\d+$/.test(val)) return "Name cannot consist of numbers only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "Name cannot consist of special characters only.";
+      if (/^[^a-zA-Z]+$/.test(val)) return "Name cannot consist of only numbers and special characters.";
+      return "";
+    });
+    setupInputListener('input[name="guest_phone"]', 'error-guest_phone', function(val) {
+      if (!/^\+?\d*$/.test(val)) return "Phone number can only contain numbers.";
+      return "";
+    });
+    setupInputListener('input[name="guest_address_line1"]', 'error-guest_address_line1', function(val) {
+      if (/^\d+$/.test(val)) return "Address cannot consist of numbers only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "Address cannot consist of special characters only.";
+      if (/^[^a-zA-Z]+$/.test(val)) return "Address cannot consist of only numbers and special characters.";
+      return "";
+    });
+    setupInputListener('input[name="guest_city"]', 'error-guest_city', function(val) {
+      if (/^\d+$/.test(val)) return "City cannot consist of numbers only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "City cannot consist of special characters only.";
+      if (/^[^a-zA-Z]+$/.test(val)) return "City cannot consist of only numbers and special characters.";
+      return "";
+    });
+    setupInputListener('input[name="guest_pincode"]', 'error-guest_pincode', function(val) {
+      if (/^[a-zA-Z\s]+$/.test(val)) return "Postal code cannot contain alphabets only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "Postal code cannot contain special characters only.";
+      if (!/^\d+$/.test(val)) return "Postal code can only contain numbers.";
+      return "";
+    });
+  });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    function initTomSelect(el) {
+      if (el && !el.classList.contains('tomselected')) {
+        new TomSelect(el, {
+          create: false,
+          sortField: {
+            field: "text",
+            direction: "asc"
+          },
+          onChange: function(value) {
+            var errorDiv = document.getElementById('error-guest_state');
+            if (errorDiv) {
+              if (!value) {
+                errorDiv.innerText = "State is required.";
+              } else {
+                errorDiv.innerText = "";
+              }
+            }
+          }
+        });
+      }
+    }
+
+    var stateSelect = document.getElementById('guest_state');
+    initTomSelect(stateSelect);
+
+    document.body.addEventListener('htmx:load', function(evt) {
+      var newSelect = document.getElementById('guest_state');
+      if (newSelect) {
+        initTomSelect(newSelect);
+      }
+    });
+  });
+</script>
+{% endblock %}
+

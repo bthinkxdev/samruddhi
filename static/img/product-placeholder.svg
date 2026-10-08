@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Product image placeholder">
+  <rect width="400" height="400" fill="#fdf8f9"/>
+  <g fill="none" stroke="#c98a99" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200 205v130"/>
+    <path d="M200 300c-30-10-55-5-70-25 25-8 52-8 70 25z"/>
+    <path d="M200 275c28-10 52-6 66-26-24-8-50-6-66 26z"/>
+    <circle cx="178" cy="122" r="27"/>
+    <circle cx="222" cy="122" r="27"/>
+    <circle cx="160" cy="172" r="27"/>
+    <circle cx="240" cy="172" r="27"/>
+    <circle cx="200" cy="152" r="27"/>
+    <circle cx="200" cy="152" r="9" fill="#c98a99"/>
+  </g>
+</svg>

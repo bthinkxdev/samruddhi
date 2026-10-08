@@ -1,0 +1,87 @@
+{% load i18n %}
+{% load static %}
+{% if summary and summary.lines %}
+{% if error and not error_item_id %}
+<div class="alert alert-danger py-2 small m-3 mb-0" role="alert">{{ error }}</div>
+{% endif %}
+<div class="cart-drawer-scroll">
+  <ul class="list-unstyled mb-0">
+    {% for line in summary.lines %}
+    <li class="cart-line">
+    <div class="cart-line__img-wrap">
+      {% with line.product.primary_images|first as primary_image %}
+      {% if primary_image %}
+      <img src="{{ primary_image.image.url }}" alt="{{ line.product.name }}" class="cart-line__img" loading="lazy">
+      {% else %}
+      <img src="{% static 'img/product-placeholder.svg' %}" alt="{{ line.product.name }}" class="cart-line__img cart-line__img--placeholder">
+      {% endif %}
+      {% endwith %}
+    </div>
+    <div class="cart-line__info">
+      <a href="{% url 'catalog:pdp' slug=line.product.slug %}{% if line.variant %}?variant_id={{ line.variant.id }}{% endif %}" class="cart-line__name text-dark">
+        {{ line.product.name }}
+      </a>
+      {% if line.variant %}
+      <div class="cart-line__meta text-muted small mt-1 mb-1">{{ line.variant.name }}</div>
+      {% endif %}
+      <div class="cart-line__meta">{{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
+      {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
+      {% if not line.product.is_in_stock or max_stock <= 0 %}
+      <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
+      {% elif line.quantity > max_stock %}
+      <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+      {% elif error_item_id == line.item.pk and error %}
+      <div class="text-danger small mt-1">{{ error }}</div>
+      {% endif %}
+      {% if line.gift_snapshot %}<div class="small text-theme mb-1">{% trans "Gift customized" %}</div>{% endif %}
+      
+      <div class="qty-stepper d-flex align-items-center border rounded-pill overflow-hidden mt-2" style="width: fit-content;">
+        <form method="post" action="{% url 'cart:quantity' %}">
+          {% csrf_token %}
+          <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+          <input type="hidden" name="delta" value="-1">
+          <input type="hidden" name="is_drawer" value="1">
+          <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Decrease quantity' %}" {% if line.quantity <= 1 %}disabled{% endif %} style="padding: 2px 8px; font-size: 14px; border: none; background: transparent;">
+            &minus;
+          </button>
+        </form>
+        <span class="qty-stepper__value" style="padding: 0 8px; min-width: 20px; text-align: center; font-size: 13px;">{{ line.quantity }}</span>
+        <form method="post" action="{% url 'cart:quantity' %}">
+          {% csrf_token %}
+          <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+          <input type="hidden" name="delta" value="1">
+          <input type="hidden" name="is_drawer" value="1">
+          <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" style="padding: 2px 8px; font-size: 14px; border: none; background: transparent;">&plus;</button>
+        </form>
+      </div>
+      {% endwith %}
+    </div>
+    <form method="post" action="{% url 'cart:remove' %}">
+      {% csrf_token %}
+      <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
+      <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:remove' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Remove' %}">×</button>
+    </form>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+<div class="cart-drawer-footer">
+  <div class="cart-summary-row"><span>{% trans "Subtotal" %}</span><span>{{ display_currency.symbol }} {{ summary.subtotal }}</span></div>
+  {% if summary.coupon_discount %}<div class="cart-summary-row text-success"><span>{% trans "Coupon" %}</span><span>-{{ display_currency.symbol }} {{ summary.coupon_discount }}</span></div>{% endif %}
+  <div class="cart-summary-row"><span>{% trans "Delivery" %}</span><span>{{ display_currency.symbol }} {{ summary.delivery_charge }}</span></div>
+  <div class="cart-summary-row cart-summary-total"><span>{% trans "Total" %}</span><span class="text-theme">{{ display_currency.symbol }} {{ summary.grand_total }}</span></div>
+  <a href="{% url 'cart:page' %}" class="btn btn-outline-theme w-100 py-2 mt-2">{% trans "View Cart" %}</a>
+  {% if summary.has_stock_issues %}
+  <button class="btn btn-theme w-100 py-2 mt-2" disabled style="cursor: not-allowed;" onclick="event.preventDefault();">{% trans "Checkout" %}</button>
+  <div class="text-danger small mt-2 text-center">{% trans "Some items are out of stock. Please remove them to checkout." %}</div>
+  {% else %}
+  <a href="{% url 'checkout:checkout' %}?mode=cart" class="btn btn-theme w-100 py-2 mt-2">{% trans "Checkout" %}</a>
+  {% endif %}
+</div>
+{% else %}
+<div class="text-center py-4">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" class="mb-3 mx-auto"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+  <p class="text-muted mb-3">{% trans "Your cart is empty." %}</p>
+  <a href="{% url 'catalog:plp' %}" class="btn btn-outline-theme btn-sm">{% trans "Continue Shopping" %}</a>
+</div>
+{% endif %}

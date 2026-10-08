@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Rentals" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container plp-page">
+  <div class="plp-toolbar">
+    <div>
+      <h1 class="section-title mb-0">{% trans "Rental Catalog" %}</h1>
+      <p class="section-subtitle mt-1">{% trans "Premium items available for rental" %}</p>
+    </div>
+  </div>
+  <div class="row g-3 mt-2">
+    {% for product in products %}
+    <div class="col-6 col-md-4 col-lg-3 product-grid-item">
+      {% include "catalog/partials/product_card.html" with product=product %}
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+      <p class="text-muted mb-3">{% trans "No rentals currently available." %}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

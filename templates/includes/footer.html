@@ -1,0 +1,65 @@
+{% load i18n static %}
+<footer class="site-footer jm-footer">
+  <div class="container">
+    <div class="jm-footer__grid">
+      <div class="jm-footer__brand">
+        <div class="jm-footer__logo">
+          <a href="{% url 'cms:homepage' %}" style="display: contents; color: inherit !important; text-decoration: none;">
+            {% if site_settings.logo %}
+              <img src="{{ site_settings.logo.url }}" alt="" width="36" height="36">
+            {% else %}
+              <img src="{% static 'dashboard/images/logo.png' %}" alt="" width="36" height="36">
+            {% endif %}
+            <span>{{ site_settings.site_name }}</span>
+          </a>
+        </div>
+        {% if site_settings.tagline %}<p class="jm-footer__tagline">{{ site_settings.tagline }}</p>{% endif %}
+        <div class="jm-footer__social">
+          {% if site_settings.facebook_url %}<a href="{{ site_settings.facebook_url }}" aria-label="Facebook" rel="noopener">Facebook</a>{% endif %}
+          {% if site_settings.instagram_url %}<a href="{{ site_settings.instagram_url }}" aria-label="Instagram" rel="noopener">Instagram</a>{% endif %}
+          {% if site_settings.twitter_url %}<a href="{{ site_settings.twitter_url }}" aria-label="Twitter" rel="noopener">Twitter</a>{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <h6>{% trans "Shop" %}</h6>
+        <a href="{% url 'catalog:plp' %}">{% trans "All Products" %}</a>
+        <a href="{% url 'catalog:plp' %}?bestseller=1">{% trans "Best Sellers" %}</a>
+        <a href="{% url 'catalog:plp' %}?featured=1">{% trans "Featured" %}</a>
+        <a href="{% url 'catalog:plp' %}?new_arrival=1">{% trans "New Arrivals" %}</a>
+
+      </div>
+
+      <div>
+        <h6>{% trans "Company" %}</h6>
+        <a href="{% url 'core:about-us' %}">{% trans "About Us" %}</a>
+        <a href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a>
+        <a href="{% url 'core:faq' %}">{% trans "FAQ" %}</a>
+        <a href="{% url 'core:blog' %}">{% trans "Blog" %}</a>
+      </div>
+
+      <div>
+        <h6>{% trans "Policies" %}</h6>
+        <a href="{% url 'core:privacy-policy' %}">{% trans "Privacy Policy" %}</a>
+        <a href="{% url 'core:shipping-policy' %}">{% trans "Shipping Policy" %}</a>
+        <a href="{% url 'core:terms-of-service' %}">{% trans "Terms of Service" %}</a>
+        <a href="{% url 'core:refund-policy' %}">{% trans "Refund Policy" %}</a>
+        <a href="{% url 'core:contact-us' %}">{% trans "Support" %}</a>
+        {% for p in cms_pages %}
+          <a href="{% url 'core:page' p.slug %}">{{ p.title|title }}</a>
+        {% endfor %}
+      </div>
+
+      <div class="jm-footer__contact">
+        <h6>{% trans "Contact" %}</h6>
+        {% include "includes/jm_locations.html" with compact=1 %}
+        {% if site_settings.vendor_email %}
+        <p class="mb-0">
+          <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    <p class="footer-copy text-center mb-0">&copy; {% now "Y" %} {{ site_settings.site_name }}. {% trans "All rights reserved." %}</p>
+  </div>
+</footer>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Corporate Registration" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card p-4">
+        <h1 class="section-title h4 mb-3">{% trans "Corporate Account Registration" %}</h1>
+        {% if errors %}
+        <div class="alert alert-danger py-2" role="alert">{{ errors }}</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="id_work_email">{% trans "Work email" %}</label>
+            {{ form.work_email }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_password">{% trans "Password" %}</label>
+            {{ form.password }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_contact_name">{% trans "Contact name" %}</label>
+            {{ form.contact_name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_company_name">{% trans "Company name" %}</label>
+            {{ form.company_name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_trade_license_number">{% trans "Trade license number" %}</label>
+            {{ form.trade_license_number }}
+          </div>
+          <button type="submit" class="btn btn-theme w-100">{% trans "Submit for Approval" %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

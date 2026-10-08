@@ -1,0 +1,65 @@
+{% load i18n %}
+<section class="jm-hero" aria-label="{% trans 'Promotions' %}">
+  <div class="jm-hero__stage">
+    {% if section_context.slides %}
+    <div id="heroCarousel"
+         class="carousel slide carousel-fade jm-hero__carousel"
+         data-bs-ride="carousel"
+         data-bs-interval="6500"
+         data-bs-pause="hover">
+      <div class="carousel-inner">
+        {% for slide in section_context.slides %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+          {% if slide.type == 'video' %}
+          <video class="jm-hero__img"
+                 autoplay muted loop playsinline
+                 preload="{% if forloop.first %}auto{% else %}metadata{% endif %}"
+                 {% if slide.poster %}poster="{{ slide.poster }}"{% endif %}>
+            <source src="{{ slide.src }}">
+          </video>
+          {% else %}
+          {% if forloop.first %}<link rel="preload" as="image" href="{{ slide.src }}" fetchpriority="high">{% endif %}
+          <img src="{{ slide.src }}"
+               class="jm-hero__img"
+               alt="{{ slide.title|default:site_settings.site_name }}"
+               width="1440"
+               {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}>
+          {% endif %}
+
+          <div class="jm-hero__caption">
+            <div class="container jm-hero__caption-inner">
+              {% if slide.title %}
+              <h2 class="jm-hero__title">{{ slide.title }}</h2>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if section_context.slides|length > 1 %}
+      <div class="carousel-indicators jm-hero__dots">
+        {% for slide in section_context.slides %}
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ forloop.counter0 }}"
+                {% if forloop.first %}class="active" aria-current="true"{% endif %}
+                aria-label="{% blocktrans with number=forloop.counter %}Slide {{ number }}{% endblocktrans %}"></button>
+        {% endfor %}
+      </div>
+      <button class="jm-hero__nav jm-hero__nav--prev d-none d-md-grid" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" aria-label="{% trans 'Previous' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="jm-hero__nav jm-hero__nav--next d-none d-md-grid" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" aria-label="{% trans 'Next' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="jm-hero__fallback" aria-hidden="true"></div>
+    <div class="jm-hero__caption">
+      <div class="container jm-hero__caption-inner">
+
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>

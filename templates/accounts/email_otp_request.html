@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Login" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card p-4 shadow-sm border-0">
+        <h1 class="section-title h4 mb-3 text-center">{% trans "Login" %}</h1>
+        <p class="text-muted small text-center mb-4">{% trans "Enter your email address to receive a secure login verification code" %}</p>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2 small mb-3" role="alert">
+          {% for error in form.non_field_errors %}
+            {{ error }}
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'accounts:login-email-otp' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="needs-validation" novalidate>
+          {% csrf_token %}
+          {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+          
+
+
+          <div class="mb-4">
+            <label class="form-label" for="id_email">{% trans "Email Address" %}</label>
+            <input type="email" name="email" id="id_email" class="form-control" required value="{{ form.email.value|default:'' }}">
+            {% if form.email.errors %}
+            <div class="text-danger small mt-1">{% for error in form.email.errors %}{{ error }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          {% include "shared/image_captcha.html" with scope="customer_login" field_id="image_captcha_customer_login" label="Security check" captcha_bust=captcha_bust %}
+
+          <button type="submit" class="btn btn-theme w-100 mb-3">
+            {% trans "Send Verification Code" %}
+          </button>
+        </form>
+
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'common/js/image-captcha.js' %}" defer></script>
+{% endblock %}

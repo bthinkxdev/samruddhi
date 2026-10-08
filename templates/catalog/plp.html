@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ seo_title|default:site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container plp-page jm-page">
+  {% if active_collection and active_collection.banner_image %}
+  <div class="jm-collection-banner">
+    <img src="{{ active_collection.banner_image.url }}" alt="{{ active_collection.name }}" fetchpriority="high" decoding="async">
+  </div>
+  {% endif %}
+  <div class="plp-toolbar jm-plp-toolbar">
+    <div class="jm-plp-toolbar__copy">
+      <h1 id="jm-page-title" class="section-title jm-page-title mb-0">{% if active_collection %}{{ active_collection.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
+      {% if active_collection.description %}<p class="jm-collection-description">{{ active_collection.description|linebreaksbr }}</p>{% endif %}
+      <p id="jm-plp-count" class="section-subtitle jm-plp-count">{{ plp.total_count|default:"0" }} {% trans "products" %}</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <button type="button" class="btn btn-outline-theme btn-sm plp-filter-toggle jm-filter-btn" data-bs-toggle="offcanvas" data-bs-target="#plpFilters">
+        {% trans "Filters" %}
+      </button>
+    </div>
+  </div>
+  <div class="row">
+    <aside class="col-lg-3 mb-4 plp-filters-desktop">
+      {% include "catalog/partials/plp_filters.html" %}
+    </aside>
+    <div class="col-lg-9">
+      <div id="product-grid" class="view-grid product-grid-shell">
+        {% include "catalog/partials/product_grid.html" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="plpFilters" aria-labelledby="plpFiltersLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="plpFiltersLabel">{% trans "Filters" %}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+  </div>
+  <div class="offcanvas-body">
+    {% include "catalog/partials/plp_filters.html" %}
+  </div>
+</div>
+{% endblock %}

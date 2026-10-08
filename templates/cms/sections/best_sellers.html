@@ -1,0 +1,19 @@
+{% load i18n %}
+<section class="jm-section jm-bestsellers">
+  <div class="container">
+    <div class="section-header jm-section-header">
+      <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Best Sellers" %}{% endif %}</h2>
+      <a href="{% url 'catalog:plp' %}?bestseller=1" class="section-cta">{% trans "View All" %}</a>
+    </div>
+
+    <div class="jm-product-grid jm-product-grid--2" role="list">
+      {% for product in section_context.products %}
+      <div class="jm-product-grid__item" role="listitem">
+        {% include "catalog/partials/product_card.html" with product=product force_badge='bestseller' %}
+      </div>
+      {% empty %}
+      <p class="text-muted small mb-0">{% trans "No products available." %}</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>

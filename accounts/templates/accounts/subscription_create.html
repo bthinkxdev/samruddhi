@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New Subscription" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card p-4">
+        <h1 class="section-title h4 mb-3">{% trans "Set Up a Subscription" %}</h1>
+        {% if errors %}
+        <div class="alert alert-danger py-2" role="alert">{{ errors }}</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          {{ form.product_id }}
+          <div class="mb-3">
+            <label class="form-label" for="id_delivery_address_id">{% trans "Delivery address" %}</label>
+            {{ form.delivery_address_id }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_frequency">{% trans "Frequency" %}</label>
+            {{ form.frequency }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_next_run_date">{% trans "First delivery date" %}</label>
+            {{ form.next_run_date }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_quantity">{% trans "Quantity" %}</label>
+            {{ form.quantity }}
+          </div>
+          <button type="submit" class="btn btn-theme w-100">{% trans "Start Subscription" %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

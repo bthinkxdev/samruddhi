@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ seo_title }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-4">
+  <h1 class="section-title mb-4">{% trans "Terms of Service" %}</h1>
+
+  <div class="card p-4">
+    <p class="text-muted small">{% trans "Last updated" %}: {% now "F Y" %}</p>
+
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}Welcome to {{ domain }} ("Website"), operated by {{ name }} ("we", "our", "us"). By accessing, browsing, or purchasing from this Website, you agree to comply with and be bound by the following Terms and Conditions. If you do not agree with any part of these terms, please do not use our Website or services.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Agreement" %}</h6>
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}By placing an order through {{ domain }}, you confirm that you have read, understood, and accepted these Terms and Conditions in full. These terms constitute a legally binding agreement between you and {{ name }}.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Products and Pricing" %}</h6>
+    <p class="mb-1">{% trans "Currency: All prices are displayed in Indian Rupees (INR)." %}</p>
+    <p class="mb-1">{% trans "Price Changes: Prices may change at any time without prior notice." %}</p>
+    <p class="mb-1">{% trans "Product Display: We strive to display product images and descriptions accurately; however, minor variations may occur." %}</p>
+    <p>{% trans "Availability: All products are subject to availability. If a product becomes unavailable after an order is placed, we will notify you and provide a suitable replacement or a full refund." %}</p>
+
+    <h6 class="mt-3">{% trans "Orders and Payment" %}</h6>
+    <p class="mb-1">{% trans "Orders are confirmed only after successful payment." %}</p>
+    <p class="mb-1">{% trans "Full payment must be completed before order processing and dispatch." %}</p>
+    <p class="mb-1">{% trans "Payments are processed through secure third-party payment gateways." %}</p>
+    <p class="mb-1">{% trans "We do not store sensitive payment information such as card numbers or CVV." %}</p>
+    <p>{% trans "In case of payment failure, the order will not be processed." %}</p>
+
+    <h6 class="mt-3">{% trans "Shipping and Delivery" %}</h6>
+    <p class="mb-1">{% trans "Processing Time: Orders are typically shipped within 1–2 business days after payment confirmation." %}</p>
+    <p class="mb-1">{% trans "Delivery Timeline: Delivery timelines are estimated and may vary based on location, courier availability, weather conditions, or unforeseen circumstances." %}</p>
+    <p>{% trans "Shipping Address: Customers are responsible for providing accurate shipping details. We are not liable for delays or losses caused by incorrect address information." %}</p>
+
+    <h6 class="mt-3">{% trans "Returns and Replacements" %}</h6>
+    <p class="mb-1">{% trans "Eligibility: Returns are accepted only if the product is damaged due to our handling or packaging." %}</p>
+    <p class="mb-1">{% trans "Notification Period: Any return request must be raised within 2 days of receiving the product." %}</p>
+    <p class="mb-1">{% trans "Shipping Costs: Customers bear the return shipping cost for both directions (approximately ₹150)." %}</p>
+    <p>{% trans "Verification: Returned items will be inspected before approval of replacement." %}
+      <br>{% trans "Resolution: We do not offer refunds. Approved returns are resolved only with a replacement of the same product." %}</p>
+
+    <h6 class="mt-3">{% trans "Cancellation Policy" %}</h6>
+    <p class="mb-1">{% trans "Orders can be cancelled only before dispatch." %}</p>
+    <p>{% trans "Once shipped, orders cannot be cancelled and will follow the return policy conditions." %}</p>
+
+    <h6 class="mt-3">{% trans "User Responsibilities" %}</h6>
+    <p class="mb-1">{% trans "You agree:" %}</p>
+    <ul>
+      <li>{% trans "To provide accurate personal and delivery information." %}</li>
+      <li>{% trans "Not to misuse the Website or engage in fraudulent activities." %}</li>
+      <li>{% trans "Not to attempt unauthorized access to systems or data." %}</li>
+      <li>{% trans "To comply with all applicable laws and regulations." %}</li>
+    </ul>
+
+    <h6 class="mt-3">{% trans "Intellectual Property" %}</h6>
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}All content on this Website, including logos, images, text, graphics, and design, is the property of {{ name }} and protected under applicable intellectual property laws. Unauthorized use or reproduction is prohibited.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Limitation of Liability" %}</h6>
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} shall not be liable for any direct, indirect, incidental, consequential, or special damages arising from the use or inability to use our products or Website, including but not limited to delays, data loss, or service interruptions.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Force Majeure" %}</h6>
+    <p>{% trans "We shall not be held responsible for delays or failures caused by events beyond our reasonable control, including natural disasters, strikes, government actions, logistics disruptions, or technical failures." %}</p>
+
+    <h6 class="mt-3">{% trans "Privacy" %}</h6>
+    <p>{% trans "Your personal information is handled in accordance with our Privacy Policy. By using our Website, you consent to the collection and use of your data as described therein." %}
+      <a href="{% url 'core:privacy-policy' %}">{% trans "Read our Privacy Policy" %}</a>.
+    </p>
+
+    <h6 class="mt-3">{% trans "Modifications" %}</h6>
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} reserves the right to modify these Terms and Conditions at any time without prior notice. Updated terms will become effective immediately upon posting on the Website.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Governing Law" %}</h6>
+    <p>{% trans "These Terms and Conditions shall be governed and interpreted in accordance with the laws of India." %}</p>
+
+    <h6 class="mt-3">{% trans "Dispute Resolution" %}</h6>
+    <p class="mb-1">{% trans "Negotiation: Any dispute shall first be attempted to be resolved through mutual discussion and good faith negotiation." %}</p>
+    <p class="mb-0">{% trans "Arbitration: If unresolved, the dispute shall be referred to binding arbitration in accordance with applicable Indian laws. The arbitrator's decision shall be final and binding." %}</p>
+  </div>
+
+  <div class="card p-4 mt-4">
+    <h6 class="mb-3">{% trans "Contact Information" %}</h6>
+    <p class="mb-1">{% trans "For any questions or concerns related to these Terms and Conditions, please contact:" %}</p>
+    <p class="mb-1">{% trans "Email" %}: <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a></p>
+    <p class="mb-0">{% trans "Phone" %}: <a href="tel:{{ site_settings.contact_phone|cut:' ' }}">{{ site_settings.contact_phone }}</a></p>
+  </div>
+</div>
+{% endblock %}

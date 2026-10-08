@@ -1,0 +1,66 @@
+{% load static %}
+<nav id="topbar" class="navbar bg-white border-bottom fixed-top topbar px-3">
+  <button id="toggleBtn" class="d-none d-lg-inline-flex btn btn-light btn-icon btn-sm" type="button">
+    <i class="ti ti-layout-sidebar-left-expand"></i>
+  </button>
+  <button id="mobileBtn" class="btn btn-light btn-icon btn-sm d-lg-none me-2" type="button">
+    <i class="ti ti-layout-sidebar-left-expand"></i>
+  </button>
+
+  <div>
+    <ul class="list-unstyled d-flex align-items-center mb-0 gap-1">
+      <li>
+        <a class="position-relative btn-icon btn-sm btn-light btn rounded-circle" data-bs-toggle="dropdown"
+           aria-expanded="false" href="#" role="button">
+          <i class="ti ti-bell fs-5"></i>
+          {% if dashboard_unread_count %}
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2 ms-n2">
+            {{ dashboard_unread_count }}
+            <span class="visually-hidden">unread notifications</span>
+          </span>
+          {% endif %}
+        </a>
+        <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-0">
+          <div class="px-3 py-2 border-bottom fw-semibold small">Notifications</div>
+          <ul class="list-unstyled p-0 m-0 overflow-auto" style="max-height: 300px;">
+            {% for note in dashboard_notifications %}
+            <li class="p-3 border-bottom">
+              <div class="small">
+                <p class="mb-0 fw-semibold">{{ note.title }}</p>
+                <p class="mb-1 text-break">{{ note.body }}</p>
+                <div class="text-secondary">{{ note.created_at|timesince }} ago</div>
+              </div>
+            </li>
+            {% empty %}
+            <li class="p-3 text-center text-secondary small">No new notifications</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
+
+      <li class="ms-3 dropdown">
+        <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="avatar avatar-sm avatar-primary rounded-circle">
+            <span class="avatar-initials rounded-circle">{{ request.user.get_username|slice:":1"|upper }}</span>
+          </span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 220px;">
+          <div class="d-flex gap-3 align-items-center border-bottom px-3 py-3">
+            <span class="avatar avatar-md avatar-primary rounded-circle">
+              <span class="avatar-initials rounded-circle">{{ request.user.get_username|slice:":1"|upper }}</span>
+            </span>
+            <div>
+              <h4 class="mb-0 small">{{ request.user.get_full_name|default:request.user.get_username }}</h4>
+              <p class="mb-0 small text-secondary">{{ request.user.email }}</p>
+            </div>
+          </div>
+          <div class="p-2 small">
+            <a href="{% url 'dashboard:settings' %}" class="dropdown-item rounded"><i class="ti ti-settings me-2"></i>Settings</a>
+            <a href="/admin/" class="dropdown-item rounded"><i class="ti ti-shield-lock me-2"></i>Django Admin</a>
+            <a href="{% url 'dashboard:logout' %}" class="dropdown-item rounded text-danger"><i class="ti ti-logout me-2"></i>Log out</a>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</nav>

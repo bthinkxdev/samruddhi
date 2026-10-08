@@ -1,0 +1,10 @@
+{% if active_filters %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="active-filters">
+  <span class="text-secondary small">Filtered by:</span>
+  {% for f in active_filters %}
+  <a href="{{ f.clear_url }}" class="badge bg-primary-subtle text-primary text-decoration-none d-inline-flex align-items-center gap-1" title="Remove filter">
+    {{ f.label }} <i class="ti ti-x" style="font-size: 0.7rem;"></i>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}

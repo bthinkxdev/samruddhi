@@ -1,0 +1,86 @@
+[
+  {
+    "page": "homepage",
+    "path": "/",
+    "status_code": 200,
+    "query_count": 25,
+    "duplicate_queries": [
+      "SELECT \"catalog_productimage\".\"id\", \"catalog_productimage\".\"created_at\", \"catalog_productimage\".\"updated_at\", \"catalog_productimage\".\"product_id\", \"catalog_productimage\".\"image\", \"catalog_productimage\".\"alt_text\", \"catalog_productimage\".\"display_order\", \"catalog_productimage\".\"is_primary\" FROM \"catalog_productimage\" WHERE (\"catalog_productimage\".\"is_primary\" AND \"catalog_productimage\".\"product_id\" IN (24, 20, 16, 12, 8, 4)) ORDER BY \"catalog_productimage\".\"display_order\" ASC",
+      "SELECT \"catalog_productimage\".\"id\", \"catalog_productimage\".\"created_at\", \"catalog_productimage\".\"updated_at\", \"catalog_productimage\".\"product_id\", \"catalog_productimage\".\"image\", \"catalog_productimage\".\"alt_text\", \"catalog_productimage\".\"display_order\", \"catalog_productimage\".\"is_primary\" FROM \"catalog_productimage\" WHERE (\"catalog_productimage\".\"is_primary\" AND \"catalog_productimage\".\"product_id\" IN (24, 23, 22, 21, 20, 19, 18, 17)) ORDER BY \"catalog_productimage\".\"display_order\" ASC"
+    ],
+    "slow_queries_ms": [],
+    "total_time_ms": 95.67
+  },
+  {
+    "page": "plp",
+    "path": "/shop/",
+    "status_code": 200,
+    "query_count": 12,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 20.62
+  },
+  {
+    "page": "plp_filtered",
+    "path": "/shop/?bestseller=1&sort=price_asc",
+    "status_code": 200,
+    "query_count": 12,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 12.37
+  },
+  {
+    "page": "pdp",
+    "path": "/shop/products/luxury-arrangement-1/",
+    "status_code": 200,
+    "query_count": 18,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 18.37
+  },
+  {
+    "page": "gift_builder",
+    "path": "/gifting/products/luxury-arrangement-1/builder/",
+    "status_code": 404,
+    "query_count": 14,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 16.97
+  },
+  {
+    "page": "cart_drawer",
+    "path": "/cart/drawer/",
+    "status_code": 200,
+    "query_count": 6,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 5.89
+  },
+  {
+    "page": "checkout",
+    "path": "/checkout/",
+    "status_code": 302,
+    "query_count": 7,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 3.23
+  },
+  {
+    "page": "order_tracking",
+    "path": "/orders/1/tracking/",
+    "status_code": 200,
+    "query_count": 8,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 9.15
+  },
+  {
+    "page": "admin_dashboard",
+    "path": "/reports/admin/dashboard/",
+    "status_code": 200,
+    "query_count": 6,
+    "duplicate_queries": [],
+    "slow_queries_ms": [],
+    "total_time_ms": 3.57
+  }
+]

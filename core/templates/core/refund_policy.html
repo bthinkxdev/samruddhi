@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ seo_title }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-4">
+  <h1 class="section-title mb-4">{% trans "Refund Policy" %}</h1>
+
+  <div class="card p-4">
+    <p class="text-muted small">{% trans "Last updated" %}: {% now "F Y" %}</p>
+
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}Thank you for shopping with {{ name }}. We value customer satisfaction and aim to provide high-quality products. Please read this policy carefully to understand the conditions under which returns are accepted. We do not offer cash or payment refunds — approved returns are resolved only with a replacement of the same product.{% endblocktrans %}</p>
+
+    <h6 class="mt-3">{% trans "Eligibility for Returns" %}</h6>
+    <p class="mb-1">{% trans "Returns are accepted only under the following condition:" %}</p>
+    <ul>
+      <li>{% trans "The product received is damaged due to our packaging or handling." %}</li>
+    </ul>
+    <p class="mb-1">{% trans "We do not accept returns for:" %}</p>
+    <ul class="mb-0">
+      <li>{% trans "Change of mind" %}</li>
+      <li>{% trans "Incorrect product selection by the customer" %}</li>
+      <li>{% trans "Color or texture variation" %}</li>
+      <li>{% trans "Normal wear and tear" %}</li>
+      <li>{% trans "Incorrect address provided by the customer" %}</li>
+    </ul>
+
+    <h6 class="mt-3">{% trans "Return Request Timeframe" %}</h6>
+    <p>{% trans "Any eligible return request must be initiated within 2 days of receiving the product. Requests made after this period will not be accepted." %}</p>
+
+    <h6 class="mt-3">{% trans "Proof of Damage" %}</h6>
+    <p class="mb-1">{% trans "To process a return request, customers must provide:" %}</p>
+    <ul>
+      <li>{% trans "Clear photos or videos showing the damaged product and packaging." %}</li>
+      <li>{% trans "Order number and registered contact details." %}</li>
+    </ul>
+    <p>{% trans "Requests without valid proof may be rejected." %}</p>
+
+    <h6 class="mt-3">{% trans "Return Shipping Charges" %}</h6>
+    <p class="mb-1">{% trans "Customers are responsible for return shipping costs for both directions, approximately ₹150." %}</p>
+    <p>{% trans "Shipping charges are non-refundable unless explicitly stated." %}</p>
+
+    <h6 class="mt-3">{% trans "Inspection and Approval" %}</h6>
+    <p class="mb-1">{% trans "Once the returned product is received, it will be inspected for verification." %}</p>
+    <p class="mb-1">{% trans "If the damage is confirmed, a replacement will be approved." %}</p>
+    <p>{% trans "If the product does not meet eligibility conditions, the return will be declined and returned to the customer at their expense." %}</p>
+
+    <h6 class="mt-3">{% trans "Replacement Policy" %}</h6>
+    <p class="mb-1">{% trans "We do not offer refunds. Approved returns are resolved only by replacing the product with the same item — no cash or payment refunds are issued under any circumstances." %}</p>
+    <p>{% trans "Replacements are subject to stock availability of the same product and variant." %}</p>
+
+    <h6 class="mt-3">{% trans "Order Cancellation" %}</h6>
+    <p class="mb-1">{% trans "Orders can only be cancelled before dispatch." %}</p>
+    <p>{% trans "Once shipped, orders cannot be cancelled and must follow the return policy conditions." %}</p>
+
+    <h6 class="mt-3">{% trans "Policy Modifications" %}</h6>
+    <p class="mb-0">{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} reserves the right to modify this policy at any time without prior notice. Changes become effective immediately upon posting on the website.{% endblocktrans %}</p>
+  </div>
+
+  <div class="card p-4 mt-4">
+    <h6 class="mb-3">{% trans "Contact Information" %}</h6>
+    <p class="mb-1">{% trans "For return or replacement requests, please contact:" %}</p>
+    <p class="mb-1">{% trans "Email" %}: <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a></p>
+    <p class="mb-0">{% trans "Phone" %}: <a href="tel:{{ site_settings.contact_phone|cut:' ' }}">{{ site_settings.contact_phone }}</a></p>
+  </div>
+</div>
+{% endblock %}

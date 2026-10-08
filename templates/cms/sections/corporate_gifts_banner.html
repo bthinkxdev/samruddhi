@@ -1,0 +1,8 @@
+{% load i18n %}
+{% if section_context.banner.url and section_context.banner.image %}
+<section class="container mb-5">
+  <a href="{{ section_context.banner.url }}" class="promo-banner d-block rounded overflow-hidden">
+    <img src="{{ section_context.banner.image }}" alt="{{ section_context.banner.title }}" class="w-100" width="1200" height="300" loading="lazy">
+  </a>
+</section>
+{% endif %}

@@ -1,0 +1,24 @@
+[Unit]
+Description=Samruddhi Gunicorn daemon
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+RuntimeDirectory=samruddhi
+RuntimeDirectoryMode=0755
+WorkingDirectory=/var/www/samruddhi
+EnvironmentFile=/var/www/samruddhi/.env
+Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+ExecStart=/var/www/samruddhi/.venv/bin/gunicorn \
+    -c deploy/gunicorn/gunicorn.conf.py \
+    config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

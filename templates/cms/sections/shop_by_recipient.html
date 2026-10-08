@@ -1,0 +1,18 @@
+{% load i18n %}
+<section class="container mb-4">
+  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Shop by Recipient" %}
+  <div class="chip-scroll" role="list">
+    {% for recipient in section_context.recipients %}
+    <a href="{% url 'catalog:plp' %}?recipient={{ recipient.pk }}" class="occasion-chip text-decoration-none" role="listitem">
+      <span class="occasion-chip__icon">
+        {% if recipient.icon %}
+        <img src="{{ recipient.icon.url }}" alt="{{ recipient.name }}" class="occasion-chip__img" width="40" height="40" loading="lazy">
+        {% else %}
+        🎀
+        {% endif %}
+      </span>
+      <span class="occasion-chip__label">{{ recipient.name }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>

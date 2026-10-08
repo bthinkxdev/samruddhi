@@ -1,0 +1,397 @@
+{% load storefront_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - {{ order.order_number }}</title>
+    <!-- include html2pdf.js for client-side PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #333;
+            background: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .action-bar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        .btn-download {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s;
+        }
+        .btn-download:hover {
+            background-color: #2563eb;
+        }
+        @media print {
+            .action-bar { display: none !important; }
+            body { background: white; padding: 0; display: block; }
+            .invoice-container { 
+                box-shadow: none !important; 
+                margin: 0 !important; 
+                width: 100% !important; 
+                padding: 15mm !important; 
+                min-height: auto !important; 
+            }
+        }
+        
+        .invoice-container {
+            width: 210mm;
+            min-height: 296mm;
+            padding: 15mm;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            page-break-inside: avoid;
+        }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2d3748;
+            margin-bottom: 20px;
+        }
+        .company-name { font-size: 24pt; font-weight: bold; color: #1a202c; margin-bottom: 4px; }
+        .company-details { font-size: 10pt; color: #4a5568; line-height: 1.5; }
+        .invoice-meta { text-align: right; }
+        .invoice-title { font-size: 20pt; font-weight: bold; color: #2d3748; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+        .invoice-number { font-size: 12pt; color: #4a5568; font-weight: bold; margin-bottom: 4px; }
+        .invoice-date { font-size: 10pt; color: #718096; }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .ship-to {
+            flex: 0 1 320px;
+            padding: 12px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .section-title { font-size: 10pt; font-weight: bold; color: #4a5568; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .customer-details { font-size: 10pt; line-height: 1.6; color: #2d3748; }
+        .customer-name { font-weight: bold; font-size: 11pt; color: #1a202c; margin-bottom: 4px; }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 10pt;
+        }
+        .items-table thead { background: #2d3748; color: white; }
+        .items-table th {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 10pt;
+            font-weight: 600;
+        }
+        .items-table th:last-child, .items-table td:last-child { text-align: right; }
+        .items-table th:nth-last-child(2), .items-table td:nth-last-child(2) { text-align: center; }
+        .items-table tbody tr { border-bottom: 1px solid #e2e8f0; }
+        .items-table tbody tr:nth-child(even) { background-color: #f7fafc; }
+        .items-table td { padding: 10px 12px; color: #4a5568; }
+        .item-name { font-weight: 600; color: #1a202c; display: block; margin-bottom: 2px; }
+        .item-variant { font-size: 9pt; color: #718096; }
+        .totals-section { 
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px; 
+        }
+        .totals-table { width: 300px; font-size: 10pt; }
+        .totals-table tr { border-bottom: 1px solid #edf2f7; }
+        .totals-table td { padding: 8px 12px; color: #4a5568; }
+        .totals-table td:last-child { text-align: right; font-weight: 600; }
+        .totals-table .total-row {
+            border-top: 2px solid #2d3748;
+            border-bottom: none;
+            background-color: #f7fafc;
+        }
+        .totals-table .total-row td {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1a202c;
+        }
+        .invoice-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .payment-info { flex: 1; }
+        .payment-info-title { font-size: 10pt; font-weight: bold; color: #4a5568; margin-bottom: 6px; text-transform: uppercase; }
+        .payment-details { font-size: 10pt; color: #718096; line-height: 1.5; }
+        .payment-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: 600;
+            background: #def7ec;
+            color: #03543f;
+            margin-top: 6px;
+        }
+        .payment-badge.pending { background: #fef3c7; color: #92400e; }
+        .thank-you {
+            text-align: right;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            color: #718096;
+            font-style: italic;
+        }
+        @media screen and (max-width: 800px) {
+            body.responsive-view {
+                padding: 10px;
+                display: block; 
+            }
+            .responsive-view .action-bar {
+                position: static;
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+            }
+            .responsive-view .invoice-container {
+                width: 100%;
+                min-height: auto;
+                padding: 15px;
+                margin: 0 auto 20px auto;
+            }
+            .responsive-view .invoice-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .responsive-view .invoice-meta {
+                text-align: left;
+            }
+            .responsive-view .info-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .responsive-view .totals-section {
+                justify-content: flex-start;
+            }
+            .responsive-view .totals-table {
+                width: 100%;
+            }
+            .responsive-view .items-table th, 
+            .responsive-view .items-table td {
+                padding: 8px 5px;
+                font-size: 9pt;
+                word-break: break-word;
+                white-space: normal;
+            }
+            .responsive-view .invoice-footer {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .responsive-view .thank-you {
+                text-align: left;
+                margin-top: 10px;
+            }
+            .responsive-view .table-responsive {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin-bottom: 20px;
+            }
+            .responsive-view .items-table {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="responsive-view">
+    <div class="action-bar">
+        <button class="btn-download" onclick="downloadInvoice()">Download PDF</button>
+    </div>
+
+    <div class="invoice-container" id="invoice-content">
+        <div class="invoice-header">
+            <div style="display: flex; align-items: flex-start; gap: 15px;">
+                {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="Logo" style="max-height: 60px; max-width: 150px; object-fit: contain;">
+                {% endif %}
+                <div>
+                    <div class="company-name">{{ site_settings.site_name|default:"Our Store" }}</div>
+                    <div class="company-details">
+                        {% if site_settings.vendor_email %}
+                            {{ site_settings.vendor_email }}<br>
+                        {% else %}
+                            contact@{{ request.get_host }}<br>
+                        {% endif %}
+                        {% if site_settings.whatsapp_number %}
+                            {{ site_settings.whatsapp_number }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="invoice-meta">
+                <div class="invoice-title">INVOICE</div>
+                <div class="invoice-number">#{{ order.order_number }}</div>
+                <div class="invoice-date">Date: {{ order.created_at|date:"M d, Y" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="ship-to">
+                <div class="section-title">Shipping Address</div>
+                <div class="customer-details">
+                    <div class="customer-name">
+                        {% if order.delivery_address_snapshot.name %}
+                            {{ order.delivery_address_snapshot.name }}
+                        {% elif order.customer_profile and order.customer_profile.user.get_full_name %}
+                            {{ order.customer_profile.user.get_full_name }}
+                        {% else %}
+                            Guest Customer
+                        {% endif %}
+                    </div>
+                    {% if order.delivery_address_snapshot.line1 %}<div>{{ order.delivery_address_snapshot.line1 }}</div>{% endif %}
+                    {% if order.delivery_address_snapshot.line2 %}
+                        <div>{{ order.delivery_address_snapshot.line2 }}</div>
+                    {% endif %}
+                    <div>{{ order.delivery_address_snapshot.city }}{% if order.delivery_address_snapshot.state %}, {{ order.delivery_address_snapshot.state }}{% endif %} {{ order.delivery_address_snapshot.pincode }}</div>
+
+                    {% if order.delivery_address_snapshot.email %}
+                        <div>{{ order.delivery_address_snapshot.email }}</div>
+                    {% elif order.customer_profile %}
+                        <div>{{ order.customer_profile.user.email }}</div>
+                    {% endif %}
+
+                    {% if order.delivery_address_snapshot.phone %}
+                        <div>{{ order.delivery_address_snapshot.phone }}</div>
+                    {% elif order.customer_profile and order.customer_profile.get_phone %}
+                        <div>{{ order.customer_profile.get_phone }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Item Description</th>
+                        <th>Price/Qty</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>
+                            <span class="item-name">{{ item.product.name }}</span>
+                            {% if item.variant %}
+                                <span class="item-variant">{{ item.variant.name }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{% money_label item.unit_price order.currency %}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ order.currency.symbol }} {% widthratio item.unit_price 1 item.quantity %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td>Subtotal</td>
+                    <td>{% money_label order.subtotal order.currency %}</td>
+                </tr>
+                {% if order.delivery_charge > 0 %}
+                <tr>
+                    <td>Delivery Charge</td>
+                    <td>{% money_label order.delivery_charge order.currency %}</td>
+                </tr>
+                {% endif %}
+                {% if order.coupon_discount > 0 %}
+                <tr>
+                    <td>Discount</td>
+                    <td>- {% money_label order.coupon_discount order.currency %}</td>
+                </tr>
+                {% endif %}
+                <tr class="total-row">
+                    <td>Total Amount</td>
+                    <td>{% money_label order.total_amount order.currency %}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="invoice-footer">
+            <div class="payment-info">
+                <div class="payment-info-title">Payment Information</div>
+                <div class="payment-details">
+                    Method: {{ order.payment_method_display }}<br>
+                    <span class="payment-badge {% if order.payment_status_display != 'Success' %}pending{% endif %}">
+                        Status: {{ order.payment_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="thank-you">
+                <p>Thank you for your order!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadInvoice() {
+            const wasResponsive = document.body.classList.contains('responsive-view');
+            if (wasResponsive) document.body.classList.remove('responsive-view');
+
+            const element = document.getElementById('invoice-content');
+            
+            //for single invoice, the element is the container itself
+            const originalMinHeight = element.style.minHeight;
+            const originalBoxShadow = element.style.boxShadow;
+            
+            element.style.minHeight = 'auto';
+            element.style.boxShadow = 'none';
+
+            const opt = {
+                margin:       0,
+                filename:     'Invoice_{{ order.order_number }}.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
+            };
+            
+            // generate PDF and save
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.minHeight = originalMinHeight;
+                element.style.boxShadow = originalBoxShadow;
+                if (wasResponsive) document.body.classList.add('responsive-view');
+            });
+        }
+    </script>
+</body>
+</html>

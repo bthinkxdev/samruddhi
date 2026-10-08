@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load i18n storefront_tags %}
+
+{% block title %}{% trans "Order Confirmed" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9">
+      <div class="card border-0 shadow-lg" style="border-radius: 1.5rem; overflow: hidden;">
+        <div class="card-header bg-white border-0 text-center pt-5 pb-2">
+          <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-4" style="width: 80px; height: 80px; color: var(--theme-primary) !important;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h1 class="h3 fw-bold text-dark mb-2">{% trans "Thank you for your order!" %}</h1>
+          <p class="text-muted mb-0 fs-6">
+            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">#{{ number }}</strong> has been confirmed.{% endblocktrans %}
+          </p>
+        </div>
+
+        <div class="card-body px-4 px-md-5 pb-5 pt-4">
+          <div class="card bg-light border-0 mb-4" style="border-radius: 1rem;">
+            <div class="card-body p-4">
+              <div class="row g-3">
+                <div class="col-sm-4">
+                  <p class="text-muted small fw-semibold text-uppercase letter-spacing-sm mb-1">{% trans "Date" %}</p>
+                  <p class="fw-medium text-dark mb-0">{{ order.created_at|date:"M d, Y" }}</p>
+                </div>
+                <div class="col-sm-4">
+                  <p class="text-muted small fw-semibold text-uppercase letter-spacing-sm mb-1">{% trans "Payment Method" %}</p>
+                  <p class="fw-medium text-dark mb-0">{{ order.payment_method_display }}</p>
+                </div>
+                <div class="col-sm-4">
+                  <p class="text-muted small fw-semibold text-uppercase letter-spacing-sm mb-1">{% trans "Total Amount" %}</p>
+                  <p class="fw-bold text-dark mb-0 fs-5">{% money_label order.total_amount order.currency %}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% if order.delivery_address_snapshot %}
+          <div class="mb-4">
+            <h5 class="fw-bold fs-6 mb-3 text-dark">{% trans "Delivery Details" %}</h5>
+            <div class="card border border-light shadow-sm" style="border-radius: 1rem;">
+              <div class="card-body p-4 d-flex align-items-start gap-3">
+                <div class="text-muted mt-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-geo-alt-fill text-primary" viewBox="0 0 16 16" style="color: var(--theme-primary) !important;">
+                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                  </svg>
+                </div>
+                <div class="flex-grow-1 text-break">
+                  {% if order.delivery_address_snapshot.label %}
+                  <span class="badge bg-light text-dark border mb-2">{{ order.delivery_address_snapshot.label }}</span>
+                  {% endif %}
+                  {% if order.delivery_address_snapshot.name %}
+                  <div class="fw-bold text-dark mb-1">{{ order.delivery_address_snapshot.name }}</div>
+                  {% endif %}
+                  <div class="text-muted small lh-lg">
+                    {{ order.delivery_address_snapshot.line1 }}<br>
+                    {% if order.delivery_address_snapshot.line2 %}
+                    {{ order.delivery_address_snapshot.line2 }}<br>
+                    {% endif %}
+                    {{ order.delivery_address_snapshot.city }}{% if order.delivery_address_snapshot.state %}, {{ order.delivery_address_snapshot.state }}{% endif %}{% if order.delivery_address_snapshot.pincode %} - {{ order.delivery_address_snapshot.pincode }}{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center mt-5">
+            <a href="{% url 'accounts:customer-invoice' order.pk %}" class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-pill shadow-sm" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/><path d="M4.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/></svg>{% trans "View Invoice" %}
+            </a>
+            <a href="{% if order.delhivery_shipment.waybill_number %}https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}{% else %}https://www.delhivery.com/tracking{% endif %}" target="_blank" class="btn btn-theme px-4 py-2 fw-medium rounded-pill shadow-sm" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">{% trans "Track Order" %}</a>
+            <a href="{% url 'catalog:plp' %}" class="btn btn-outline-theme px-4 py-2 fw-medium rounded-pill" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">{% trans "Continue Shopping" %}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
