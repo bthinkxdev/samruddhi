@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 
 from core.models import TimeStampedModel
@@ -88,6 +88,58 @@ class Collection(TimeStampedModel):
         indexes = [
             models.Index(fields=["is_active"], name="cat_collection_is_active_idx"),
         ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Label(TimeStampedModel):
+    """
+    A badge shown in the corner of a product's image ("Bestseller", "New", ...).
+
+    Labels are many-to-many with products: a product can carry several labels and
+    one label can sit on many products.
+    """
+
+    name = models.CharField(
+        max_length=40,
+        verbose_name="Name",
+        help_text="Text shown on the badge.",
+    )
+    slug = models.SlugField(
+        max_length=50,
+        unique=True,
+        verbose_name="Slug",
+        help_text="Used in shop filter links, e.g. /shop/?label=bestseller.",
+    )
+    background_color = models.CharField(
+        max_length=7,
+        default="#111827",
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Enter a hex colour such as #1A2B3C.")],
+        verbose_name="Badge colour",
+    )
+    text_color = models.CharField(
+        max_length=7,
+        default="#FFFFFF",
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Enter a hex colour such as #1A2B3C.")],
+        verbose_name="Text colour",
+    )
+    display_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Display order",
+        help_text="Lower values appear first when a product has several labels.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name="Is active",
+        help_text="Inactive labels are hidden from the storefront but stay assigned.",
+    )
+
+    class Meta:
+        verbose_name = "Label"
+        verbose_name_plural = "Labels"
+        ordering = ["display_order", "name"]
 
     def __str__(self) -> str:
         return self.name
@@ -233,20 +285,11 @@ class Product(TimeStampedModel):
         db_index=True,
         verbose_name="Is active",
     )
-    is_featured = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name="Is featured",
-    )
-    is_bestseller = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name="Is bestseller",
-    )
-    is_new_arrival = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name="Is new arrival",
+    labels = models.ManyToManyField(
+        Label,
+        blank=True,
+        related_name="products",
+        verbose_name="Labels",
     )
 
     stock_quantity = models.PositiveIntegerField(
@@ -276,16 +319,6 @@ class Product(TimeStampedModel):
     class Meta:
         verbose_name = "Product"
         verbose_name_plural = "Products"
-        indexes = [
-            models.Index(
-                fields=["is_active", "is_bestseller"],
-                name="cat_prod_active_bestseller_idx",
-            ),
-            models.Index(fields=["is_active", "is_new_arrival"], name="cat_prod_active_new_idx"),
-            models.Index(
-                fields=["is_active", "is_featured"], name="cat_prod_featured_idx"
-            ),
-        ]
 
     def __str__(self) -> str:
         return self.name

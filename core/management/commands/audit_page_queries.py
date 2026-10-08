@@ -32,7 +32,7 @@ class Command(BaseCommand):
     PAGES = [
         ("homepage", "/"),
         ("plp", "/shop/"),
-        ("plp_filtered", "/shop/?bestseller=1&sort=price_asc"),
+        ("plp_filtered", "/shop/?sort=price_asc"),
         ("pdp", None),
         ("gift_builder", None),
         ("cart_drawer", "/cart/drawer/"),

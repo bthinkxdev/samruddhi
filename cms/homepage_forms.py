@@ -100,9 +100,6 @@ class EmptyConfigForm(BaseSectionConfigForm):
 SECTION_CONFIG_FORMS: dict[str, type[BaseSectionConfigForm]] = {
     HomepageSectionType.HERO_SLIDER: HeroSliderConfigForm,
     HomepageSectionType.SHOP_BY_COLLECTION: EmptyConfigForm,
-    HomepageSectionType.FEATURED_PRODUCTS: EmptyConfigForm,
-    HomepageSectionType.NEW_ARRIVALS: EmptyConfigForm,
-    HomepageSectionType.BEST_SELLERS: EmptyConfigForm,
     HomepageSectionType.FEATURED_BRANDS: EmptyConfigForm,
     HomepageSectionType.SUBSCRIPTION_BANNER: BannerConfigForm,
     HomepageSectionType.MARKETING_FEATURES: MarketingFeaturesConfigForm,

@@ -51,12 +51,8 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
         filters["recipient_id"] = int(recipient_id)
     if color := request.GET.get("color"):
         filters["color"] = color
-    if request.GET.get("featured") == "1":
-        filters["featured"] = True
-    if request.GET.get("bestseller") == "1":
-        filters["bestseller"] = True
-    if request.GET.get("new_arrival") == "1":
-        filters["new_arrival"] = True
+    if label_slug := request.GET.get("label"):
+        filters["label"] = label_slug
     if request.GET.get("in_stock") == "1":
         filters["in_stock"] = True
     if min_price := request.GET.get("min_price"):
@@ -147,6 +143,7 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
             "sort": sort,
             "collections": filter_options["collections"],
             "brands": filter_options["brands"],
+            "labels": filter_options["labels"],
             "subcollections": subcollections,
             "subcollections_map": filter_options["subcollections_map"],
             "active_collection": active_collection,

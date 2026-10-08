@@ -11,6 +11,7 @@ from django.db.models import Avg, Count, F, Prefetch, Q, QuerySet, Case, When, V
 
 from catalog.models import (
     Collection,
+    Label,
     ModerationStatus,
     Product,
     ProductDocument,
@@ -32,9 +33,6 @@ PLP_CARD_FIELDS: tuple[str, ...] = (
     "base_price",
     "mrp",
     "color",
-    "is_featured",
-    "is_bestseller",
-    "is_new_arrival",
     "stock_quantity",
     "low_stock_threshold",
     "brand_id",
@@ -79,61 +77,13 @@ def _variants_prefetch() -> Prefetch:
     )
 
 
-def _homepage_rail_queryset(*, filters: Q, ordering: tuple = ("-created_at",)) -> QuerySet[Product]:
-    """Base queryset for a single homepage rail with shared optimizations."""
-    approved = Q(reviews__moderation_status=ModerationStatus.APPROVED)
-    return (
-        Product.objects.filter(is_active=True)
-        .filter(filters)
-        .select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
-        .only(*PLP_CARD_FIELDS)
-        .annotate(
-            average_rating=Avg("reviews__rating", filter=approved),
-            review_count=Count("reviews", filter=approved),
-        )
-        .order_by(*ordering)[:HOMEPAGE_RAIL_LIMIT]
+def _label_prefetch() -> Prefetch:
+    """Prefetch active labels onto ``active_labels`` for the corner badges on product cards."""
+    return Prefetch(
+        "labels",
+        queryset=Label.objects.filter(is_active=True).order_by("display_order", "name"),
+        to_attr="active_labels",
     )
-
-
-def get_homepage_product_rails() -> dict[str, list[Product]]:
-    """
-    Return homepage merchandising rails keyed by rail name.
-
-    Query guarantee: exactly 6 DB queries total (3 rails × 2 queries each) —
-      trending/bestsellers share one evaluated bestseller rail —
-      plus one flash-sale discount lookup for all unique product ids.
-    """
-    bestseller_rail = list(_homepage_rail_queryset(filters=Q(is_bestseller=True)))
-    new_arrivals = list(_homepage_rail_queryset(filters=Q(is_new_arrival=True)))
-    featured = list(_homepage_rail_queryset(
-        filters=Q(),
-        ordering=(
-            Case(
-                When(homepage_featured__is_shown=True, then=Value(1)),
-                When(homepage_featured__is_shown=False, then=Value(-1)),
-                default=Value(0),
-                output_field=IntegerField()
-            ).desc(),
-            Case(
-                When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
-                default=None
-            ).desc(nulls_last=True),
-            Case(
-                When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
-                default=None
-            ).asc(nulls_last=True),
-            "-created_at"
-        )
-    ))
-    rails = {
-        "trending": bestseller_rail,
-        "bestsellers": bestseller_rail,
-        "new_arrivals": new_arrivals,
-        "featured": featured,
-    }
-    _decorate_homepage_rail_prices(rails)
-    return rails
 
 
 def get_collection_family_ids(*, collection_id: int) -> list[int]:
@@ -165,7 +115,7 @@ def get_collection_products(*, collection: Collection, limit: int | None = None)
         Product.objects.filter(is_active=True)
         .filter(products_in_collections(get_collection_family_ids(collection_id=collection.pk)))
         .select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
             average_rating=Avg("reviews__rating", filter=approved),
@@ -256,12 +206,8 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(brand_id=brand_id)
     if color := filters.get("color"):
         queryset = queryset.filter(color__iexact=color)
-    if filters.get("featured"):
-        queryset = queryset.filter(is_featured=True)
-    if filters.get("bestseller"):
-        queryset = queryset.filter(is_bestseller=True)
-    if filters.get("new_arrival"):
-        queryset = queryset.filter(is_new_arrival=True)
+    if label_slug := filters.get("label"):
+        queryset = queryset.filter(labels__slug=label_slug, labels__is_active=True)
     if filters.get("in_stock"):
         queryset = queryset.filter(stock_quantity__gt=0)
     if min_price := filters.get("min_price"):
@@ -320,7 +266,7 @@ def get_plp_products(
     queryset = (
         Product.objects.filter(is_active=True)
         .select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
             average_rating=Avg(
@@ -516,7 +462,7 @@ def get_recently_viewed(
     products = (
         Product.objects.filter(id__in=product_ids, is_active=True)
         .select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
     product_map = {product.id: product for product in products}
@@ -568,7 +514,7 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
     clean_query = query.strip()
     products = list(
         Product.objects.filter(is_active=True, name__icontains=clean_query)
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
@@ -627,7 +573,7 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
     limit = config.get("limit", HOMEPAGE_RAIL_LIMIT)
     return list(
         qs.select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .order_by("-created_at")[:limit]
     )
@@ -727,6 +673,7 @@ def get_plp_filter_options() -> dict:
     return {
         "collections": collections,
         "brands": get_featured_brands(),
+        "labels": list(Label.objects.filter(is_active=True)),
         "subcollections_map": subcollections_map,
     }
 
@@ -786,7 +733,7 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     products = list(
         Product.objects.filter(pk__in=explicit_ids, is_active=True)
         .select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
     
@@ -799,7 +746,7 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
             Product.objects.filter(products_in_collections(collection_ids), is_active=True)
             .exclude(pk__in=exclude_ids)
             .select_related("brand")
-            .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+            .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
             .only(*PLP_CARD_FIELDS)[:needed]
         )
         products.extend(list(collection_products))
@@ -812,7 +759,7 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
             Product.objects.filter(is_active=True)
             .exclude(pk__in=exclude_ids)
             .select_related("brand")
-            .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+            .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
             .only(*PLP_CARD_FIELDS)[:needed]
         )
         products.extend(list(fallback_products))

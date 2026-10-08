@@ -496,3 +496,54 @@ class HomepageSectionReorderTests(TestCase):
         self.client.logout()
         response = self.client.get(reverse("dashboard:homepagesection-list"))
         self.assertEqual(response.status_code, 302)
+
+
+class LabelDashboardTests(TestCase):
+    """Label CRUD and assigning labels from the product form."""
+
+    def setUp(self) -> None:
+        self.client.force_login(
+            User.objects.create_superuser(
+                username="dash-labels", email="dash-labels@example.com", password="testpass12345"
+            )
+        )
+
+    def test_create_label_derives_slug(self) -> None:
+        from catalog.models import Label
+
+        response = self.client.post(
+            reverse("dashboard:label-create"),
+            {"name": "Just In", "slug": "", "background_color": "#AA0000", "text_color": "#FFFFFF",
+             "display_order": "1", "is_active": "on"},
+        )
+        self.assertRedirects(response, reverse("dashboard:label-list"))
+        self.assertEqual(Label.objects.get().slug, "just-in")
+
+    def test_invalid_colour_is_rejected(self) -> None:
+        from catalog.models import Label
+
+        response = self.client.post(
+            reverse("dashboard:label-create"),
+            {"name": "Bad", "slug": "bad", "background_color": "red", "text_color": "#FFFFFF",
+             "display_order": "0", "is_active": "on"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Label.objects.exists())
+
+    def test_product_form_assigns_labels(self) -> None:
+        from catalog.models import Label
+
+        label = Label.objects.create(name="Sale", slug="sale")
+        data = {
+            "name": "Labelled Tee", "sku": "LAB-1", "labels": [str(label.pk)],
+            "base_price": "5.00", "mrp": "5.00", "purchase_price": "2.00", "stock_quantity": "3",
+            **_EMPTY_FORMSETS,
+        }
+        self.client.post(reverse("dashboard:product-create"), data=data)
+        self.assertEqual(list(Product.objects.get(sku="LAB-1").labels.all()), [label])
+
+    def test_removed_section_types_are_not_offered(self) -> None:
+        from cms.models import HomepageSectionType
+
+        values = {value for value, _ in HomepageSectionType.choices}
+        self.assertTrue({"featured_products", "new_arrivals", "best_sellers"}.isdisjoint(values))

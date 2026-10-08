@@ -172,3 +172,49 @@ class CollectionMembershipTests(TestCase):
         self.sale.save()
         response = self.client.get(reverse("catalog:plp-collection", kwargs={"collection_slug": "sale"}))
         self.assertEqual(response.status_code, 404)
+
+
+class LabelTests(TestCase):
+    """Labels are many-to-many corner badges on product cards."""
+
+    def setUp(self) -> None:
+        from catalog.models import Label
+
+        self.collection = Collection.objects.create(name="Tees", slug="tees")
+        self.hot = Label.objects.create(
+            name="Hot Seller", slug="hot-seller", background_color="#112233", text_color="#FFEEDD"
+        )
+        self.hidden = Label.objects.create(name="Secret", slug="secret", is_active=False)
+        self.tagged = _make_product(sku="L-1", name="Tagged tee")
+        self.plain = _make_product(sku="L-2", name="Plain tee")
+        for product in (self.tagged, self.plain):
+            product.collections.add(self.collection)
+        self.tagged.labels.add(self.hot, self.hidden)
+
+    def _collection_page(self, **params):
+        from django.urls import reverse
+
+        return self.client.get(
+            reverse("catalog:plp-collection", kwargs={"collection_slug": "tees"}), params
+        )
+
+    def test_active_label_renders_over_the_card_with_its_colours(self) -> None:
+        response = self._collection_page()
+        self.assertContains(response, "Hot Seller")
+        self.assertContains(response, "background: #112233; color: #FFEEDD;")
+
+    def test_inactive_label_is_hidden(self) -> None:
+        self.assertNotContains(self._collection_page(), "Secret")
+
+    def test_label_filter_narrows_the_listing(self) -> None:
+        response = self._collection_page(label="hot-seller")
+        self.assertContains(response, "Tagged tee")
+        self.assertNotContains(response, "Plain tee")
+
+    def test_inactive_label_does_not_filter(self) -> None:
+        response = self._collection_page(label="secret")
+        self.assertNotContains(response, "Tagged tee")
+
+    def test_label_can_sit_on_many_products(self) -> None:
+        self.plain.labels.add(self.hot)
+        self.assertEqual(self.hot.products.count(), 2)

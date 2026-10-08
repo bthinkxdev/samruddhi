@@ -7,6 +7,7 @@ from django.contrib import admin
 from catalog.models import (
     Brand,
     Collection,
+    Label,
     Product,
     ProductImage,
     ProductRelation,
@@ -38,6 +39,17 @@ class CollectionAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("display_order", "name")
 
+
+
+@admin.register(Label)
+class LabelAdmin(admin.ModelAdmin):
+    """Admin for product labels (corner badges)."""
+
+    list_display = ("name", "slug", "background_color", "text_color", "display_order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+    ordering = ("display_order", "name")
 
 
 @admin.register(Brand)
@@ -80,22 +92,19 @@ class ProductAdmin(admin.ModelAdmin):
         "brand",
         "base_price",
         "is_active",
-        "is_bestseller",
         "stock_quantity",
         "updated_at",
     )
     list_filter = (
         "is_active",
-        "is_bestseller",
-        "is_new_arrival",
-        "is_featured",
+        "labels",
         "collections",
         "brand",
     )
     search_fields = ("name", "slug", "sku")
     list_select_related = ("brand",)
     prepopulated_fields = {"slug": ("name",)}
-    filter_horizontal = ("collections",)
+    filter_horizontal = ("collections", "labels")
     inlines = [
         ProductVariantInline,
         ProductImageInline,

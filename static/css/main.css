@@ -925,21 +925,6 @@ body.mobile-search-open {
   box-shadow: var(--theme-shadow-sm);
 }
 
-.product-badge--express {
-  color: var(--theme-primary);
-}
-
-.product-badge--same-day {
-  background: var(--theme-primary);
-  color: #fff;
-}
-
-.product-badge--new {
-  background: var(--jm-accent-dark);
-  color: #fff;
-}
-
-
 .chip-scroll {
   display: flex;
   gap: 0.5rem;

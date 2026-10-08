@@ -75,11 +75,7 @@ def reorder_homepage_sections(*, ordered_ids: list[int]) -> None:
     refresh_homepage_cache()
 
 
-def get_section_render_context(
-    *,
-    section: dict[str, Any],
-    product_rails: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+def get_section_render_context(*, section: dict[str, Any]) -> dict[str, Any]:
     """
     Build template context for a homepage section by dispatching to catalog selectors.
 
@@ -90,4 +86,4 @@ def get_section_render_context(
     """
     from cms.section_context import build_section_context
 
-    return build_section_context(section=section, product_rails=product_rails)
+    return build_section_context(section=section)

@@ -5,7 +5,7 @@
   data-product-url="{% url 'catalog:pdp' slug=product.slug %}"
   data-product-price="{% money_label eff_price display_currency %}"
   data-product-stock="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}"
-  data-product-badge="{% if product.is_featured %}{% trans 'Featured' %}{% elif product.is_bestseller %}{% trans 'Bestseller' %}{% elif product.is_new_arrival %}{% trans 'New' %}{% endif %}"
+  data-product-badge="{{ product.active_labels.0.name }}"
   {% with img=product.primary_images.0 %}
   data-product-image="{% if img and img.image %}{{ img.image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
   {% endwith %}
@@ -39,23 +39,9 @@
       <span class="product-badge product-badge--flash">{% if product.flash_discount_percentage %}-{{ product.flash_discount_percentage|floatformat:0 }}%{% else %}{% trans "Sale" %}{% endif %}</span>
       {% endif %}
 
-      {% if force_badge == 'featured' %}
-      <span class="product-badge product-badge--same-day">{% trans "Featured" %}</span>
-      {% elif force_badge == 'bestseller' %}
-      <span class="product-badge product-badge--express">{% trans "Bestseller" %}</span>
-      {% elif force_badge == 'new' %}
-      <span class="product-badge product-badge--new">{% trans "New" %}</span>
-      {% else %}
-      <!--
-      {% if product.is_featured %}
-      <span class="product-badge product-badge--same-day">{% trans "Featured" %}</span>
-      {% elif product.is_bestseller %}
-      <span class="product-badge product-badge--express">{% trans "Bestseller" %}</span>
-      {% elif product.is_new_arrival %}
-      <span class="product-badge product-badge--new">{% trans "New" %}</span>
-      {% endif %}
-      -->
-      {% endif %}
+      {% for label in product.active_labels %}
+      <span class="product-badge" style="background: {{ label.background_color }}; color: {{ label.text_color }};">{{ label.name }}</span>
+      {% endfor %}
     </div>
 
     <div class="jm-product-card__hover">

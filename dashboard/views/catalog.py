@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from catalog.models import Brand, Collection, Product, ProductImage, Review, HomePageProduct, SizeChart
+from catalog.models import Brand, Collection, Label, Product, ProductImage, Review, HomePageProduct, SizeChart
 from catalog.selectors import get_collection_family_ids, products_in_collections
 from core.models import Currency
 from dashboard import forms
@@ -32,7 +32,7 @@ class ProductListView(DashboardListView):
     plural_name = "Products"
     search_fields = ["name", "sku"]
     select_related = ["brand", "homepage_featured"]
-    prefetch_related = ["images", "collections"]
+    prefetch_related = ["images", "collections", "labels"]
     paginate_by = 20
 
     def get_queryset(self):
@@ -391,6 +391,48 @@ class CollectionDeleteView(DashboardDeleteView):
     url_basename = "collection"
     singular_name = "Collection"
 
+
+
+class LabelListView(DashboardListView):
+    model = Label
+    nav_section = "labels"
+    url_basename = "label"
+    singular_name = "Label"
+    plural_name = "Labels"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    default_ordering = ["display_order", "name"]
+    columns = [
+        {"label": "Name", "name": "name"},
+        {"label": "Slug", "name": "slug"},
+        {"label": "Badge colour", "name": "background_color"},
+        {"label": "Text colour", "name": "text_color"},
+        {"label": "Order", "name": "display_order"},
+        {"label": "Active", "name": "is_active", "type": "bool"},
+    ]
+
+
+class LabelCreateView(DashboardCreateView):
+    model = Label
+    form_class = forms.LabelForm
+    nav_section = "labels"
+    url_basename = "label"
+    singular_name = "Label"
+
+
+class LabelUpdateView(DashboardUpdateView):
+    model = Label
+    form_class = forms.LabelForm
+    nav_section = "labels"
+    url_basename = "label"
+    singular_name = "Label"
+
+
+class LabelDeleteView(DashboardDeleteView):
+    model = Label
+    nav_section = "labels"
+    url_basename = "label"
+    singular_name = "Label"
 
 
 class BrandListView(DashboardListView):

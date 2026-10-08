@@ -38,6 +38,12 @@
       </a>
     </li>
     <li>
+      <a class="nav-link {% if nav_section == 'labels' %}active{% endif %}"
+        href="{% url 'dashboard:label-list' %}">
+        <i class="ti ti-tag"></i><span class="nav-text">Labels</span>
+      </a>
+    </li>
+    <li>
       <a class="nav-link {% if nav_section == 'size_charts' %}active{% endif %}"
         href="{% url 'dashboard:sizechart-list' %}">
         <i class="ti ti-ruler-measure"></i><span class="nav-text">Size Charts</span>

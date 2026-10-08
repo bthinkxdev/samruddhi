@@ -7,19 +7,13 @@ from typing import Any
 from catalog.selectors import (
     get_featured_brands,
     get_homepage_collections,
-    get_homepage_product_rails,
-    get_products_for_section_config,
     get_recent_approved_reviews,
     get_root_collections,
 )
 from cms.selectors import get_hero_slides
 
 
-def build_section_context(
-    *,
-    section: dict[str, Any],
-    product_rails: dict[str, list] | None = None,
-) -> dict[str, Any]:
+def build_section_context(*, section: dict[str, Any]) -> dict[str, Any]:
     """
     Dispatch section_type to the appropriate data source.
 
@@ -38,9 +32,6 @@ def build_section_context(
         "shop_by_occasion": _empty,
         "shop_by_recipient": _empty,
         "shop_by_collection": _shop_by_collection,
-        "featured_products": _featured,
-        "new_arrivals": _new_arrivals,
-        "best_sellers": _best_sellers,
         "featured_brands": _featured_brands,
         "corporate_gifts_banner": _empty,
         "subscription_banner": _banner,
@@ -51,17 +42,8 @@ def build_section_context(
         "collection_products": _collection_products,
     }
     builder = builders.get(section_type, _empty)
-    if section_type in ("featured_products", "best_sellers", "new_arrivals"):
-        base.update(builder(config, product_rails=product_rails))
-    else:
-        base.update(builder(config))
+    base.update(builder(config))
     return base
-
-
-def _rails(product_rails: dict[str, list] | None, key: str) -> list:
-    if product_rails is not None:
-        return product_rails.get(key, [])
-    return get_homepage_product_rails().get(key, [])
 
 
 def _collection_products(config: dict[str, Any]) -> dict[str, Any]:
@@ -99,24 +81,6 @@ def _shop_by_recipient(config: dict[str, Any]) -> dict[str, Any]:
 
 def _shop_by_collection(config: dict[str, Any]) -> dict[str, Any]:
     return {"collections": get_root_collections()}
-
-
-def _featured(
-    config: dict[str, Any], product_rails: dict[str, list] | None = None
-) -> dict[str, Any]:
-    return {"products": _rails(product_rails, "featured")}
-
-
-def _new_arrivals(
-    config: dict[str, Any], product_rails: dict[str, list] | None = None
-) -> dict[str, Any]:
-    return {"products": _rails(product_rails, "new_arrivals")}
-
-
-def _best_sellers(
-    config: dict[str, Any], product_rails: dict[str, list] | None = None
-) -> dict[str, Any]:
-    return {"products": _rails(product_rails, "bestsellers")}
 
 
 def _featured_brands(config: dict[str, Any]) -> dict[str, Any]:

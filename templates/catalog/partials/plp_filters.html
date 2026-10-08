@@ -45,8 +45,17 @@
         <input type="number" name="max_price" class="form-control" placeholder="Max" value="{{ request.GET.max_price }}">
       </div>
     </div>
-    <div class="form-check mb-1 ms-1"><input class="form-check-input" type="checkbox" name="featured" value="1" id="f-ft" {% if filters.featured %}checked{% endif %}><label class="form-check-label small" for="f-ft">{% trans "Featured" %}</label></div>
-    <div class="form-check mb-1 ms-1"><input class="form-check-input" type="checkbox" name="bestseller" value="1" id="f-bs" {% if filters.bestseller %}checked{% endif %}><label class="form-check-label small" for="f-bs">{% trans "Bestseller" %}</label></div>
+    {% if labels %}
+    <div class="mb-3">
+      <label class="form-label small">{% trans "Label" %}</label>
+      <select name="label" class="form-select form-select-sm">
+        <option value="">{% trans "All" %}</option>
+        {% for item in labels %}
+        <option value="{{ item.slug }}" {% if filters.label == item.slug %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
     <div class="form-check mb-3 ms-1"><input class="form-check-input" type="checkbox" name="in_stock" value="1" id="f-stock" {% if filters.in_stock %}checked{% endif %}><label class="form-check-label small" for="f-stock">{% trans "In Stock" %}</label></div>
     <div class="mb-2">
       <label class="form-label small">{% trans "Sort" %}</label>

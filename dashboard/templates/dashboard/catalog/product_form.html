@@ -502,9 +502,26 @@
           </div>
           <div class="card-body">
             {% include "dashboard/partials/_field.html" with field=form.is_active %}
-            {% include "dashboard/partials/_field.html" with field=form.is_bestseller %}
-            {% include "dashboard/partials/_field.html" with field=form.is_new_arrival %}
-            {% include "dashboard/partials/_field.html" with field=form.is_featured %}
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header panel-header">
+            <div>
+              <h3 class="panel-title">Labels</h3>
+              <p class="panel-sub">Badges shown over the product image</p>
+            </div>
+          </div>
+          <div class="card-body">
+            {% for choice in form.labels %}
+            <div class="form-check mb-1">
+              {{ choice.tag }}
+              <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">No labels yet. <a href="{% url 'dashboard:label-create' %}">Create one</a>.</p>
+            {% endfor %}
+            {% for error in form.labels.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
           </div>
         </div>
 

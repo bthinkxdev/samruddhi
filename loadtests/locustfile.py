@@ -38,7 +38,7 @@ class StorefrontUser(HttpUser):
 
     @task(4)
     def plp(self) -> None:
-        self.client.get("/shop/?bestseller=1&sort=newest", name="GET /shop/ (filtered PLP)")
+        self.client.get("/shop/?sort=newest", name="GET /shop/ (filtered PLP)")
 
     @task(3)
     def pdp_and_gift_builder(self) -> None:

@@ -79,6 +79,14 @@ urlpatterns += _crud(
 )
 
 urlpatterns += _crud(
+    "label",
+    catalog.LabelListView,
+    catalog.LabelCreateView,
+    catalog.LabelUpdateView,
+    catalog.LabelDeleteView,
+)
+
+urlpatterns += _crud(
     "brand",
     catalog.BrandListView,
     catalog.BrandCreateView,

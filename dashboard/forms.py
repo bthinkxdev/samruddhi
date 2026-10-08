@@ -9,6 +9,7 @@ from accounts.models import CustomerProfile
 from catalog.models import (
     Brand,
     Collection,
+    Label,
     Product,
     ProductImage,
     ProductSpecification,
@@ -65,9 +66,7 @@ class ProductForm(SlugAutoMixin):
             "stock_quantity",
             "low_stock_threshold",
             "is_active",
-            "is_featured",
-            "is_bestseller",
-            "is_new_arrival",
+            "labels",
             "meta_title",
             "meta_description",
             "og_image",
@@ -77,7 +76,10 @@ class ProductForm(SlugAutoMixin):
             "height",
         ]
         field_classes = {"collections": CollectionChoiceField}
-        widgets = {"collections": forms.CheckboxSelectMultiple}
+        widgets = {
+            "collections": forms.CheckboxSelectMultiple,
+            "labels": forms.CheckboxSelectMultiple,
+        }
         error_messages = {
             "name": {"required": "Product name is required."},
             "sku": {"required": "SKU is required."},
@@ -173,6 +175,20 @@ class CollectionForm(SlugAutoMixin):
     def _save_m2m(self):
         super()._save_m2m()
         self.instance.products.set(self.cleaned_data["products"])
+
+
+class LabelForm(SlugAutoMixin):
+    class Meta:
+        model = Label
+        fields = ["name", "slug", "background_color", "text_color", "display_order", "is_active"]
+        widgets = {
+            "background_color": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
+            "text_color": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
 
 
 class BrandForm(SlugAutoMixin):
