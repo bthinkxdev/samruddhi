@@ -151,13 +151,15 @@
       <div class="card-header bg-transparent px-4 py-3"><h3 class="h5 mb-0">Update Status</h3></div>
       <div class="card-body p-4">
         {% if allowed_choices %}
-        <form method="post" action="{% url 'dashboard:order-transition' order.pk %}">
+        <form method="post" action="{% url 'dashboard:order-transition' order.pk %}" id="order-transition-form"
+          data-confirm-statuses="{{ confirm_required_statuses|join:',' }}">
           {% csrf_token %}
+          <input type="hidden" name="confirmed" value="">
           <div class="mb-3">
-            <label class="form-label">New status</label>
-            <select name="new_status" class="form-select" required>
+            <label class="form-label" for="order-new-status">New status</label>
+            <select name="new_status" id="order-new-status" class="form-select" required>
               {% for value, label in allowed_choices %}
-                <option value="{{ value }}" {% if value == order.order_status %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}">{{ label }}</option>
               {% endfor %}
             </select>
           </div>
@@ -259,4 +261,57 @@
     {% endif %}
   </div>
 </div>
+
+{% if allowed_choices %}
+<div class="modal fade" id="order-status-confirm" tabindex="-1" aria-labelledby="order-status-confirm-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="order-status-confirm-title">Confirm status change</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Change order <strong>{{ order.display_number }}</strong> to <strong data-confirm-status-label></strong>?
+        This can't be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep current status</button>
+        <button type="button" class="btn btn-danger" data-confirm-status-submit>Yes, change status</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (function () {
+    var form = document.getElementById("order-transition-form");
+    var modalEl = document.getElementById("order-status-confirm");
+    if (!form || !modalEl) return;
+    var select = form.querySelector('select[name="new_status"]');
+    var confirmedInput = form.querySelector('input[name="confirmed"]');
+    var needsConfirm = (form.dataset.confirmStatuses || "").split(",").filter(Boolean);
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    form.addEventListener("submit", function (event) {
+      if (needsConfirm.indexOf(select.value) === -1 || confirmedInput.value === "yes") return;
+      event.preventDefault();
+      modalEl.querySelector("[data-confirm-status-label]").textContent =
+        select.options[select.selectedIndex].text;
+      modal.show();
+    });
+
+    modalEl.querySelector("[data-confirm-status-submit]").addEventListener("click", function () {
+      confirmedInput.value = "yes";
+      modal.hide();
+      form.requestSubmit();
+    });
+
+    //picking a different status after closing the dialog must ask again
+    select.addEventListener("change", function () { confirmedInput.value = ""; });
+  })();
+</script>
 {% endblock %}

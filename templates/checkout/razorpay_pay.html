@@ -75,7 +75,7 @@
       "amount": "{{ amount_in_paise }}",
       "currency": "{{ currency_code }}",
       "name": "{{ site_settings.site_name|escapejs }}",
-      "description": "Payment for Order #{{ order.order_number }}",
+      "description": "Payment for Order {{ order.display_number }}",
       "order_id": "{{ razorpay_order_id }}",
       "handler": function (response) {
         document.getElementById("payment-processing-overlay").classList.remove("d-none");

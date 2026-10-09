@@ -309,11 +309,81 @@
     });
   }
 
+  function initFilterForms() {
+    document.querySelectorAll("[data-filter-submit]").forEach(function (button) {
+      var form = button.form;
+      if (!form) return;
+
+      var filters = Array.prototype.filter.call(form.elements, function (el) {
+        return el.tagName === "SELECT" && el.name;
+      });
+      if (!filters.length) return;
+
+      var applied = filters.map(function (select) {
+        var options = Array.prototype.slice.call(select.options);
+        var selected = options.filter(function (opt) { return opt.defaultSelected; })[0];
+        return selected ? selected.value : (options[0] ? options[0].value : "");
+      });
+
+      function hasChanges() {
+        return filters.some(function (select, i) {
+          return select.value !== applied[i];
+        });
+      }
+
+      function sync() {
+        button.disabled = !hasChanges();
+      }
+
+      filters.forEach(function (select) {
+        select.addEventListener("change", sync);
+      });
+      window.addEventListener("pageshow", sync);
+      sync();
+
+      form.addEventListener("submit", function (event) {
+        if (event.submitter === button && !hasChanges()) {
+          event.preventDefault();
+        }
+      });
+
+      var search = form.querySelector('input[name="q"]');
+      if (search) {
+        var appliedQuery = search.defaultValue.trim();
+        search.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          if (search.value.trim() !== appliedQuery || hasChanges()) {
+            form.submit();
+          }
+        });
+      }
+    });
+  }
+
+  
+  function initDateRanges() {
+    document.querySelectorAll("input[data-min-from]").forEach(function (end) {
+      var start = document.getElementById(end.getAttribute("data-min-from"));
+      if (!start) return;
+      var ownMin = end.getAttribute("min") || "";
+      function sync() {
+        var min = start.value && start.value > ownMin ? start.value : ownMin;
+        if (min) end.setAttribute("min", min);
+      }
+      start.addEventListener("change", sync);
+      start.addEventListener("input", sync);
+      sync();
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
     initFormValidation();
     initCharts();
     initFormsets();
     initTableLabels();
+    initFilterForms();
+    initDateRanges();
   });
 })();

@@ -45,7 +45,7 @@
       {% endif %}
       <div class="col-6 col-md-auto d-flex align-items-center gap-2">
         {% if filter_by_active_status or filter_by_featured_status %}
-        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0" data-filter-submit>Filter</button>
         {% endif %}
         {% if search_query or current_status or current_featured %}
         <a href="?" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>

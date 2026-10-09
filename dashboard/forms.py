@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django import forms
+from django.utils import timezone
 from django.utils.text import slugify
 
 from accounts.models import CustomerProfile
@@ -18,6 +21,7 @@ from catalog.models import (
     SizeChart,
 )
 from cms.services import next_homepage_section_order
+from dashboard.uploads import RetainUploadsMixin
 from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
 from core.models import SiteSettings, Currency
 
@@ -26,6 +30,42 @@ from marketing.models import Coupon, FlashSale, NewsletterSubscriber
 _DATE = forms.DateInput(attrs={"type": "date"})
 _DATETIME = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
 _TIME = forms.TimeInput(attrs={"type": "time"})
+
+
+class FutureDateRangeMixin:
+
+    date_range_fields: tuple[str, str] = ("", "")
+    #allow for the time spent filling the form after picking "now"
+    PAST_GRACE = timedelta(minutes=5)
+    _PICKER_FORMAT = "%Y-%m-%dT%H:%M"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        now = timezone.localtime().replace(second=0, microsecond=0)
+        start_name, end_name = self.date_range_fields
+        for name in (start_name, end_name):
+            saved = self._saved_value(name)
+            earliest = min(now, timezone.localtime(saved)) if saved else now
+            self.fields[name].widget.attrs["min"] = earliest.strftime(self._PICKER_FORMAT)
+        self.fields[end_name].widget.attrs["data-min-from"] = self[start_name].auto_id
+
+    def _saved_value(self, name):
+        if self.instance and self.instance.pk:
+            return getattr(self.instance, name, None)
+        return None
+
+    def clean(self):
+        cleaned = super().clean()
+        cutoff = timezone.now() - self.PAST_GRACE
+        start_name, end_name = self.date_range_fields
+        for name in (start_name, end_name):
+            value = cleaned.get(name)
+            if value and value < cutoff and value != self._saved_value(name):
+                self.add_error(name, "Date and time can't be in the past.")
+        start, end = cleaned.get(start_name), cleaned.get(end_name)
+        if start and end and end <= start:
+            self.add_error(end_name, "End date must be after the start date.")
+        return cleaned
 
 
 class SlugAutoMixin(forms.ModelForm):
@@ -40,14 +80,50 @@ class SlugAutoMixin(forms.ModelForm):
         return cleaned
 
 
+def _inactive_suffix(obj) -> str:
+    return "" if getattr(obj, "is_active", True) else " (inactive)"
+
+
 class CollectionChoiceField(forms.ModelMultipleChoiceField):
     """Collection checkboxes labelled with their parent ("Parent › Child")."""
 
     def label_from_instance(self, obj: Collection) -> str:
-        return f"{obj.parent.name} › {obj.name}" if obj.parent_id else obj.name
+        name = f"{obj.parent.name} › {obj.name}" if obj.parent_id else obj.name
+        return name + _inactive_suffix(obj)
 
 
-class ProductForm(SlugAutoMixin):
+class LabelChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, obj: Label) -> str:
+        return obj.name + _inactive_suffix(obj)
+
+
+class SizeChartChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: SizeChart) -> str:
+        return str(obj) + _inactive_suffix(obj)
+
+
+def find_sku_owner(sku: str, *, exclude_product_pk=None) -> str:
+    """
+    Describe where a SKU is already used outside the given product.
+
+    """
+    products = Product.objects.filter(sku__iexact=sku)
+    variants = ProductVariant.objects.filter(sku_suffix__iexact=sku).select_related("product")
+    if exclude_product_pk:
+        products = products.exclude(pk=exclude_product_pk)
+        variants = variants.exclude(product_id=exclude_product_pk)
+    product = products.first()
+    if product:
+        return f'product "{product.name}"'
+    variant = variants.first()
+    if variant:
+        return f'a variant of "{variant.product.name}"'
+    return ""
+
+
+class ProductForm(RetainUploadsMixin, SlugAutoMixin):
+    retained_upload_fields = ("og_image",)
+
     class Meta:
         model = Product
         fields = [
@@ -75,7 +151,11 @@ class ProductForm(SlugAutoMixin):
             "width",
             "height",
         ]
-        field_classes = {"collections": CollectionChoiceField}
+        field_classes = {
+            "collections": CollectionChoiceField,
+            "labels": LabelChoiceField,
+            "size_chart": SizeChartChoiceField,
+        }
         widgets = {
             "collections": forms.CheckboxSelectMultiple,
             "labels": forms.CheckboxSelectMultiple,
@@ -92,14 +172,24 @@ class ProductForm(SlugAutoMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.db.models import Q
-        qs = SizeChart.objects.filter(is_active=True)
-        if self.instance and self.instance.pk and self.instance.size_chart_id:
-            qs = SizeChart.objects.filter(Q(is_active=True) | Q(pk=self.instance.size_chart_id))
-        self.fields["size_chart"].queryset = qs.order_by("name")
+
+        editing = bool(self.instance and self.instance.pk)
+
+        size_charts = Q(is_active=True)
+        if editing and self.instance.size_chart_id:
+            size_charts |= Q(pk=self.instance.size_chart_id)
+        self.fields["size_chart"].queryset = SizeChart.objects.filter(size_charts).order_by("name")
         self.fields["size_chart"].empty_label = "No Size Chart"
-        self.fields["collections"].queryset = Collection.objects.select_related("parent").order_by(
-            "display_order", "name"
+
+        collections = Q(is_active=True)
+        labels = Q(is_active=True)
+        if editing:
+            collections |= Q(pk__in=self.instance.collections.values("pk"))
+            labels |= Q(pk__in=self.instance.labels.values("pk"))
+        self.fields["collections"].queryset = (
+            Collection.objects.filter(collections).select_related("parent").order_by("display_order", "name")
         )
+        self.fields["labels"].queryset = Label.objects.filter(labels).order_by("display_order", "name")
         self.fields["slug"].required = False
         self.fields["hsn_code"].required = False
         self.fields["base_price"].required = False
@@ -107,6 +197,15 @@ class ProductForm(SlugAutoMixin):
         self.fields["purchase_price"].required = False
         self.fields["stock_quantity"].required = False
         self.fields["low_stock_threshold"].required = False
+
+    def clean_sku(self):
+        sku = (self.cleaned_data.get("sku") or "").strip()
+        unchanged = self.instance.pk and sku.lower() == (self.instance.sku or "").lower()
+        if sku and not unchanged:
+            owner = find_sku_owner(sku, exclude_product_pk=self.instance.pk)
+            if owner.startswith("a variant"):
+                raise forms.ValidationError(f'SKU "{sku}" is already used by {owner}.')
+        return sku
 
     def clean(self):
         cleaned = super().clean()
@@ -116,8 +215,10 @@ class ProductForm(SlugAutoMixin):
         return cleaned
 
 
-class CollectionForm(SlugAutoMixin):
+class CollectionForm(RetainUploadsMixin, SlugAutoMixin):
     """Collection details plus its product membership (managed from the collection side)."""
+
+    retained_upload_fields = ("image", "banner_image")
 
     products = forms.ModelMultipleChoiceField(
         queryset=Product.objects.all(),
@@ -239,6 +340,23 @@ class ProductVariantForm(forms.ModelForm):
             "low_stock_threshold": {"required": "Low stock threshold is required."},
         }
 
+    REQUIRED_PRICES = (("base_price", "Base price"), ("mrp", "MRP"))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if not self.instance.pk:
+            for name in [name for name, _label in self.REQUIRED_PRICES] + ["purchase_price"]:
+                self.initial[name] = None
+
+    def clean(self):
+        cleaned = super().clean()
+        for name, label in self.REQUIRED_PRICES:
+            value = cleaned.get(name)
+            if value is not None and value <= 0:
+                self.add_error(name, f"{label} must be greater than 0.")
+        return cleaned
+
     def has_changed(self):
         """
         A row counts as "touched" if any field was submitted with a non-blank
@@ -262,6 +380,12 @@ class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
     (no DB constraint/migration) so it can't fail against any duplicate/blank
     data already sitting in production.
     """
+
+    @staticmethod
+    def _sku_is_new_or_changed(form, sku: str) -> bool:
+        
+        saved = (form.instance.sku_suffix or "").strip() if form.instance.pk else None
+        return saved is None or saved.lower() != sku.lower()
 
     def clean(self):
         super().clean()
@@ -308,6 +432,10 @@ class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
                     ).exclude(pk=form.instance.pk).first()
                     if conflict:
                         form.add_error("sku_suffix", f'SKU suffix "{sku_suffix}" is already used by another variant of this product.')
+                    elif self._sku_is_new_or_changed(form, sku_suffix):
+                        owner = find_sku_owner(sku_suffix, exclude_product_pk=self.instance.pk)
+                        if owner:
+                            form.add_error("sku_suffix", f'SKU "{sku_suffix}" is already used by {owner}.')
 
             if form.cleaned_data.get("is_default"):
                 default_count += 1
@@ -323,7 +451,9 @@ ProductVariantFormSet = forms.inlineformset_factory(
     can_delete=True,
 )
 
-class ProductImageForm(forms.ModelForm):
+class ProductImageForm(RetainUploadsMixin, forms.ModelForm):
+    retained_upload_fields = ("image",)
+
     class Meta:
         model = ProductImage
         fields = ["image", "alt_text", "display_order", "is_primary"]
@@ -382,7 +512,9 @@ class CustomerProfileForm(forms.ModelForm):
 
 
 
-class CouponForm(forms.ModelForm):
+class CouponForm(FutureDateRangeMixin, forms.ModelForm):
+    date_range_fields = ("valid_from", "valid_until")
+
     class Meta:
         model = Coupon
         fields = [
@@ -422,7 +554,9 @@ class CouponForm(forms.ModelForm):
 
 
 
-class FlashSaleForm(forms.ModelForm):
+class FlashSaleForm(FutureDateRangeMixin, forms.ModelForm):
+    date_range_fields = ("starts_at", "ends_at")
+
     class Meta:
         model = FlashSale
         fields = ["name", "products", "discount_percentage", "starts_at", "ends_at", "is_active"]

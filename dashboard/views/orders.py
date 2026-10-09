@@ -22,6 +22,10 @@ from orders.services import (
 
 _STATUS_LABELS = dict(OrderStatus.choices)
 
+#statuses that can't be undone once applied - the dashboard asks for confirmation
+#before submitting them, and order_transition refuses them without it
+CONFIRM_REQUIRED_STATUSES = (OrderStatus.CANCELLED, OrderStatus.REFUNDED)
+
 
 @dashboard_required
 @require_http_methods(["GET"])
@@ -136,8 +140,11 @@ def order_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
     #only the actually-valid next statuses — CONFIRMED is the sole trigger for AWB
     #creation, so an admin must never be able to pick an arbitrary status here.
+    
     next_statuses = ALLOWED_STATUS_TRANSITIONS.get(order.order_status, set())
-    allowed_choices = [(value, _STATUS_LABELS[value]) for value in next_statuses]
+    allowed_choices = [
+        (value, label) for value, label in OrderStatus.choices if value in next_statuses
+    ]
     from payments.models import PaymentStatus
     payment_statuses = PaymentStatus.choices
 
@@ -162,6 +169,7 @@ def order_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "payments": payments,
         "pod": pod,
         "allowed_choices": allowed_choices,
+        "confirm_required_statuses": [str(status) for status in CONFIRM_REQUIRED_STATUSES],
         "payment_statuses": payment_statuses,
         "address_form": address_form,
         "address_editable": order.order_status in ADDRESS_EDITABLE_STATUSES,
@@ -176,6 +184,16 @@ def order_transition(request: HttpRequest, pk: int) -> HttpResponse:
     order = get_object_or_404(Order, pk=pk)
     new_status = request.POST.get("new_status", "")
     note = request.POST.get("note", "")
+    if not new_status or new_status == order.order_status:
+        messages.info(request, "Status not changed — choose a different status to update the order.")
+        return redirect("dashboard:order-detail", pk=pk)
+    if new_status in CONFIRM_REQUIRED_STATUSES and request.POST.get("confirmed") != "yes":
+        messages.error(
+            request,
+            f"{_STATUS_LABELS[new_status]} can't be undone, so it needs confirmation. "
+            "The order was not changed.",
+        )
+        return redirect("dashboard:order-detail", pk=pk)
     try:
         transition_order_status(
             order=order, new_status=new_status, actor=request.user, note=note, force=False

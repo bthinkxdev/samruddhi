@@ -50,7 +50,7 @@
         </select>
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
-        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0" data-filter-submit>Filter</button>
         {% if current_status or current_payment_status %}
         <a href="{% url 'dashboard:order-list' %}{% if current_view == 'abandoned' %}?view=abandoned{% endif %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}

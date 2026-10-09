@@ -110,6 +110,7 @@
         }
         .section-title { font-size: 10pt; font-weight: bold; color: #4a5568; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         .customer-details { font-size: 10pt; line-height: 1.6; color: #2d3748; }
+        .address-note { margin-top: 6px; font-size: 8.5pt; color: #718096; font-style: italic; }
         .customer-name { font-weight: bold; font-size: 11pt; color: #1a202c; margin-bottom: 4px; }
         .items-table {
             width: 100%;
@@ -277,43 +278,18 @@
                 </div>
                 <div class="invoice-meta">
                     <div class="invoice-title">INVOICE</div>
-                    <div class="invoice-number">#{{ order.order_number }}</div>
+                    <div class="invoice-number">{{ order.display_number }}</div>
                     <div class="invoice-date">Date: {{ order.created_at|date:"M d, Y" }}</div>
                 </div>
             </div>
 
             <div class="info-section">
-                <div class="ship-to">
-                    <div class="section-title">Shipping Address</div>
-                    <div class="customer-details">
-                        <div class="customer-name">
-                            {% if order.delivery_address_snapshot.name %}
-                                {{ order.delivery_address_snapshot.name }}
-                            {% elif order.customer_profile and order.customer_profile.user.get_full_name %}
-                                {{ order.customer_profile.user.get_full_name }}
-                            {% else %}
-                                Guest Customer
-                            {% endif %}
-                        </div>
-                        {% if order.delivery_address_snapshot.line1 %}<div>{{ order.delivery_address_snapshot.line1 }}</div>{% endif %}
-                        {% if order.delivery_address_snapshot.line2 %}
-                            <div>{{ order.delivery_address_snapshot.line2 }}</div>
-                        {% endif %}
-                        <div>{{ order.delivery_address_snapshot.city }}{% if order.delivery_address_snapshot.state %}, {{ order.delivery_address_snapshot.state }}{% endif %} {{ order.delivery_address_snapshot.pincode }}</div>
-
-                        {% if order.delivery_address_snapshot.email %}
-                            <div>{{ order.delivery_address_snapshot.email }}</div>
-                        {% elif order.customer_profile %}
-                            <div>{{ order.customer_profile.user.email }}</div>
-                        {% endif %}
-
-                        {% if order.delivery_address_snapshot.phone %}
-                            <div>{{ order.delivery_address_snapshot.phone }}</div>
-                        {% elif order.customer_profile and order.customer_profile.get_phone %}
-                            <div>{{ order.customer_profile.get_phone }}</div>
-                        {% endif %}
-                    </div>
-                </div>
+                {% if order.bill_to_same_as_shipping %}
+                    {% include "shared/_invoice_address.html" with addr=order.bill_to_address title="Bill To" note="Same as shipping address" %}
+                {% else %}
+                    {% include "shared/_invoice_address.html" with addr=order.bill_to_address title="Bill To" %}
+                {% endif %}
+                {% include "shared/_invoice_address.html" with addr=order.delivery_address_snapshot title="Ship To" %}
             </div>
 
             <div class="table-responsive">

@@ -191,6 +191,9 @@ class FAQItem(TimeStampedModel, PublishableModel):
         verbose_name = "FAQ item"
         verbose_name_plural = "FAQ items"
 
+    def __str__(self) -> str:
+        return self.question
+
 
 class PolicyDocument(TimeStampedModel, SEOModel, PublishableModel):
     """Legal/policy document (privacy, terms, etc.)."""

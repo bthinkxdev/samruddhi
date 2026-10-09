@@ -195,6 +195,7 @@ class FAQItemListView(DashboardListView):
 
 class FAQItemCreateView(DashboardCreateView):
     model = FAQItem
+    name_object_in_messages = False
     form_class = forms.FAQItemForm
     nav_section = "faqs"
     url_basename = "faq"
@@ -203,6 +204,7 @@ class FAQItemCreateView(DashboardCreateView):
 
 class FAQItemUpdateView(DashboardUpdateView):
     model = FAQItem
+    name_object_in_messages = False
     form_class = forms.FAQItemForm
     nav_section = "faqs"
     url_basename = "faq"
@@ -211,6 +213,7 @@ class FAQItemUpdateView(DashboardUpdateView):
 
 class FAQItemDeleteView(DashboardDeleteView):
     model = FAQItem
+    name_object_in_messages = False
     nav_section = "faqs"
     url_basename = "faq"
     singular_name = "FAQ"

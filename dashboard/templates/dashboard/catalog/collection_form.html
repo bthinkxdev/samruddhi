@@ -29,8 +29,14 @@
         <div class="card-header panel-header"><h3 class="panel-title">Images</h3></div>
         <div class="card-body">
           <div class="row">
-            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.image %}</div>
-            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.banner_image %}</div>
+            <div class="col-md-6">
+              {% include "dashboard/partials/_field.html" with field=form.image %}
+              {% include "dashboard/partials/_retained_upload.html" with retained=form.retained.image %}
+            </div>
+            <div class="col-md-6">
+              {% include "dashboard/partials/_field.html" with field=form.banner_image %}
+              {% include "dashboard/partials/_retained_upload.html" with retained=form.retained.banner_image %}
+            </div>
           </div>
         </div>
       </div>

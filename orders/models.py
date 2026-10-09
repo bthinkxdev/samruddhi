@@ -183,6 +183,31 @@ class Order(TimeStampedModel):
         return str(self.customer_profile) if self.customer_profile_id else "Guest"
 
     @property
+    def display_number(self) -> str:
+        """Order number with exactly one leading "#" (new numbers already start with one)."""
+        number = self.order_number or ""
+        return number if number.startswith("#") else f"#{number}"
+
+    @property
+    def bill_to_same_as_shipping(self) -> bool:
+        """True unless a separate billing address was captured for this order."""
+        details = self.invoice_details or {}
+        billing = details.get("billing_address")
+        return bool(details.get("billing_same_as_shipping")) or not (
+            isinstance(billing, dict) and billing.get("line1")
+        )
+
+    @property
+    def bill_to_address(self) -> dict:
+        """
+        Address for the invoice's Bill To block.
+
+        """
+        if self.bill_to_same_as_shipping:
+            return self.delivery_address_snapshot or {}
+        return self.invoice_details["billing_address"]
+
+    @property
     def payment_method_display(self) -> str:
         """Get the human-readable payment method name from the latest transaction."""
         tx = self.payment_transactions.filter(status="success").last()

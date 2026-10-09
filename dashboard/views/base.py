@@ -22,12 +22,18 @@ class DashboardContextMixin(DashboardAccessMixin):
 
     nav_section: str = ""
     page_title: str = ""
+    name_object_in_messages: bool = True
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["nav_section"] = self.nav_section
         context["page_title"] = self.page_title
         return context
+
+    def message_subject(self, obj) -> str:
+        if self.name_object_in_messages:
+            return f"'{obj}'"
+        return getattr(self, "singular_name", "") or "Item"
 
 
 class DashboardListView(DashboardContextMixin, ListView):
@@ -135,7 +141,7 @@ class DashboardCreateView(_FormStyleMixin, DashboardContextMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, f"'{self.object}' created successfully.")
+        messages.success(self.request, f"{self.message_subject(self.object)} created successfully.")
         return response
 
     def get_context_data(self, **kwargs):
@@ -156,7 +162,7 @@ class DashboardUpdateView(_FormStyleMixin, DashboardContextMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, f"'{self.object}' updated successfully.")
+        messages.success(self.request, f"{self.message_subject(self.object)} updated successfully.")
         return response
 
     def get_context_data(self, **kwargs):
@@ -178,9 +184,9 @@ class DashboardDeleteView(DashboardContextMixin, DeleteView):
     def form_valid(self, form):
         from django.db.models import ProtectedError
         try:
-            obj_name = str(self.object)
+            subject = self.message_subject(self.object)
             response = super().form_valid(form)
-            messages.success(self.request, f"'{obj_name}' deleted.")
+            messages.success(self.request, f"{subject} deleted.")
             return response
         except ProtectedError:
             obj_name = str(self.object)

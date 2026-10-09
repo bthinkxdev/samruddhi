@@ -1,0 +1,11 @@
+{{ retained.token }}
+{% if retained.name %}
+{% if compact %}
+<div class="small text-secondary mt-1">Kept: <strong>{{ retained.name }}</strong></div>
+{% else %}
+<div class="d-flex align-items-center gap-2 small text-secondary mb-3" style="margin-top: -0.5rem;">
+  <img src="{{ retained.url }}" alt="" width="40" height="40" class="rounded border" style="object-fit: cover;">
+  <span>Kept from your last attempt: <strong>{{ retained.name }}</strong>. It will be saved with the form; choose another file to replace it.</span>
+</div>
+{% endif %}
+{% endif %}

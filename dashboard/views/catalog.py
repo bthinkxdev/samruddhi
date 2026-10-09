@@ -151,8 +151,7 @@ def _render_product_form(request, product, mode):
         )
 
         #evaluate all four eagerly (not via `and` short-circuit) so every
-        #formset gets a chance to populate its own errors for re-display,
-        #and so has_surviving_variant below can rely on variants.cleaned_data.
+        #formset gets a chance to populate its own errors for re-display.
         form_valid = form.is_valid()
         variants_valid = variants.is_valid()
         images_valid = images.is_valid()
@@ -162,8 +161,10 @@ def _render_product_form(request, product, mode):
         #meaningful standalone when no variant exists to drive them (see the
         #sync below, and ProductForm.clean() which otherwise silently defaults
         #a blank of any of these to 0).
-        has_surviving_variant = variants_valid and any(
-            vform.cleaned_data and not vform.cleaned_data.get("DELETE")
+    
+        has_surviving_variant = any(
+            (vform.instance.pk or vform.has_changed())
+            and not vform.data.get(vform.add_prefix("DELETE"))
             for vform in variants.forms
         )
         if form_valid and not has_surviving_variant:
@@ -175,6 +176,9 @@ def _render_product_form(request, product, mode):
             ):
                 if form.data.get(form.add_prefix(field)) in (None, ""):
                     form.add_error(field, f"{label} is required when the product has no variants.")
+                    form_valid = False
+                elif field in ("base_price", "mrp") and form.cleaned_data.get(field, 0) <= 0:
+                    form.add_error(field, f"{label} must be greater than 0.")
                     form_valid = False
 
         if form_valid and variants_valid and images_valid and specifications_valid:
@@ -213,6 +217,11 @@ def _render_product_form(request, product, mode):
 
             messages.success(request, f"Product '{product.name}' saved successfully.")
             return redirect("dashboard:product-list")
+
+
+        form.retain_uploads()
+        for iform in images.forms:
+            iform.retain_uploads()
 
     else:
         form = forms.ProductForm(instance=product)

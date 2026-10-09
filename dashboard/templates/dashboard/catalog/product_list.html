@@ -43,7 +43,7 @@
         </select>
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
-        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
+        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0" data-filter-submit>Filter</button>
         {% if status_filter or collection_filter %}
         <a href="{% url 'dashboard:product-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}

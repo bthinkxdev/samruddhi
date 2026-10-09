@@ -46,7 +46,7 @@
                 <div class="card-body p-3 d-flex align-items-center justify-content-between gap-2">
                   <div class="overflow-hidden">
                     <div class="d-flex align-items-center mb-1 flex-wrap gap-2">
-                      <span class="fw-bold fs-6 me-md-3">#{{ order.order_number }}</span>
+                      <span class="fw-bold fs-6 me-md-3">{{ order.display_number }}</span>
                       <span class="badge bg-light text-dark border fw-normal">{{ order.get_order_status_display|default:order.order_status }}</span>
                     </div>
                     <div class="text-muted small">

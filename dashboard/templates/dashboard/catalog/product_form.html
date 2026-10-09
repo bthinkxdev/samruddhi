@@ -343,12 +343,15 @@
                 <tr>
                   <td class="d-none">{{ iform.id }}</td>
                   <td>
-                    {% if iform.instance.pk and iform.instance.image %}<img src="{{ iform.instance.image.url }}"
+                    {% if iform.retained.image.url %}<img src="{{ iform.retained.image.url }}"
+                      class="thumb" data-img-preview alt="">
+                    {% elif iform.instance.pk and iform.instance.image %}<img src="{{ iform.instance.image.url }}"
                       class="thumb" data-img-preview alt="">
                     {% else %}<img src="" class="thumb d-none" data-img-preview alt="">{% endif %}
                   </td>
                   <td>
                     {{ iform.image }}
+                    {% include "dashboard/partials/_retained_upload.html" with retained=iform.retained.image compact=True %}
                     {% if iform.image.errors %}<div class="text-danger small mt-1">{{ iform.image.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td>
@@ -380,7 +383,7 @@
             <tr>
               <td class="d-none">{{ images.empty_form.id }}</td>
               <td><img src="" class="thumb d-none" data-img-preview alt=""></td>
-              <td>{{ images.empty_form.image }}</td>
+              <td>{{ images.empty_form.image }}{{ images.empty_form.image_retained }}</td>
               <td>{{ images.empty_form.alt_text }}</td>
               <td>{{ images.empty_form.display_order }}</td>
               <td class="text-center">{{ images.empty_form.is_primary }}</td>
@@ -533,6 +536,7 @@
             {% include "dashboard/partials/_field.html" with field=form.meta_title %}
             {% include "dashboard/partials/_field.html" with field=form.meta_description %}
             {% include "dashboard/partials/_field.html" with field=form.og_image %}
+            {% include "dashboard/partials/_retained_upload.html" with retained=form.retained.og_image %}
           </div>
         </div>
 
@@ -557,8 +561,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const variantRows = document.querySelectorAll('#variant-select-group tr, tbody[data-formset-body] tr');
     let hasVariants = false;
     
-    // check if any variant row is active
-    document.querySelectorAll('tbody[data-formset-body] tr').forEach(row => {
+    // check if any variant row is active — only the variants table; the images /
+    // specifications tables use the same markup and always have a starter row
+    document.querySelectorAll('[data-formset="variants"] tbody[data-formset-body] tr').forEach(row => {
       const delCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
       if (row.style.display !== 'none' && (!delCheckbox || !delCheckbox.checked)) {
         hasVariants = true;
