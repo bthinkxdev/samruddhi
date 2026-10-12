@@ -32,4 +32,5 @@ known_first_party = [
     "cms",
     "notifications",
     "reports",
+    "whatsapp",
 ]

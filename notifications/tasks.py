@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from celery import shared_task
 
-from notifications.services import create_notification, send_email, send_sms, send_whatsapp
+from notifications.services import (
+    create_notification,
+    send_email,
+    send_order_whatsapp,
+    send_sms,
+)
 
 
 @shared_task(name="notifications.tasks.dispatch_sms")
@@ -69,7 +74,7 @@ def dispatch_order_status_notification(
         if profile.notify_via_sms:
             send_sms(phone=profile.phone, message=body)
         if profile.notify_via_whatsapp:
-            send_whatsapp(phone=profile.phone, message=body)
+            send_order_whatsapp(order=order, event=new_status, phone=profile.phone)
 
 
 @shared_task(name="notifications.tasks.dispatch_new_order_admin_notification")
@@ -171,5 +176,5 @@ def dispatch_order_confirmation_notification(*, order_id: int) -> None:
         if profile.notify_via_sms:
             send_sms(phone=profile.phone, message=f"{brand}: Order {order.order_number} has been {status_word}. Thank you!")
         if profile.notify_via_whatsapp:
-            send_whatsapp(phone=profile.phone, message=body)
+            send_order_whatsapp(order=order, event="order_placed", phone=profile.phone)
 

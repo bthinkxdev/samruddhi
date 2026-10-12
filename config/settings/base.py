@@ -38,6 +38,7 @@ LOCAL_APPS = [
     "reports",
     "dashboard",
     "delhivery",
+    "whatsapp",
 ]
 
 INSTALLED_APPS = [
@@ -272,3 +273,15 @@ META_CAPI_ACCESS_TOKEN = env("META_CAPI_ACCESS_TOKEN", default="").strip()
 META_TEST_EVENT_CODE = env("META_TEST_EVENT_CODE", default="").strip()
 META_API_VERSION = env("META_API_VERSION", default="v21.0")
 
+
+#whatsapp (Meta WhatsApp Cloud API) — see whatsapp/ and docs/whatsapp.md.
+#WHATSAPP_ENABLED is the master switch for automatic order messages (off by default).
+WHATSAPP_ENABLED = env.bool("WHATSAPP_ENABLED", default=False)
+WHATSAPP_ACCESS_TOKEN = env("WHATSAPP_ACCESS_TOKEN", default="").strip()
+WHATSAPP_PHONE_NUMBER_ID = env("WHATSAPP_PHONE_NUMBER_ID", default="").strip()
+WHATSAPP_BUSINESS_ACCOUNT_ID = env("WHATSAPP_BUSINESS_ACCOUNT_ID", default="").strip()
+WHATSAPP_APP_SECRET = env("WHATSAPP_APP_SECRET", default="").strip()
+WHATSAPP_WEBHOOK_VERIFY_TOKEN = env("WHATSAPP_WEBHOOK_VERIFY_TOKEN", default="").strip()
+WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", default="v21.0")
+WHATSAPP_DEFAULT_COUNTRY_CODE = env("WHATSAPP_DEFAULT_COUNTRY_CODE", default="91")
+WHATSAPP_REQUEST_TIMEOUT = env.int("WHATSAPP_REQUEST_TIMEOUT", default=10)

@@ -40,8 +40,18 @@ def send_email(*, email: str, subject: str, message: str) -> None:
 
 
 def send_whatsapp(*, phone: str, message: str) -> None:
-    """Dispatch a WhatsApp message — provider-agnostic stub that logs the payload."""
+
     logger.info("WhatsApp to %s: %s", phone, message)
+
+
+def send_order_whatsapp(*, order, event: str, phone: str) -> None:
+
+    try:
+        from whatsapp.services import queue_order_event
+
+        queue_order_event(order=order, event=event, phone=phone)
+    except Exception:  # noqa: BLE001
+        logger.exception("WhatsApp %s for order %s could not be queued", event, order.pk)
 
 
 def create_notification(*, user: User, title: str, body: str = "") -> Notification:
