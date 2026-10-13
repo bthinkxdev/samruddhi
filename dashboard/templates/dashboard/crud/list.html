@@ -19,10 +19,7 @@
         <div class="input-group">
           <input type="text" id="searchInput" name="q" value="{{ search_query }}" class="form-control border-end-0"
                  placeholder="Search {{ plural_name|lower }}..." />
-          <button type="button" class="input-group-text bg-transparent border-start-0 {% if search_query %}border-end-0{% endif %} text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
-          {% if search_query %}
-          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="document.getElementById('searchInput').value=''; this.form.submit();" title="Clear search"><i class="ti ti-x"></i></button>
-          {% endif %}
+          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
         </div>
       </div>
       {% if filter_by_active_status %}

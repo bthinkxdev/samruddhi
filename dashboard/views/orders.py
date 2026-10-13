@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import F
+from datetime import date
+
+from django.db.models import F, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
@@ -12,7 +15,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from dashboard.access import dashboard_required
 from orders.exceptions import InvalidOrderStatusTransitionError, OrderNotEditableError
 from orders.forms import OrderAddressForm
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderStatus, OrderStatusHistory
 from orders.services import (
     ADDRESS_EDITABLE_STATUSES,
     ALLOWED_STATUS_TRANSITIONS,
@@ -25,6 +28,14 @@ _STATUS_LABELS = dict(OrderStatus.choices)
 #statuses that can't be undone once applied - the dashboard asks for confirmation
 #before submitting them, and order_transition refuses them without it
 CONFIRM_REQUIRED_STATUSES = (OrderStatus.CANCELLED, OrderStatus.REFUNDED)
+
+
+def _parse_date(value: str) -> date | None:
+    """Parse a YYYY-MM-DD query param (what <input type="date"> submits); None if blank/invalid."""
+    try:
+        return date.fromisoformat(value.strip()) if value else None
+    except ValueError:
+        return None
 
 
 @dashboard_required
@@ -80,6 +91,22 @@ def order_list(request: HttpRequest) -> HttpResponse:
     if payment_status:
         qs = qs.filter(payment_transactions__status=payment_status).distinct()
 
+    date_from = _parse_date(request.GET.get("date_from", ""))
+    date_to = _parse_date(request.GET.get("date_to", ""))
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
+    if date_from or date_to:
+        latest_confirmed = (
+            OrderStatusHistory.objects.filter(order=OuterRef("pk"), to_status=OrderStatus.CONFIRMED)
+            .order_by("-changed_at")
+            .values("changed_at")[:1]
+        )
+        qs = qs.annotate(order_date=Coalesce(Subquery(latest_confirmed), "created_at"))
+        if date_from:
+            qs = qs.filter(order_date__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(order_date__date__lte=date_to)
+
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
 
@@ -102,6 +129,10 @@ def order_list(request: HttpRequest) -> HttpResponse:
         })
     if query:
         active_filters.append({"label": f'Search: "{query}"', "clear_url": _clear_url("q")})
+    if date_from:
+        active_filters.append({"label": f"From: {date_from:%b %d, %Y}", "clear_url": _clear_url("date_from")})
+    if date_to:
+        active_filters.append({"label": f"To: {date_to:%b %d, %Y}", "clear_url": _clear_url("date_to")})
 
     abandoned_count = Order.objects.filter(order_status=OrderStatus.CHECKOUT_PENDING).count()
     orderable_statuses = [
@@ -118,6 +149,8 @@ def order_list(request: HttpRequest) -> HttpResponse:
         "current_status": status,
         "current_payment_status": payment_status,
         "search_query": query,
+        "date_from": date_from.isoformat() if date_from else "",
+        "date_to": date_to.isoformat() if date_to else "",
         "querystring": params.urlencode(),
         "active_filters": active_filters,
         "current_view": view,

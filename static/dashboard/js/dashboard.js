@@ -315,11 +315,13 @@
       if (!form) return;
 
       var filters = Array.prototype.filter.call(form.elements, function (el) {
-        return el.tagName === "SELECT" && el.name;
+        if (!el.name) return false;
+        return el.tagName === "SELECT" || (el.tagName === "INPUT" && el.type === "date");
       });
       if (!filters.length) return;
 
       var applied = filters.map(function (select) {
+        if (select.tagName === "INPUT") return select.defaultValue;
         var options = Array.prototype.slice.call(select.options);
         var selected = options.filter(function (opt) { return opt.defaultSelected; })[0];
         return selected ? selected.value : (options[0] ? options[0].value : "");
@@ -337,6 +339,7 @@
 
       filters.forEach(function (select) {
         select.addEventListener("change", sync);
+        if (select.tagName === "INPUT") select.addEventListener("input", sync);
       });
       window.addEventListener("pageshow", sync);
       sync();

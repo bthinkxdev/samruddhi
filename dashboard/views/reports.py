@@ -58,52 +58,14 @@ def reports_view(request: HttpRequest) -> HttpResponse:
     if start > end:
         start = end
 
-    state_filter = request.GET.get("state", "").strip()
-    hsn_code_filter = request.GET.get("hsn_code", "").strip()
+    sales = get_daily_sales_reports(start_date=start, end_date=end, page=1, page_size=366)
+    customers = get_daily_customer_reports(start_date=start, end_date=end, page=1, page_size=366)
 
-    if state_filter or hsn_code_filter:
-        from django.db.models import Sum, Count, F
-        from django.db.models.functions import TruncDate
-        from orders.models import OrderItem
-        from orders.services import REVENUE_ORDER_STATUSES
-        from decimal import Decimal
-
-        items = OrderItem.objects.filter(
-            order__created_at__date__gte=start,
-            order__created_at__date__lte=end,
-            order__order_status__in=REVENUE_ORDER_STATUSES
-        )
-        if state_filter:
-            items = items.filter(order__delivery_address_snapshot__state__icontains=state_filter)
-        if hsn_code_filter:
-            items = items.filter(product__hsn_code__icontains=hsn_code_filter)
-            
-        daily_stats = items.annotate(
-            date=TruncDate('order__created_at')
-        ).values('date').annotate(
-            order_count=Count('order', distinct=True),
-            revenue=Sum(F('quantity') * F('unit_price')),
-        ).order_by('-date')
-
-        class MockDailyReport:
-            def __init__(self, date, orders, revenue):
-                self.report_date = date
-                self.order_count = orders
-                self.revenue = revenue or Decimal('0')
-                self.average_order_value = (self.revenue / self.order_count) if self.order_count else Decimal('0')
-                self.coupon_discount_total = Decimal('0')
-
-        sales = {"results": [MockDailyReport(s['date'], s['order_count'], s['revenue']) for s in daily_stats]}
-        customers = {"results": []}
-    else:
-        sales = get_daily_sales_reports(start_date=start, end_date=end, page=1, page_size=366)
-        customers = get_daily_customer_reports(start_date=start, end_date=end, page=1, page_size=366)
-
-        if start <= today <= end:
-            sales["results"] = [r for r in sales["results"] if r.report_date != today]
-            sales["results"].insert(0, get_live_today_sales_report())
-            customers["results"] = [r for r in customers["results"] if r.report_date != today]
-            customers["results"].insert(0, get_live_today_customer_report())
+    if start <= today <= end:
+        sales["results"] = [r for r in sales["results"] if r.report_date != today]
+        sales["results"].insert(0, get_live_today_sales_report())
+        customers["results"] = [r for r in customers["results"] if r.report_date != today]
+        customers["results"].insert(0, get_live_today_customer_report())
 
     ordered = list(reversed(sales["results"]))
     
@@ -135,15 +97,11 @@ def reports_view(request: HttpRequest) -> HttpResponse:
     total_revenue = sum(float(r.revenue) for r in sales["results"])
     total_orders = sum(r.order_count for r in sales["results"])
 
-    from core.models import State
     context = {
         "nav_section": "reports",
         "page_title": "Reports",
         "start": start,
         "end": end,
-        "state_filter": state_filter,
-        "hsn_code_filter": hsn_code_filter,
-        "states": State.objects.filter(is_active=True).order_by("name"),
         "summary": get_admin_dashboard_summary(),
         "sales": sales["results"],
         "customers": customers["results"],
@@ -169,8 +127,6 @@ def reports_export_csv(request: HttpRequest) -> HttpResponse:
     if start > end:
         start = end
         
-    state_filter = request.GET.get("state", "").strip()
-    hsn_code_filter = request.GET.get("hsn_code", "").strip()
     
     from orders.models import OrderItem
     from orders.services import REVENUE_ORDER_STATUSES
@@ -180,11 +136,6 @@ def reports_export_csv(request: HttpRequest) -> HttpResponse:
         order__created_at__date__lte=end,
         order__order_status__in=REVENUE_ORDER_STATUSES
     ).select_related("order", "product", "order__customer_profile")
-
-    if state_filter:
-        items = items.filter(order__delivery_address_snapshot__state__icontains=state_filter)
-    if hsn_code_filter:
-        items = items.filter(product__hsn_code__icontains=hsn_code_filter)
 
     items = items.order_by("-order__created_at", "id")
 

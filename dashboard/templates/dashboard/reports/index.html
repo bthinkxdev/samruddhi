@@ -8,7 +8,7 @@
   {% csrf_token %}
   <button type="submit" class="btn btn-outline-secondary"><i class="ti ti-refresh me-1"></i>Recompute (yesterday)</button>
 </form>
-<a href="{% url 'dashboard:reports-export' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}&state={{ state_filter|urlencode }}&hsn_code={{ hsn_code_filter|urlencode }}" class="btn btn-primary"><i class="ti ti-download me-1"></i>Export CSV</a>
+<a href="{% url 'dashboard:reports-export' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}" class="btn btn-primary"><i class="ti ti-download me-1"></i>Export CSV</a>
 {% endblock %}
 
 {% block content %}
@@ -25,22 +25,9 @@
         <label class="form-label small mb-1">To</label>
         <input type="date" name="end" value="{{ end|date:'Y-m-d' }}" class="form-control" />
       </div>
-      <div class="col-6 col-md-auto">
-        <label class="form-label small mb-1">State</label>
-        <select name="state" class="form-select">
-          <option value="">All States</option>
-          {% for st in states %}
-            <option value="{{ st.name }}" {% if state_filter == st.name %}selected{% endif %}>{{ st.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-auto">
-        <label class="form-label small mb-1">HSN Code</label>
-        <input type="text" name="hsn_code" value="{{ hsn_code_filter }}" class="form-control" placeholder="e.g. 1234" />
-      </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
         <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Apply</button>
-        {% if request.GET.start or request.GET.end or request.session.reports_start or request.session.reports_end or request.GET.state or request.GET.hsn_code %}
+        {% if request.GET.start or request.GET.end or request.session.reports_start or request.session.reports_end %}
         <a href="{% url 'dashboard:reports' %}?clear=1" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
       </div>

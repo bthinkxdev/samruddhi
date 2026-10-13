@@ -19,10 +19,7 @@
         <div class="input-group">
           <input type="text" id="searchInput" name="q" value="{{ search_query }}" class="form-control border-end-0"
             placeholder="Search by name or SKU..." />
-          <button type="button" class="input-group-text bg-transparent border-start-0 {% if search_query %}border-end-0{% endif %} text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
-          {% if search_query %}
-          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="document.getElementById('searchInput').value=''; this.form.submit();" title="Clear search"><i class="ti ti-x"></i></button>
-          {% endif %}
+          <button type="button" class="input-group-text bg-transparent border-start-0 text-secondary" onclick="if(document.getElementById('searchInput').value.trim() !== '') { this.form.submit(); }" title="Search"><i class="ti ti-search"></i></button>
         </div>
       </div>
       <div class="col-6 col-md-auto">
@@ -44,7 +41,7 @@
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
         <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0" data-filter-submit>Filter</button>
-        {% if status_filter or collection_filter %}
+        {% if search_query or status_filter or collection_filter %}
         <a href="{% url 'dashboard:product-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
       </div>
