@@ -3,7 +3,7 @@
 <form class="plp-filters card p-3" method="get" action="{{ request.path }}" hx-get="{{ request.path }}"
   hx-target="#product-grid" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#product-grid"
   hx-trigger="submit">
-  <h2 class="h6 plp-filters-header">{% trans "Filters" %}</h2>
+  {% if not hide_filters_header %}<h2 class="h6 plp-filters-header">{% trans "Filters" %}</h2>{% endif %}
   <div class="plp-filters-body">
     {% if not active_collection %}
     <div class="mb-3">
@@ -60,6 +60,7 @@
     <div class="mb-2">
       <label class="form-label small">{% trans "Sort" %}</label>
       <select name="sort" class="form-select form-select-sm">
+        <option value="featured" {% if sort == 'featured' %}selected{% endif %}>{% trans "Featured" %}</option>
         <option value="newest" {% if sort == 'newest' %}selected{% endif %}>{% trans "Newest" %}</option>
         <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>{% trans "Price: Low to High" %}</option>
         <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>{% trans "Price: High to Low" %}

@@ -141,18 +141,26 @@ def adjust_cart_item_quantity(
 
     Raises:
         CartItemNotFoundError: When no matching line exists on this cart.
+        InsufficientStockError: When an *increase* would exceed available stock.
     """
     item = CartItem.objects.select_for_update().filter(cart=cart, pk=cart_item_id).first()
     if item is None:
         raise CartItemNotFoundError("Cart item not found.")
 
+    max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
     new_quantity = item.quantity + delta
+
+    if delta < 0 and item.quantity > max_stock:
+        new_quantity = max_stock
+    elif new_quantity > item.quantity and new_quantity > max_stock:
+        # Only *increases* past available stock are blocked.
+        raise InsufficientStockError(f"Only {max_stock} items available in stock.")
+
     if new_quantity < 1:
         new_quantity = 1
 
-    max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
-    if new_quantity > max_stock:
-        raise InsufficientStockError(f"Only {max_stock} items available in stock.")
+    if new_quantity == item.quantity:
+        return item
 
     user = (
         cart.customer_profile.user

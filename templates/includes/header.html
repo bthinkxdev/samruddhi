@@ -163,29 +163,24 @@
 
 
       <ul class="jm-nav__links">
+        {# Keep in sync with the mobile menu (#jmMainNav) below: Home, Shop All, collections, About Us, Contact Us #}
         <li><a
             class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref != 'brands' %}is-active{% endif %}"
             href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
+        <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
+            href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
         {% for collection in collection_tree %}
         <li><a
             class="jm-nav__link {% if request.resolver_match.kwargs.collection_slug == collection.slug %}is-active{% endif %}"
             href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>
         {% endfor %}
-        <!-- <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'plp' or request.resolver_match.url_name == 'plp-collection' %}is-active{% endif %}"
-            href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
-         <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref == 'brands' %}is-active{% endif %}"
-            href="{% url 'cms:homepage' %}?ref=brands#featured-brands">{% trans "Brands" %}</a></li> 
-
         <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref == 'services' %}is-active{% endif %}"
-            href="{% url 'core:contact-us' %}?ref=services">{% trans "Services" %}</a></li>
-        <li><a class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
+            class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
             href="{% url 'core:about-us' %}">{% trans "About Us" %}</a></li>
         <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref != 'services' %}is-active{% endif %}"
-            href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a></li> -->
+            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' %}is-active{% endif %}"
+            href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a></li>
       </ul>
 
     </div>

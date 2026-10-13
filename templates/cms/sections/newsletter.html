@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (btn) btn.disabled = false;
+
+            if (data.mpx_event && window.mpx) {
+                window.mpx.track(data.mpx_event.name, data.mpx_event.params, data.mpx_event.custom);
+            }
             
             let container = document.querySelector('.toast-container');
             if (!container) {

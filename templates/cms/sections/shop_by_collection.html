@@ -1,7 +1,12 @@
 {% load i18n %}
 <section class="jm-section jm-collections" id="jm-collections">
   <div class="container">
-    <div class="jm-collection-scroll" aria-label="{% trans 'Shop by collection' %}">
+    {% if section_context.title %}
+    <div class="section-header">
+      <h2 class="section-title">{{ section_context.title }}</h2>
+    </div>
+    {% endif %}
+    <div class="jm-collection-scroll" aria-label="{% if section_context.title %}{{ section_context.title }}{% else %}{% trans 'Shop by collection' %}{% endif %}">
       {% for collection in section_context.collections %}
       <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}" class="jm-collection-chip">
         <span class="jm-collection-chip__icon">

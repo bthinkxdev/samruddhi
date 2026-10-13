@@ -51,7 +51,7 @@
           <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
           <input type="hidden" name="delta" value="1">
           <input type="hidden" name="is_drawer" value="1">
-          <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" style="padding: 2px 8px; font-size: 14px; border: none; background: transparent;">&plus;</button>
+          <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" {% if line.quantity >= max_stock %}disabled{% endif %} style="padding: 2px 8px; font-size: 14px; border: none; background: transparent;">&plus;</button>
         </form>
       </div>
       {% endwith %}

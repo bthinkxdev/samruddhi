@@ -345,10 +345,17 @@
       reinitPageScripts();
     }
     if (event.detail.target && event.detail.target.id === 'product-grid') {
-      var toolbar = document.querySelector('.plp-toolbar') || event.detail.target;
-      var headerOffset = 170;
-      var elementPosition = toolbar.getBoundingClientRect().top + window.scrollY;
-      var offsetPosition = Math.max(0, elementPosition - headerOffset);
+      
+      var grid = event.detail.target;
+      var header = document.querySelector('.site-header.sticky-top');
+      var toolbar = document.querySelector('.plp-toolbar');
+      var offset = 16;
+      if (header) offset += header.getBoundingClientRect().height;
+      if (toolbar && getComputedStyle(toolbar).position === 'sticky') {
+        offset += toolbar.getBoundingClientRect().height;
+      }
+      var gridTop = grid.getBoundingClientRect().top + window.scrollY;
+      var offsetPosition = Math.max(0, gridTop - offset);
       if (window.scrollY > offsetPosition) {
         window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
       }

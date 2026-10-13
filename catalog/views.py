@@ -116,7 +116,7 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
             subcollections = list(active_collection.children.filter(is_active=True))
             filters["parent_collection_id"] = active_collection.pk
 
-    sort = request.GET.get("sort", "newest")
+    sort = request.GET.get("sort") or "featured"
     page = int(request.GET.get("page", 1))
     plp_data = get_plp_products(filters=filters, sort=sort, page=page, user=request.user)
     filter_options = get_plp_filter_options()

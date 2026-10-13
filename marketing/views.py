@@ -43,10 +43,14 @@ def newsletter_subscribe_view(request: HttpRequest) -> HttpResponse:
     subscriber, is_new = subscribe_newsletter(email=form.cleaned_data["email"])
     
     if is_new:
-        meta_pixel.queue_event(request, "Subscribe", {"subscription_type": "newsletter"})
+        subscribe_params = {"subscription_type": "newsletter"}
         msg = "Thank you for subscribing to our newsletter!"
         if is_ajax:
-            return JsonResponse({"status": "success", "message": msg})
+            payload = {"status": "success", "message": msg}
+            if meta_pixel.is_enabled():
+                payload["mpx_event"] = meta_pixel.event("Subscribe", subscribe_params)
+            return JsonResponse(payload)
+        meta_pixel.queue_event(request, "Subscribe", subscribe_params)
         messages.success(request, msg)
     else:
         msg = "This email is already subscribed to our newsletter."

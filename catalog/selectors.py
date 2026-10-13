@@ -217,16 +217,25 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     return queryset
 
 
+PLP_DEFAULT_SORT = "featured"
+
+_PLP_SORT_MAP = {
+    "price_asc": ("base_price", "-created_at"),
+    "price_desc": ("-base_price", "-created_at"),
+    "newest": ("-created_at",),
+    "rating": (F("average_rating").desc(nulls_last=True), "-created_at"),
+    "name": ("name",),
+}
+
+
 def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]:
-    """Apply PLP sort key to queryset."""
-    sort_map = {
-        "price_asc": "base_price",
-        "price_desc": "-base_price",
-        "newest": "-created_at",
-        "rating": "-average_rating",
-        "name": "name",
-    }
-    primary_sort = sort_map.get(sort, "-created_at")
+    """
+    Apply PLP sort key to queryset.
+
+    """
+    if sort in _PLP_SORT_MAP:
+        return queryset.order_by(*_PLP_SORT_MAP[sort], "pk")
+
     return queryset.order_by(
         Case(
             When(homepage_featured__is_shown=True, then=Value(1)),
@@ -242,14 +251,15 @@ def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]
             When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
             default=None
         ).asc(nulls_last=True),
-        primary_sort
+        "-created_at",
+        "pk",
     )
 
 
 def get_plp_products(
     *,
     filters: Optional[dict[str, Any]] = None,
-    sort: str = "newest",
+    sort: str = PLP_DEFAULT_SORT,
     page: int = 1,
     page_size: int = 24,
     user: Optional[Any] = None,

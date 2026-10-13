@@ -34,7 +34,7 @@
   <div class="row g-4">
     <div class="col-lg-7">
       <form id="checkout-form" method="post" action="{% url 'checkout:place-order' %}"
-        hx-post="{% url 'checkout:place-order' %}" hx-target="#checkout-result" hx-swap="innerHTML" novalidate>
+        hx-post="{% url 'checkout:place-order' %}" hx-target="#checkout-result" hx-swap="innerHTML" hx-select="unset" novalidate>
         {% csrf_token %}
         <input type="hidden" name="idempotency_key" value="{{ checkout_session.pk }}-{{ summary.grand_total }}-{{ summary.lines|length }}-{{ request.user.pk|default:'guest' }}">
 
@@ -429,9 +429,20 @@
         }
       });
 
-      checkoutForm.addEventListener('htmx:afterSwap', function(event) {
-        if (event.detail.elt === checkoutForm) {
+      // Hide the "Confirming Order!" overlay once the place-order request finishes,
+      // unless the server is redirecting (confirmation / payment page). Uses
+      // afterRequest because afterSwap's detail.elt is the swap target (#checkout-result),
+      // not the form.
+      checkoutForm.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.elt !== checkoutForm) return;
+        var xhr = event.detail.xhr;
+        var redirecting = event.detail.successful && xhr && xhr.getResponseHeader('HX-Redirect');
+        if (!redirecting) {
           document.getElementById('order-processing-overlay').classList.add('d-none');
+          var result = document.getElementById('checkout-result');
+          if (result && result.textContent.trim()) {
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         }
       });
       checkoutForm.addEventListener('htmx:responseError', function(event) {

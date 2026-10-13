@@ -360,6 +360,18 @@ class StorefrontEventTests(MetaPixelTestBase):
         # drained after the first full page load — never replayed
         self.assertNotIn("Subscribe", [e["name"] for e in _page_events(self.client.get(reverse("catalog:plp")))])
 
+    def test_ajax_newsletter_returns_subscribe_event_instead_of_queueing(self):
+        url = reverse("marketing:newsletter-subscribe")
+        response = self.client.post(url, {"email": "pixel-news@example.com"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        data = response.json()
+        self.assertEqual(data["mpx_event"]["name"], "Subscribe")
+        self.assertEqual(data["mpx_event"]["params"]["subscription_type"], "newsletter")
+        # not left in the session to fire again on the next page
+        self.assertNotIn(meta_pixel.SESSION_QUEUE_KEY, self.client.session)
+        # already-subscribed email: no event
+        again = self.client.post(url, {"email": "pixel-news@example.com"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertNotIn("mpx_event", again.json())
+
     def test_home_fires_view_home(self):
         events = _page_events(self.client.get("/"))
         self.assertIn("ViewHome", [e["name"] for e in events])

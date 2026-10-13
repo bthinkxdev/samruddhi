@@ -40,7 +40,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
   </div>
   <div class="offcanvas-body">
-    {% include "catalog/partials/plp_filters.html" %}
+    {% include "catalog/partials/plp_filters.html" with hide_filters_header=True %}
   </div>
 </div>
 {% endblock %}
