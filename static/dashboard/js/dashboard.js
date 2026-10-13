@@ -380,8 +380,74 @@
     });
   }
 
+  var SUBMIT_LOCK_SELECTOR = 'button[type="submit"], button:not([type]), input[type="submit"]';
+  var SPINNER_HTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
+
+  function submitButtons(form) {
+    return Array.prototype.filter.call(form.elements, function (el) {
+      return el.matches(SUBMIT_LOCK_SELECTOR);
+    });
+  }
+
+  function lockForm(form, submitter) {
+    form.dataset.submitting = "1";
+    form.setAttribute("aria-busy", "true");
+
+    setTimeout(function () {
+      submitButtons(form).forEach(function (btn) {
+        if (btn.disabled) return;
+        btn.dataset.submitLocked = "1";
+        btn.disabled = true;
+        if (btn === submitter && btn.tagName === "BUTTON") {
+          btn.dataset.submitLabel = btn.innerHTML;
+          btn.insertAdjacentHTML("afterbegin", SPINNER_HTML);
+        }
+      });
+    }, 0);
+  }
+
+  function unlockForm(form) {
+    delete form.dataset.submitting;
+    form.removeAttribute("aria-busy");
+    submitButtons(form).forEach(function (btn) {
+      if (!btn.dataset.submitLocked) return;
+      btn.disabled = false;
+      if (btn.dataset.submitLabel !== undefined) btn.innerHTML = btn.dataset.submitLabel;
+      delete btn.dataset.submitLocked;
+      delete btn.dataset.submitLabel;
+    });
+  }
+
+  function initSubmitLock() {
+    document.addEventListener("submit", function (event) {
+      var form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if ((form.getAttribute("method") || "get").toLowerCase() !== "post") return;
+      if (form.hasAttribute("data-no-submit-lock")) return;
+
+      if (form.dataset.submitting) {
+        event.preventDefault(); 
+        return;
+      }
+      if (event.defaultPrevented) return; 
+
+      lockForm(form, event.submitter || null);
+
+      var target = (event.submitter && event.submitter.getAttribute("formtarget")) || form.getAttribute("target");
+      if (target && target !== "_self") {
+        setTimeout(function () { unlockForm(form); }, 2000);
+      }
+    });
+
+    window.addEventListener("pageshow", function (event) {
+      if (!event.persisted) return;
+      document.querySelectorAll("form[data-submitting]").forEach(unlockForm);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
+    initSubmitLock();
     initFormValidation();
     initCharts();
     initFormsets();

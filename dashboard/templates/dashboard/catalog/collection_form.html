@@ -51,10 +51,24 @@
         </div>
         <div class="card-body" id="collection-products"
           data-search-url="{% url 'dashboard:collection-product-search' %}">
-          <div class="position-relative mb-3">
+          <div class="mb-3">
             <input type="search" class="form-control" id="collection-product-search"
               placeholder="Search products to add…" autocomplete="off" />
-            <div class="list-group position-absolute w-100 shadow-sm collection-product-results" id="collection-product-results" hidden></div>
+          </div>
+          {# Rendered in normal flow (not an absolute dropdown) so results push the selected list down instead of covering it #}
+          <div class="collection-product-results mb-3" id="collection-product-results" hidden>
+            <div class="collection-product-results-head" id="collection-product-results-head">
+              <div class="form-check mb-0">
+                <input type="checkbox" class="form-check-input" id="collection-product-select-all" />
+                <label class="form-check-label small" for="collection-product-select-all">Select all</label>
+              </div>
+              <span class="text-secondary small" id="collection-product-results-meta"></span>
+            </div>
+            <div class="list-group list-group-flush collection-product-results-list" id="collection-product-results-list"></div>
+            <div class="collection-product-results-foot" id="collection-product-results-foot">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="collection-product-cancel">Cancel</button>
+              <button type="button" class="btn btn-sm btn-primary" id="collection-product-add-selected" disabled>Add selected (0)</button>
+            </div>
           </div>
           <ul class="list-group" id="collection-product-list"></ul>
           <p class="text-secondary small mb-0 mt-2" id="collection-product-empty">No products in this collection yet.</p>

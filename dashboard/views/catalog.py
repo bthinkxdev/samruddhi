@@ -307,7 +307,7 @@ def product_home_toggle(request, pk):
     return redirect("dashboard:product-list")
 
 
-PICKER_RESULT_LIMIT = 20
+PICKER_RESULT_LIMIT = 50
 
 
 def _picker_products(queryset) -> list[dict]:
@@ -336,10 +336,15 @@ def collection_product_search(request):
     query = request.GET.get("q", "").strip()
     if len(query) < 2:
         return JsonResponse({"results": []})
-    matches = Product.objects.filter(Q(name__icontains=query) | Q(sku__icontains=query)).order_by(
-        "name"
-    )[:PICKER_RESULT_LIMIT]
-    return JsonResponse({"results": _picker_products(matches)})
+    #one extra row tells the picker whether there are more matches than shown
+    matches = list(
+        Product.objects.filter(Q(name__icontains=query) | Q(sku__icontains=query))
+        .order_by("name")
+        .values_list("pk", flat=True)[: PICKER_RESULT_LIMIT + 1]
+    )
+    has_more = len(matches) > PICKER_RESULT_LIMIT
+    page = Product.objects.filter(pk__in=matches[:PICKER_RESULT_LIMIT]).order_by("name")
+    return JsonResponse({"results": _picker_products(page), "has_more": has_more})
 
 
 class CollectionListView(DashboardListView):
