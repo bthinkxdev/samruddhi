@@ -186,6 +186,32 @@ class ProductVariantHasChangedTests(TestCase):
         form = ProductVariantForm(data, prefix="variants-0")
         self.assertTrue(form.has_changed())
 
+    def test_untouched_added_row_with_prefilled_defaults_is_unchanged(self) -> None:
+        """
+        "Add variant" then removing it (or leaving it empty) posts only the
+        template's pre-filled stock 0 / threshold 5 plus the hidden parent FK;
+        that row must be ignored, not validated into "... is required" errors.
+        """
+        data = {
+            "variants-0-id": "",
+            "variants-0-product": "85",
+            "variants-0-variant_type": "",
+            "variants-0-name": "",
+            "variants-0-base_price": "",
+            "variants-0-mrp": "",
+            "variants-0-purchase_price": "",
+            "variants-0-sku_suffix": "",
+            "variants-0-stock_quantity": "0",
+            "variants-0-low_stock_threshold": "5",
+        }
+        form = ProductVariantForm(data, prefix="variants-0")
+        self.assertFalse(form.has_changed())
+
+    def test_changed_stock_alone_counts_as_changed(self) -> None:
+        data = {"variants-0-stock_quantity": "10", "variants-0-low_stock_threshold": "5"}
+        form = ProductVariantForm(data, prefix="variants-0")
+        self.assertTrue(form.has_changed())
+
     def test_fully_blank_row_is_unchanged(self) -> None:
         data = {
             "variants-0-variant_type": "",
@@ -245,6 +271,27 @@ class ProductVariantFormSetValidationTests(TestCase):
         data.update(self._row(1, sku_suffix="small"))  # case-insensitive collision
         formset = ProductVariantFormSet(data, instance=self.product, prefix="variants")
         self.assertFalse(formset.is_valid())
+
+    def test_variant_sku_equal_to_own_product_sku_rejected(self) -> None:
+        data = self._management_form(1)
+        data.update(self._row(0, sku_suffix="sku-formset-1"))  # product SKU, other case
+        formset = ProductVariantFormSet(data, instance=self.product, prefix="variants")
+        self.assertFalse(formset.is_valid())
+        self.assertIn("this product's SKU", str(formset.forms[0].errors["sku_suffix"]))
+
+    def test_variant_sku_checked_against_submitted_product_sku(self) -> None:
+        """On create the formset has an unsaved product; the view passes the typed SKU."""
+        data = self._management_form(1)
+        data.update(self._row(0, sku_suffix="NEW-SKU"))
+        formset = ProductVariantFormSet(data, instance=Product(), prefix="variants")
+        formset.product_sku = "new-sku"
+        self.assertFalse(formset.is_valid())
+
+    def test_variant_sku_different_from_product_sku_accepted(self) -> None:
+        data = self._management_form(1)
+        data.update(self._row(0, sku_suffix="SKU-FORMSET-1-S"))
+        formset = ProductVariantFormSet(data, instance=self.product, prefix="variants")
+        self.assertTrue(formset.is_valid(), formset.errors)
 
     def test_variant_type_casing_normalized_to_first_seen(self) -> None:
         data = self._management_form(2)

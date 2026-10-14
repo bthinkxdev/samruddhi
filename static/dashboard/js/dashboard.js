@@ -194,6 +194,26 @@
         }
       });
 
+      function removeNewRow(row) {
+        var re = new RegExp("^(id_)?" + prefix + "-(\\d+)-");
+        var named = row.querySelector("[name^='" + prefix + "-']");
+        var match = named ? named.name.match(re) : null;
+        var removedIdx = match ? parseInt(match[2], 10) : null;
+        row.remove();
+        if (!total) return;
+        total.value = Math.max(0, parseInt(total.value, 10) - 1);
+        if (removedIdx === null) return;
+        Array.prototype.forEach.call(body.querySelectorAll("[name^='" + prefix + "-'], [id^='id_" + prefix + "-'], label[for^='id_" + prefix + "-']"), function (el) {
+          ["name", "id", "for"].forEach(function (attr) {
+            var val = el.getAttribute(attr);
+            if (!val) return;
+            var m = val.match(re);
+            if (!m || parseInt(m[2], 10) <= removedIdx) return;
+            el.setAttribute(attr, val.replace(re, (m[1] || "") + prefix + "-" + (parseInt(m[2], 10) - 1) + "-"));
+          });
+        });
+      }
+
       wrap.addEventListener("click", function (e) {
         //handle row delete/remove
         var btnRemove = e.target.closest ? e.target.closest("[data-row-remove]") : null;
@@ -208,13 +228,11 @@
               if (deleteCheckbox) {
                 deleteCheckbox.checked = true;
               }
+              row.style.display = "none";
             } else {
-              Array.prototype.forEach.call(row.querySelectorAll("input, select, textarea"), function (inp) {
-                if (inp.type === "checkbox" || inp.type === "radio") inp.checked = false;
-                else if (inp.type !== "hidden") inp.value = "";
-              });
+
+              removeNewRow(row);
             }
-            row.style.display = "none";
           }
           return;
         }

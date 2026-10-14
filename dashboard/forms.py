@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django import forms
+from django.forms.models import InlineForeignKeyField
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -341,6 +342,8 @@ class ProductVariantForm(forms.ModelForm):
         }
 
     REQUIRED_PRICES = (("base_price", "Base price"), ("mrp", "MRP"))
+    #fields the "Add variant" template pre-fills with the model defaults
+    PREFILLED_DEFAULT_FIELDS = ("stock_quantity", "low_stock_threshold")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -365,11 +368,20 @@ class ProductVariantForm(forms.ModelForm):
         0, low_stock_threshold 5) and so would call an explicitly-filled-in row
         matching those defaults "unchanged", silently dropping it.
         """
-        for name in self.fields:
+        for name, field in self.fields.items():
+            if name in ("id", "DELETE", "ORDER") or isinstance(field, InlineForeignKeyField):
+                continue
             prefixed_name = self.add_prefix(name)
             val = self.data.get(prefixed_name)
-            if val not in (None, ""):
-                return True
+            if val in (None, ""):
+                continue
+            if (
+                not self.instance.pk
+                and name in self.PREFILLED_DEFAULT_FIELDS
+                and str(val).strip() == str(self.get_initial_for_field(field, name)).strip()
+            ):
+                continue
+            return True
         return False
 
 class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
@@ -402,6 +414,9 @@ class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
         seen_types: dict[str, str] = {}
         seen_skus: dict[str, int] = {}
         default_count = 0
+        #the parent product's SKU as submitted (set by the product view; falls
+        #back to the saved SKU) - a variant may not reuse its own product's SKU
+        product_sku = (getattr(self, "product_sku", None) or self.instance.sku or "").strip()
 
         for form in self.forms:
             if not getattr(form, "cleaned_data", None) or form.cleaned_data.get("DELETE"):
@@ -423,7 +438,12 @@ class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
             sku_suffix = (form.cleaned_data.get("sku_suffix") or "").strip()
             if sku_suffix:
                 key = sku_suffix.lower()
-                if key in seen_skus:
+                if product_sku and key == product_sku.lower():
+                    form.add_error(
+                        "sku_suffix",
+                        f'SKU "{sku_suffix}" is already used as this product\'s SKU. Use a different SKU for the variant.',
+                    )
+                elif key in seen_skus:
                     form.add_error("sku_suffix", "This SKU suffix is used by another variant in this submission.")
                 else:
                     seen_skus[key] = 1
@@ -467,7 +487,9 @@ ProductImageFormSet = forms.inlineformset_factory(
     Product,
     ProductImage,
     form=ProductImageForm,
-    extra=1,
+    #no starter blank row: rows appear only for saved items, or when the admin
+    #clicks "Add" (same as variants)
+    extra=0,
     can_delete=True,
 )
 class ProductSpecificationForm(forms.ModelForm):
@@ -494,7 +516,9 @@ ProductSpecificationFormSet = forms.inlineformset_factory(
     Product,
     ProductSpecification,
     form=ProductSpecificationForm,
-    extra=1,
+    #no starter blank row: rows appear only for saved items, or when the admin
+    #clicks "Add" (same as variants)
+    extra=0,
     can_delete=True,
 )
 

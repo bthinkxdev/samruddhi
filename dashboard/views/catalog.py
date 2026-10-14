@@ -153,6 +153,11 @@ def _render_product_form(request, product, mode):
         #evaluate all four eagerly (not via `and` short-circuit) so every
         #formset gets a chance to populate its own errors for re-display.
         form_valid = form.is_valid()
+        #the variant formset checks variant SKUs against the product's own SKU;
+        #on create it has a separate unsaved Product, so hand it the typed SKU
+        variants.product_sku = (form.cleaned_data.get("sku") if hasattr(form, "cleaned_data") else "") or (
+            form.data.get(form.add_prefix("sku")) or ""
+        ).strip()
         variants_valid = variants.is_valid()
         images_valid = images.is_valid()
         specifications_valid = specifications.is_valid()
@@ -218,6 +223,19 @@ def _render_product_form(request, product, mode):
             messages.success(request, f"Product '{product.name}' saved successfully.")
             return redirect("dashboard:product-list")
 
+
+        if any(
+            "this product's SKU" in str(err)
+            for vform in variants.forms
+            for err in vform.errors.get("sku_suffix", [])
+        ) and "sku" not in form.errors:
+            form.add_error("sku", "This SKU is also entered as a variant SKU below. Product and variant SKUs must be different.")
+        for bound_form in [form, *variants.forms, *images.forms, *specifications.forms]:
+            for name in bound_form.errors:
+                if name in bound_form.fields:
+                    widget = bound_form.fields[name].widget
+                    widget.attrs["class"] = (widget.attrs.get("class", "") + " is-invalid").strip()
+        messages.error(request, "Product not saved. Please fix the highlighted errors below.")
 
         form.retain_uploads()
         for iform in images.forms:
