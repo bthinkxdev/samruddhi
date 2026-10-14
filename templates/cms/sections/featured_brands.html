@@ -1,28 +1,27 @@
 {% load i18n %}
-<section class="jm-section jm-brands" id="featured-brands" style="scroll-margin-top: 150px;">
+{% with brands=section_context.brands %}
+{% with brand_count=brands|length %}
+{# Up to 6 brands: centred grid of equal tiles. More: auto-scrolling marquee (list rendered twice for a seamless loop; the copy is hidden from assistive tech). #}
+<section class="jm-section jm-brands{% if brand_count > 6 %} jm-brands--marquee{% endif %}" id="featured-brands" style="scroll-margin-top: 150px;">
   <div class="container">
     <div class="jm-brands__header">
+      <span class="jm-brands__eyebrow">{% trans "Our partners" %}</span>
       <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Trusted by Leading Brands" %}{% endif %}</h2>
     </div>
+    {% if brands %}
     <div class="jm-brands__rail" aria-label="{% trans 'Featured brands' %}">
       <ul class="jm-brands__track" role="list">
-        {% for brand in section_context.brands %}
-        <li class="jm-brand" role="listitem">
-          <a href="{% url 'catalog:plp' %}?brand={{ brand.pk }}" class="jm-brand__link" aria-label="{{ brand.name }}">
-            {% if brand.logo %}
-            <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" loading="lazy" decoding="async" width="140" height="56">
-            {% else %}
-            <span class="jm-brand__fallback">{{ brand.name }}</span>
-            {% endif %}
-          </a>
-        </li>
-        {% empty %}
-        <li class="text-muted small">{% trans "Brands coming soon." %}</li>
-        {% endfor %}
+        {% for brand in brands %}{% include "cms/sections/_featured_brand_item.html" %}{% endfor %}
+        {% if brand_count > 6 %}{% for brand in brands %}{% include "cms/sections/_featured_brand_item.html" with is_clone=True %}{% endfor %}{% endif %}
       </ul>
     </div>
+    {% else %}
+    <p class="jm-brands__empty">{% trans "Brands coming soon." %}</p>
+    {% endif %}
   </div>
 </section>
+{% endwith %}
+{% endwith %}
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

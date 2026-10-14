@@ -32,6 +32,24 @@
               elPriceValue.textContent = symbol + ' ' + parseFloat(data.price).toFixed(2).replace(/\.00$/, '');
             }
 
+            var elOriginal = document.getElementById('pdp-price-original');
+            var onFlashSale = data.is_flash_sale === 'true' && data.original_price &&
+              parseFloat(data.original_price) > parseFloat(data.price);
+            if (onFlashSale && !elOriginal && elPriceValue && elPriceValue.parentNode) {
+              elOriginal = document.createElement('span');
+              elOriginal.className = 'was';
+              elOriginal.id = 'pdp-price-original';
+              elPriceValue.parentNode.insertBefore(elOriginal, elPriceValue.parentNode.firstChild);
+            }
+            if (elOriginal) {
+              if (onFlashSale) {
+                elOriginal.textContent = symbol + ' ' + parseFloat(data.original_price).toFixed(2).replace(/\.00$/, '');
+                elOriginal.style.display = '';
+              } else {
+                elOriginal.style.display = 'none';
+              }
+            }
+
             var elMrp = document.getElementById('pdp-price-mrp');
             if (elMrp) {
               if (data.is_flash_sale !== 'true' && data.has_mrp_discount === 'true' && data.mrp) {
