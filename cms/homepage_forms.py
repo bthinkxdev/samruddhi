@@ -67,13 +67,33 @@ class MarketingFeaturesConfigForm(BaseSectionConfigForm):
         return {"cards": cards}
 
 
+def _validate_link(value: str) -> None:
+    """Accept a site-relative path (/shop/, /media/...) or a full http(s) URL."""
+    if value and not (value.startswith("/") or value.startswith(("http://", "https://"))):
+        raise forms.ValidationError("Enter a path starting with / (e.g. /shop/) or a full https:// URL.")
+
+
 class BannerConfigForm(BaseSectionConfigForm):
-    image_url = forms.URLField(
-        required=False,
-        help_text="Note: All banners should have the same resolution."
+
+    eyebrow = forms.CharField(
+        max_length=60, required=False, label="Small label",
+        help_text='Short label above the heading, e.g. "Join the Samruddhi community".',
     )
-    link_url = forms.URLField(required=False)
-    subtitle = forms.CharField(max_length=200, required=False)
+    subtitle = forms.CharField(
+        max_length=200, required=False, label="Text",
+        help_text="Supporting line under the heading.",
+    )
+    button_text = forms.CharField(
+        max_length=40, required=False, help_text='Button label, e.g. "Shop now". Text banner only.',
+    )
+    link_url = forms.CharField(
+        max_length=300, required=False, validators=[_validate_link], label="Link",
+        help_text="Where the banner/button goes: /shop/, /collections/<slug>/ or a full URL.",
+    )
+    image_url = forms.CharField(
+        max_length=500, required=False, validators=[_validate_link], label="Image URL",
+        help_text="Optional. Leave empty for a text banner. Note: All banners should have the same resolution.",
+    )
 
 
 class InstagramConfigForm(BaseSectionConfigForm):
@@ -138,6 +158,14 @@ def _flatten_config_for_form(*, section_type: str, config: dict) -> dict:
         }
     if section_type == HomepageSectionType.HERO_SLIDER:
         return {}
+    if section_type == HomepageSectionType.SUBSCRIPTION_BANNER:
+        return {
+            "eyebrow": config.get("eyebrow", ""),
+            "subtitle": config.get("subtitle") or config.get("title", ""),
+            "button_text": config.get("button_text", ""),
+            "link_url": config.get("link_url") or config.get("url", ""),
+            "image_url": config.get("image_url") or config.get("image", ""),
+        }
     return {k: v for k, v in config.items() if isinstance(v, (str, int, float, bool))}
 
 

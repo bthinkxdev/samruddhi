@@ -14,6 +14,14 @@
     <div class="jm-plp-toolbar__copy">
       <h1 id="jm-page-title" class="section-title jm-page-title mb-0">{% if active_collection %}{{ active_collection.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
       {% if active_collection.description %}<p class="jm-collection-description">{{ active_collection.description|linebreaksbr }}</p>{% endif %}
+      {% if chip_parent %}
+      <nav class="jm-subcollection-chips" aria-label="{% trans 'Sub-collections' %}">
+        <a href="{% url 'catalog:plp-collection' collection_slug=chip_parent.slug %}" class="jm-chip {% if active_collection.pk == chip_parent.pk %}is-active{% endif %}">{% blocktrans with name=chip_parent.name %}All {{ name }}{% endblocktrans %}</a>
+        {% for sub in subcollections %}
+        <a href="{% url 'catalog:plp-collection' collection_slug=sub.slug %}" class="jm-chip {% if active_collection.pk == sub.pk %}is-active{% endif %}">{{ sub.name }}</a>
+        {% endfor %}
+      </nav>
+      {% endif %}
       <p id="jm-plp-count" class="section-subtitle jm-plp-count">{{ plp.total_count|default:"0" }} {% trans "products" %}</p>
     </div>
     <div class="d-flex gap-2 align-items-center">

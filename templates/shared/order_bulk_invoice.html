@@ -55,9 +55,18 @@
                 width: 100% !important; 
                 padding: 15mm !important; 
                 min-height: auto !important;
-                page-break-after: always; 
+                page-break-after: auto !important;
+                break-after: auto !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
             }
-            .invoice-container:last-child { page-break-after: auto; }
+            /* one invoice per page: break before each invoice except the first,
+               so no trailing/duplicate break can ever produce an empty page */
+            .invoice-container + .invoice-container {
+                page-break-before: always;
+                break-before: page;
+            }
+            .items-table tr, .totals-section, .invoice-footer { page-break-inside: avoid; break-inside: avoid; }
             .invoices-wrapper { display: block; gap: 0; }
         }
         
@@ -75,11 +84,6 @@
             padding: 15mm;
             background: white;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            page-break-inside: avoid;
-            page-break-after: always;
-        }
-        .invoice-container:last-child {
-            page-break-after: auto;
         }
         .invoice-header {
             display: flex;
@@ -364,59 +368,62 @@
     </div>
 
     <script>
-        function downloadInvoice() {
-            // remove responsive view so we capture desktop layout
+        async function downloadInvoice() {
+            const buttons = document.querySelectorAll('.btn-download');
+            buttons.forEach(b => { b.disabled = true; });
+            const downloadBtn = buttons[buttons.length - 1];
+            const label = downloadBtn.textContent;
+            downloadBtn.textContent = 'Preparing PDF…';
+
+            //capture the desktop (A4) layout, not the narrow responsive one
             const wasResponsive = document.body.classList.contains('responsive-view');
             if (wasResponsive) document.body.classList.remove('responsive-view');
+            const containers = Array.from(document.querySelectorAll('#invoice-content .invoice-container'));
+            const saved = containers.map(c => c.getAttribute('style'));
+            containers.forEach(c => { c.style.minHeight = 'auto'; c.style.margin = '0'; c.style.boxShadow = 'none'; });
 
-            const element = document.getElementById('invoice-content');
-            
-            // modify styles to prevent extra pages and huge margins in PDF
-            const originalGap = element.style.gap;
-            const originalWidth = element.style.width;
-            const originalDisplay = element.style.display;
-            
-            element.style.gap = '0px';
-            element.style.width = '210mm'; // Force exactly A4 width for the wrapper
-            element.style.display = 'block'; // Force block layout so page breaks work
-            
-            const containers = Array.from(element.getElementsByClassName('invoice-container'));
-            const originalStyles = [];
-            
-            for (let i = 0; i < containers.length; i++) {
-                originalStyles.push({
-                    minHeight: containers[i].style.minHeight,
-                    marginBottom: containers[i].style.marginBottom,
-                    boxShadow: containers[i].style.boxShadow
-                });
-                containers[i].style.minHeight = 'auto';
-                containers[i].style.marginBottom = '0';
-                containers[i].style.boxShadow = 'none';
-            }
+            try {
+                const blank = document.createElement('div');
+                blank.style.cssText = 'width:10px;height:10px;background:#fff';
+                document.body.appendChild(blank);
+                const pdf = await html2pdf()
+                    .set({ margin: 0, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
+                    .from(blank).toPdf().get('pdf');
+                blank.remove();
 
-            const opt = {
-                margin:       0,
-                filename:     'Bulk_Invoices.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] }
-            };
-            
-            // generate PDF and save, then restore styles
-            html2pdf().set(opt).from(element).save().then(() => {
-                element.style.gap = originalGap;
-                element.style.width = originalWidth;
-                element.style.display = originalDisplay;
-                
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 0; 
+
                 for (let i = 0; i < containers.length; i++) {
-                    containers[i].style.minHeight = originalStyles[i].minHeight;
-                    containers[i].style.marginBottom = originalStyles[i].marginBottom;
-                    containers[i].style.boxShadow = originalStyles[i].boxShadow;
+                    downloadBtn.textContent = 'Preparing PDF… ' + (i + 1) + '/' + containers.length;
+                    const canvas = await html2pdf()
+                        .set({ html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' } })
+                        .from(containers[i]).toCanvas().get('canvas');
+                    if (!canvas.width || !canvas.height) continue; //nothing rendered: never add an empty page
+
+                    let w = pageW - margin * 2;
+                    let h = canvas.height * w / canvas.width;
+                    if (h > pageH - margin * 2) {
+                        h = pageH - margin * 2;
+                        w = canvas.width * h / canvas.height;
+                    }
+                    pdf.addPage('a4', 'portrait');
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pageW - w) / 2, margin, w, h);
                 }
-                
+                pdf.deletePage(1); 
+                pdf.save('Bulk_Invoices.pdf');
+            } catch (err) {
+                console.error(err);
+                alert('Could not generate the PDF. Please try again, or use Print → Save as PDF.');
+            } finally {
+                containers.forEach((c, i) => {
+                    if (saved[i] === null) c.removeAttribute('style'); else c.setAttribute('style', saved[i]);
+                });
                 if (wasResponsive) document.body.classList.add('responsive-view');
-            });
+                downloadBtn.textContent = label;
+                buttons.forEach(b => { b.disabled = false; });
+            }
         }
     </script>
 </body>

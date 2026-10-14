@@ -1,15 +1,17 @@
 {% load i18n %}
-{% if section_context.banner.url and section_context.banner.image %}
+{% with banner=section_context.banner brand=site_settings.site_name|default:"Samruddhi" %}
+{% if banner.image %}
 <section class="jm-section">
   <div class="container">
     {% if section_context.title %}
     <div class="section-header">
       <h2 class="section-title">{{ section_context.title }}</h2>
+      {% if banner.subtitle %}<p class="section-subtitle text-muted mb-0">{{ banner.subtitle }}</p>{% endif %}
     </div>
     {% endif %}
-    <a href="{{ section_context.banner.url }}" class="jm-promo-banner">
-      <img src="{{ section_context.banner.image }}" alt="{{ section_context.banner.title|default:section_context.title }}" width="1200" height="320" loading="lazy">
-    </a>
+    {% if banner.url %}<a href="{{ banner.url }}" class="jm-promo-banner">{% else %}<div class="jm-promo-banner">{% endif %}
+      <img src="{{ banner.image }}" alt="{{ section_context.title|default:banner.subtitle|default:brand }}" width="1200" height="320" loading="lazy">
+    {% if banner.url %}</a>{% else %}</div>{% endif %}
   </div>
 </section>
 {% else %}
@@ -17,12 +19,13 @@
   <div class="container">
     <aside class="jm-promo jm-promo--wide">
       <div class="jm-promo__inner">
-        <p class="jm-promo__eyebrow">{% trans "Expert Care" %}</p>
-        <h3 class="jm-promo__title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Phone Repair & Support" %}{% endif %}</h3>
-        <p class="jm-promo__text">{% trans "Screen cracks, battery issues, or software trouble — get expert repair help in store or message us on WhatsApp." %}</p>
-        <a href="{% url 'core:contact-us' %}" class="btn btn-theme">{% trans "Contact Us" %}</a>
+        <p class="jm-promo__eyebrow">{% if banner.eyebrow %}{{ banner.eyebrow }}{% else %}{% blocktrans %}Join the {{ brand }} community{% endblocktrans %}{% endif %}</p>
+        <h3 class="jm-promo__title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Gear Up for Every Workout" %}{% endif %}</h3>
+        <p class="jm-promo__text">{% if banner.subtitle %}{{ banner.subtitle }}{% else %}{% trans "Be the first to know about new drops and exclusive offers." %}{% endif %}</p>
+        <a href="{% if banner.url %}{{ banner.url }}{% else %}{% url 'catalog:plp' %}{% endif %}" class="btn btn-theme">{% if banner.button_text %}{{ banner.button_text }}{% else %}{% trans "Shop Now" %}{% endif %}</a>
       </div>
     </aside>
   </div>
 </section>
 {% endif %}
+{% endwith %}

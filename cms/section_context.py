@@ -89,7 +89,16 @@ def _featured_brands(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _banner(config: dict[str, Any]) -> dict[str, Any]:
-    return {"banner": config}
+
+    return {
+        "banner": {
+            "image": (config.get("image_url") or config.get("image") or "").strip(),
+            "url": (config.get("link_url") or config.get("url") or "").strip(),
+            "subtitle": (config.get("subtitle") or config.get("title") or "").strip(),
+            "eyebrow": (config.get("eyebrow") or "").strip(),
+            "button_text": (config.get("button_text") or "").strip(),
+        }
+    }
 
 
 def _marketing_features(config: dict[str, Any]) -> dict[str, Any]:

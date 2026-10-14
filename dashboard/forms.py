@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import timedelta
 
 from django import forms
@@ -617,9 +618,50 @@ class NewsletterSubscriberForm(forms.ModelForm):
 class HomepageSectionForm(forms.ModelForm):
     """Section content; the position is arranged by drag and drop on the list page."""
 
+    BANNER_TYPE = "subscription_banner"
+    BANNER_PREFIX = "banner_"
+
     class Meta:
         model = HomepageSection
         fields = ["section_type", "title", "is_active", "config"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from cms.homepage_forms import BannerConfigForm, get_section_config_form
+
+        saved_type = self.instance.section_type if self.instance.pk else ""
+        banner_initial = get_section_config_form(
+            section_type=self.BANNER_TYPE,
+            initial=self.instance.config if saved_type == self.BANNER_TYPE else {},
+        ).initial
+        for name, field in BannerConfigForm.base_fields.items():
+            field = copy.deepcopy(field)
+            field.widget.attrs.setdefault("class", "form-control")
+            if not self.instance.pk:
+                field.help_text = (field.help_text + " " if field.help_text else "") + "(Subscription Banner sections only.)"
+            field.initial = banner_initial.get(name, "")
+            self.fields[self.BANNER_PREFIX + name] = field
+
+        if saved_type == self.BANNER_TYPE:
+            self.fields["config"].widget = forms.HiddenInput()
+        elif self.instance.pk:
+            for name in BannerConfigForm.base_fields:
+                self.fields.pop(self.BANNER_PREFIX + name, None)
+        if "config" in self.fields:
+            self.fields["config"].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("section_type") == self.BANNER_TYPE:
+            from cms.homepage_forms import BannerConfigForm
+
+            cleaned["config"] = {
+                name: (cleaned.get(self.BANNER_PREFIX + name) or "").strip()
+                for name in BannerConfigForm.base_fields
+            }
+        elif "config" in self.fields and cleaned.get("config") is None:
+            cleaned["config"] = {}
+        return cleaned
 
     def save(self, commit=True):
         if self.instance._state.adding:

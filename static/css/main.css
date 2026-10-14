@@ -3452,6 +3452,89 @@ body.mobile-search-open {
   border-bottom-color: var(--jm-accent);
 }
 
+/* collection with sub-collections: dropdown in the primary nav */
+.jm-nav__link--toggle {
+  background: none;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  cursor: pointer;
+  gap: 0.35rem;
+}
+
+.jm-nav__link--toggle::after {
+  margin-left: 0.1rem;
+  vertical-align: middle;
+}
+
+.jm-nav__menu {
+  min-width: 13rem;
+  padding: 0.4rem;
+  border: 1px solid var(--jm-border);
+  border-radius: var(--jm-radius);
+  box-shadow: var(--jm-shadow);
+  font-size: 0.875rem;
+}
+
+.jm-nav__menu .dropdown-item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  color: var(--jm-ink);
+}
+
+.jm-nav__menu .dropdown-item:hover,
+.jm-nav__menu .dropdown-item:focus {
+  background: var(--jm-surface);
+}
+
+.jm-nav__menu .dropdown-item.active,
+.jm-nav__menu .dropdown-item:active {
+  background: var(--jm-ink);
+  color: var(--jm-white);
+}
+
+/* sub-collection links in the mobile menu */
+.jm-mobile-nav a.jm-mobile-nav__child {
+  padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--jm-slate);
+}
+
+/* sub-collection chips on a collection page */
+.jm-subcollection-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.jm-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--jm-border);
+  border-radius: 999px;
+  background: var(--jm-white);
+  color: var(--jm-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--jm-transition), color var(--jm-transition), border-color var(--jm-transition);
+}
+
+.jm-chip:hover {
+  border-color: var(--jm-ink);
+  color: var(--jm-ink);
+}
+
+.jm-chip.is-active {
+  background: var(--jm-ink);
+  border-color: var(--jm-ink);
+  color: var(--jm-white);
+}
+
 
 /* Mobile search nudge — inactive until JS activates */
 .jm-search-nudge {

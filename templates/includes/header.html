@@ -171,9 +171,28 @@
             class="jm-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
             href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
         {% for collection in collection_tree %}
+        {% with children=collection.children.all current=request.resolver_match.kwargs.collection_slug %}
+        {% if children %}
+        <li class="dropdown jm-nav__dropdown">
+          <button type="button"
+            class="jm-nav__link jm-nav__link--toggle dropdown-toggle {% if current == collection.slug %}is-active{% else %}{% for child in children %}{% if current == child.slug %}is-active{% endif %}{% endfor %}{% endif %}"
+            data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">{{ collection.name }}</button>
+          <ul class="dropdown-menu jm-nav__menu">
+            <li><a class="dropdown-item fw-semibold {% if current == collection.slug %}active{% endif %}"
+                href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{% blocktrans with name=collection.name %}All {{ name }}{% endblocktrans %}</a></li>
+            <li><hr class="dropdown-divider"></li>
+            {% for child in children %}
+            <li><a class="dropdown-item {% if current == child.slug %}active{% endif %}"
+                href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">{{ child.name }}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% else %}
         <li><a
-            class="jm-nav__link {% if request.resolver_match.kwargs.collection_slug == collection.slug %}is-active{% endif %}"
+            class="jm-nav__link {% if current == collection.slug %}is-active{% endif %}"
             href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>
+        {% endif %}
+        {% endwith %}
         {% endfor %}
         <li><a
             class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
@@ -194,6 +213,10 @@
       {% for collection in collection_tree %}
       <a class="{% if request.resolver_match.kwargs.collection_slug == collection.slug %}is-active{% endif %}"
         href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a>
+      {% for child in collection.children.all %}
+      <a class="jm-mobile-nav__child {% if request.resolver_match.kwargs.collection_slug == child.slug %}is-active{% endif %}"
+        href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">{{ child.name }}</a>
+      {% endfor %}
       {% endfor %}
 
       <a class="{% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"

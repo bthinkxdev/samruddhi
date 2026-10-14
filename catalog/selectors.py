@@ -86,6 +86,11 @@ def _label_prefetch() -> Prefetch:
     )
 
 
+def visible_root_collections_q() -> Q:
+
+    return Q(is_active=True) & (Q(parent__isnull=True) | Q(parent__is_active=False))
+
+
 def get_collection_family_ids(*, collection_id: int) -> list[int]:
     """Return the collection id plus its active direct children (one tree level)."""
     child_ids = Collection.objects.filter(parent_id=collection_id, is_active=True).values_list(
@@ -490,7 +495,7 @@ def get_collection_tree() -> list:
         return cached
 
     tree = list(
-        Collection.objects.filter(is_active=True, parent__isnull=True)
+        Collection.objects.filter(visible_root_collections_q())
         .prefetch_related(
             Prefetch(
                 "children",
@@ -544,7 +549,7 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
 def get_root_collections() -> list:
     """Return root collections for the homepage shop-by-collection rail."""
     return list(
-        Collection.objects.filter(is_active=True, parent__isnull=True).order_by(
+        Collection.objects.filter(visible_root_collections_q()).order_by(
             "display_order", "name"
         )
     )
@@ -667,7 +672,7 @@ def get_collection_by_slug(*, slug: str) -> Optional[Collection]:
 def get_plp_filter_options() -> dict:
     """Return sidebar filter options for PLP."""
     collections = list(
-        Collection.objects.filter(is_active=True, parent__isnull=True)
+        Collection.objects.filter(visible_root_collections_q())
         .prefetch_related("children")
         .order_by("display_order", "name")
     )

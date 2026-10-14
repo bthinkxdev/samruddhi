@@ -107,14 +107,18 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
         active_collection = Collection.objects.filter(pk=collection_id, is_active=True).first()
 
     subcollections = []
+    chip_parent = None  #collection whose sub-collections are shown as chips on the page
     if active_collection:
-        if active_collection.parent_id:
+        #a child of a hidden parent is shown as a top-level collection
+        if active_collection.parent_id and active_collection.parent.is_active:
             subcollections = list(active_collection.parent.children.filter(is_active=True))
             filters["subcollection_id"] = active_collection.pk
             filters["parent_collection_id"] = active_collection.parent_id
+            chip_parent = active_collection.parent
         else:
             subcollections = list(active_collection.children.filter(is_active=True))
             filters["parent_collection_id"] = active_collection.pk
+            chip_parent = active_collection
 
     sort = request.GET.get("sort") or "featured"
     page = int(request.GET.get("page", 1))
@@ -145,6 +149,7 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
             "brands": filter_options["brands"],
             "labels": filter_options["labels"],
             "subcollections": subcollections,
+            "chip_parent": chip_parent if subcollections else None,
             "subcollections_map": filter_options["subcollections_map"],
             "active_collection": active_collection,
         }
