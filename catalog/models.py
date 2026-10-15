@@ -214,6 +214,31 @@ class SizeChart(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def has_content(self) -> bool:
+        """
+        True when the rich-text chart has something to show. An editor-emptied
+        field ("<p><br></p>", "&nbsp;") or a table of blank cells counts as empty.
+        """
+        import re
+        from django.utils.html import strip_tags
+
+        html = self.content_html or ""
+        if "<img" in html.lower():
+            return True
+        text = strip_tags(html).replace("&nbsp;", " ").replace("\xa0", " ")
+        return bool(re.sub(r"\s+", "", text))
+
+    @property
+    def show_image(self) -> bool:
+        """The image is a fallback: shown only when there is no chart content."""
+        return bool(self.image) and not self.has_content
+
+    @property
+    def is_displayable(self) -> bool:
+        """Active and has either chart content or a fallback image to show."""
+        return self.is_active and (self.has_content or bool(self.image))
+
 
 
 class Product(TimeStampedModel):

@@ -26,7 +26,7 @@
     </div>
 
     <div class="jm-reviews__grid">
-      {% for review in section_context.reviews|slice:":6" %}
+      {% for review in section_context.reviews %}
       <article class="jm-review-card d-flex flex-column h-100">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div class="jm-review-card__stars mb-0" aria-label="{% trans 'Rating' %} {{ review.rating }}">

@@ -199,8 +199,9 @@ def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     
     context = seo_context(
         request=request,
+        obj=page,
         title=page.title,
-        description=page.meta_description or page.title,
+        description=page.title,
     )
     context["page"] = page
     return render(request, "core/page.html", context)

@@ -616,54 +616,223 @@ class NewsletterSubscriberForm(forms.ModelForm):
 
 
 class HomepageSectionForm(forms.ModelForm):
-    """Section content; the position is arranged by drag and drop on the list page."""
+    """
+    Section content; the position is arranged by drag and drop on the list page.
+
+    """
 
     BANNER_TYPE = "subscription_banner"
     BANNER_PREFIX = "banner_"
+    CARD_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+    CARD_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+    MAX_CARDS = 12
+
+    instagram_handle = forms.CharField(
+        max_length=30, required=False, label="Instagram username",
+        help_text="Without the @, e.g. samruddhi.official. Empty = the Instagram link from Site Settings.",
+    )
+    reviews_limit = forms.IntegerField(
+        min_value=1, max_value=12, required=False, initial=6, label="Number of reviews",
+        help_text="How many of the latest approved reviews to show (1-12).",
+    )
+    newsletter_subtitle = forms.CharField(
+        max_length=200, required=False, label="Text",
+        help_text="Line under the heading. Empty = default text.",
+    )
+    newsletter_placeholder = forms.CharField(
+        max_length=80, required=False, label="Email box placeholder",
+        help_text='Hint shown inside the email box, e.g. "Your email address".',
+    )
+    featured_brand_ids = forms.ModelMultipleChoiceField(
+        queryset=None, required=False, widget=forms.CheckboxSelectMultiple,
+        label="Brands to show",
+        help_text="Tick the brands to show. Leave all unticked to show every brand marked Featured.",
+    )
 
     class Meta:
         model = HomepageSection
         fields = ["section_type", "title", "is_active", "config"]
+        widgets = {"config": forms.HiddenInput()}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from catalog.models import Brand
         from cms.homepage_forms import BannerConfigForm, get_section_config_form
 
+        self.fields["config"].required = False
         saved_type = self.instance.section_type if self.instance.pk else ""
+        config = (self.instance.config or {}) if self.instance.pk else {}
+
+        #subscription banner fields
         banner_initial = get_section_config_form(
             section_type=self.BANNER_TYPE,
-            initial=self.instance.config if saved_type == self.BANNER_TYPE else {},
+            initial=config if saved_type == self.BANNER_TYPE else {},
         ).initial
         for name, field in BannerConfigForm.base_fields.items():
             field = copy.deepcopy(field)
-            field.widget.attrs.setdefault("class", "form-control")
-            if not self.instance.pk:
-                field.help_text = (field.help_text + " " if field.help_text else "") + "(Subscription Banner sections only.)"
             field.initial = banner_initial.get(name, "")
             self.fields[self.BANNER_PREFIX + name] = field
 
-        if saved_type == self.BANNER_TYPE:
-            self.fields["config"].widget = forms.HiddenInput()
-        elif self.instance.pk:
-            for name in BannerConfigForm.base_fields:
-                self.fields.pop(self.BANNER_PREFIX + name, None)
-        if "config" in self.fields:
-            self.fields["config"].required = False
+        #per-type initial values from the saved config
+        if saved_type == "instagram_gallery":
+            self.fields["instagram_handle"].initial = config.get("instagram_handle", "")
+        if saved_type == "reviews":
+            self.fields["reviews_limit"].initial = config.get("limit", 6)
+        if saved_type == "newsletter":
+            self.fields["newsletter_subtitle"].initial = config.get("subtitle", "")
+            self.fields["newsletter_placeholder"].initial = config.get("placeholder", "")
+        self.fields["featured_brand_ids"].queryset = Brand.objects.filter(is_featured=True).order_by("name")
+        if saved_type == "featured_brands":
+            self.fields["featured_brand_ids"].initial = config.get("brand_ids") or []
+
+        self.card_errors: dict[str, list[str]] = {}
+        self._pending_card_uploads: dict[str, object] = {}
+        self._saved_cards = config.get("cards", []) if saved_type == "marketing_features" else []
+
+    @staticmethod
+    def _normalise_media_url(url: str) -> str:
+        url = (url or "").strip()
+        if url and not url.startswith(("/", "http://", "https://")):
+            url = "/" + url  #old configs stored "media/..." without the leading slash
+        return url
+
+    def _posted_cards(self) -> list[dict]:
+        order = [uid for uid in (self.data.get("cards_order") or "").split(",") if uid.strip()]
+        rows = []
+        for uid in order[: self.MAX_CARDS + 1]:
+            key = f"cards-{uid}-"
+            rows.append({
+                "uid": uid,
+                "title": (self.data.get(key + "title") or "").strip(),
+                "url": (self.data.get(key + "url") or "").strip(),
+                "image": self._normalise_media_url(self.data.get(key + "image") or ""),
+                "file": self.files.get(key + "image_file") if self.files else None,
+            })
+        return rows
+
+    @property
+    def card_rows(self) -> list[dict]:
+        """Rows for the template: what was posted (on a validation error) or what is saved."""
+        if self.is_bound and self.data.get("section_type") == "marketing_features":
+            rows = self._posted_cards()
+        else:
+            rows = [
+                {"uid": str(i), "title": c.get("title", ""), "url": c.get("url", ""),
+                 "image": self._normalise_media_url(c.get("image", ""))}
+                for i, c in enumerate(self._saved_cards) if isinstance(c, dict)
+            ]
+        for row in rows:
+            row["errors"] = self.card_errors.get(row["uid"], [])
+            row.pop("file", None)
+        return rows
+
+    def _validate_card_image(self, upload) -> str | None:
+        name = (upload.name or "").lower()
+        if not name.endswith(self.CARD_IMAGE_EXTENSIONS):
+            return "Upload a JPG, PNG, WEBP or GIF image."
+        if upload.size > self.CARD_IMAGE_MAX_BYTES:
+            return "Image must be 5 MB or smaller."
+        try:
+            from PIL import Image
+
+            Image.open(upload).verify()
+            upload.seek(0)
+        except Exception:
+            return "This file is not a valid image."
+        return None
+
+    def _clean_cards(self) -> list[dict]:
+        from cms.homepage_forms import _validate_link
+
+        rows = self._posted_cards()
+        if len(rows) > self.MAX_CARDS:
+            self.add_error(None, f"You can add at most {self.MAX_CARDS} feature cards.")
+            rows = rows[: self.MAX_CARDS]
+        cards = []
+        for row in rows:
+            errors = []
+            if not row["title"]:
+                errors.append("Title is required.")
+            try:
+                _validate_link(row["url"])
+            except forms.ValidationError as exc:
+                errors.extend(exc.messages)
+            if row["file"]:
+                problem = self._validate_card_image(row["file"])
+                if problem:
+                    errors.append(problem)
+                else:
+                    self._pending_card_uploads[row["uid"]] = row["file"]
+            elif not row["image"]:
+                errors.append("Add an image.")
+            if errors:
+                self.card_errors[row["uid"]] = errors
+            cards.append({"uid": row["uid"], "title": row["title"], "url": row["url"], "image": row["image"]})
+        if self.card_errors:
+            self.add_error(None, "Please fix the highlighted feature cards.")
+        return cards
+
+    # ----- assemble config -----------------------------------------------
+    def clean_instagram_handle(self):
+        import re
+
+        handle = (self.cleaned_data.get("instagram_handle") or "").strip().lstrip("@")
+        if "instagram.com/" in handle:
+            handle = handle.rstrip("/").rsplit("/", 1)[-1]
+        if handle and not re.fullmatch(r"[A-Za-z0-9._]{1,30}", handle):
+            raise forms.ValidationError("Use only letters, numbers, dots and underscores.")
+        return handle
 
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get("section_type") == self.BANNER_TYPE:
+        section_type = cleaned.get("section_type")
+        previous = (self.instance.config or {}) if self.instance.pk else {}
+
+        if section_type == self.BANNER_TYPE:
             from cms.homepage_forms import BannerConfigForm
 
-            cleaned["config"] = {
+            config = {
                 name: (cleaned.get(self.BANNER_PREFIX + name) or "").strip()
                 for name in BannerConfigForm.base_fields
             }
-        elif "config" in self.fields and cleaned.get("config") is None:
-            cleaned["config"] = {}
+        elif section_type == "marketing_features":
+            config = {"cards": self._clean_cards()}
+        elif section_type == "instagram_gallery":
+            config = {"instagram_handle": cleaned.get("instagram_handle") or ""}
+        elif section_type == "reviews":
+            config = {"limit": cleaned.get("reviews_limit") or 6}
+        elif section_type == "newsletter":
+            config = {
+                "subtitle": (cleaned.get("newsletter_subtitle") or "").strip(),
+                "placeholder": (cleaned.get("newsletter_placeholder") or "").strip(),
+            }
+        elif section_type == "featured_brands":
+            config = {"brand_ids": [b.pk for b in cleaned.get("featured_brand_ids") or []]}
+        elif section_type in ("hero_slider", "shop_by_collection", "collection_products"):
+            #content comes from Hero Slides / Collections; keep any legacy data untouched
+            config = previous if self.instance.pk and self.instance.section_type == section_type else {}
+        else:
+            config = previous
+        cleaned["config"] = config
         return cleaned
 
     def save(self, commit=True):
+        from django.core.files.storage import default_storage
+        from django.utils.text import get_valid_filename
+
+        config = self.cleaned_data.get("config") or {}
+        if self.cleaned_data.get("section_type") == "marketing_features":
+            cards = []
+            for card in config.get("cards", []):
+                upload = self._pending_card_uploads.get(card.pop("uid", None))
+                if upload:
+                    stored = default_storage.save(
+                        "cms/sections/" + get_valid_filename(upload.name), upload
+                    )
+                    card["image"] = default_storage.url(stored)
+                cards.append(card)
+            config = {"cards": cards}
+        self.instance.config = config
         if self.instance._state.adding:
             self.instance.display_order = next_homepage_section_order()
         return super().save(commit)

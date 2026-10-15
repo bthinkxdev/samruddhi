@@ -47,6 +47,7 @@ def homepage_section_reorder(request: HttpRequest) -> JsonResponse:
 class HomepageSectionCreateView(DashboardCreateView):
     model = HomepageSection
     form_class = forms.HomepageSectionForm
+    template_name = "dashboard/cms/homepagesection_form.html"  #per-type fields, no raw JSON
     nav_section = "homepage"
     url_basename = "homepagesection"
     singular_name = "Section"
@@ -55,6 +56,7 @@ class HomepageSectionCreateView(DashboardCreateView):
 class HomepageSectionUpdateView(DashboardUpdateView):
     model = HomepageSection
     form_class = forms.HomepageSectionForm
+    template_name = "dashboard/cms/homepagesection_form.html"  #per-type fields, no raw JSON
     nav_section = "homepage"
     url_basename = "homepagesection"
     singular_name = "Section"

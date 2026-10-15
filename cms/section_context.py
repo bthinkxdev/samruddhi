@@ -101,21 +101,44 @@ def _banner(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _media_url(url: str) -> str:
+    """Older configs stored "media/..." without a leading slash, which breaks off the home URL."""
+    url = (url or "").strip()
+    if url and not url.startswith(("/", "http://", "https://")):
+        url = "/" + url
+    return url
+
+
 def _marketing_features(config: dict[str, Any]) -> dict[str, Any]:
-    return {"cards": config.get("cards", [])}
+    cards = [
+        {**card, "image": _media_url(card.get("image", ""))}
+        for card in config.get("cards", [])
+        if isinstance(card, dict)
+    ]
+    return {"cards": cards}
 
 
 def _reviews(config: dict[str, Any]) -> dict[str, Any]:
-    limit = config.get("limit", 6)
+    try:
+        limit = max(1, min(int(config.get("limit", 6)), 12))
+    except (TypeError, ValueError):
+        limit = 6
     return {"reviews": get_recent_approved_reviews(limit=limit)}
 
 
 def _instagram(config: dict[str, Any]) -> dict[str, Any]:
-    return {"images": config.get("images", [])}
+    #the template links to the handle; it was never passed through before
+    return {
+        "instagram_handle": (config.get("instagram_handle") or "").strip().lstrip("@"),
+        "images": config.get("images", []),
+    }
 
 
 def _newsletter(config: dict[str, Any]) -> dict[str, Any]:
-    return {"placeholder": config.get("placeholder", "")}
+    return {
+        "placeholder": config.get("placeholder", ""),
+        "subtitle": config.get("subtitle", ""),
+    }
 
 
 def _empty(config: dict[str, Any]) -> dict[str, Any]:

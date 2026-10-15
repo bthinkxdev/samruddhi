@@ -1,0 +1,37 @@
+{% with uid=card.uid|default:"__uid__" %}
+<div class="border rounded-3 p-3 bg-white" data-card="{{ uid }}">
+  <div class="d-flex align-items-start gap-3 flex-wrap flex-md-nowrap">
+    <div class="text-center flex-shrink-0" style="width: 140px;">
+      <div class="ratio ratio-4x3 rounded-2 overflow-hidden border bg-light mb-2">
+        <img data-preview src="{{ card.image|default:'' }}" alt="" style="object-fit: cover;" {% if not card.image %}hidden{% endif %}>
+        <div data-preview-empty class="d-flex align-items-center justify-content-center text-secondary small" {% if card.image %}hidden{% endif %}><i class="ti ti-photo fs-3"></i></div>
+      </div>
+      <input type="file" name="cards-{{ uid }}-image_file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+      <input type="hidden" name="cards-{{ uid }}-image" value="{{ card.image|default:'' }}">
+      <button type="button" class="btn btn-sm btn-outline-secondary w-100" data-pick-image><i class="ti ti-upload me-1"></i>{% if card.image %}Replace{% else %}Upload{% endif %}</button>
+      <div class="small text-secondary text-truncate mt-1" data-file-name></div>
+    </div>
+    <div class="flex-grow-1" style="min-width: 220px;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="badge bg-light text-secondary border">Card <span data-card-number></span></span>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-light" data-move="up" title="Move up" aria-label="Move up"><i class="ti ti-arrow-up"></i></button>
+          <button type="button" class="btn btn-light" data-move="down" title="Move down" aria-label="Move down"><i class="ti ti-arrow-down"></i></button>
+          <button type="button" class="btn btn-light text-danger" data-remove title="Remove card" aria-label="Remove card"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label class="form-label small mb-1">Title <span class="text-danger">*</span></label>
+          <input type="text" name="cards-{{ uid }}-title" value="{{ card.title|default:'' }}" maxlength="80" class="form-control" placeholder="e.g. New Arrivals">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small mb-1">Link</label>
+          <input type="text" name="cards-{{ uid }}-url" value="{{ card.url|default:'' }}" maxlength="300" class="form-control" placeholder="/shop/ or /shop/collections/...">
+        </div>
+      </div>
+      {% for e in card.errors %}<div class="text-danger small mt-2">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endwith %}

@@ -58,7 +58,7 @@
         <div class="jm-pdp-field mb-3">
           <div class="d-flex justify-content-between align-items-end mb-2">
             <label class="jm-pdp-field__label mb-0">{% trans "Size" %}</label>
-            {% if product.size_chart and product.size_chart.is_active %}
+            {% if product.size_chart and product.size_chart.is_displayable %}
             <a href="#" data-bs-toggle="modal" data-bs-target="#sizeGuideModal" class="text-decoration-none text-dark small" style="font-weight: 500; text-underline-offset: 4px; text-decoration: underline !important;">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-grid me-1" viewBox="0 0 16 16" style="margin-top: -2px;">
                 <path d="M5 1v8H1V1h4zM1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1zm13 2v5H9V2h5zM9 1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9zM5 11v4H1v-4h4zM1 10a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H1zm13 2v2H9v-2h5zM9 11a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9z"/>
@@ -308,7 +308,7 @@
   {% endif %}
 </div>
 
-  {% if product.size_chart and product.size_chart.is_active %}
+  {% if product.size_chart and product.size_chart.is_displayable %}
   <div class="modal fade" id="sizeGuideModal" tabindex="-1" aria-labelledby="sizeGuideModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content border-0 shadow-lg">
@@ -363,13 +363,13 @@
             }
           </style>
 
-          {% if product.size_chart.image %}
-            <div class="text-center mb-4">
+          {% if product.size_chart.show_image %}
+            <div class="text-center">
               <img src="{{ product.size_chart.image.url }}" alt="{% trans 'Size Guide' %}" class="img-fluid rounded w-100" style="max-height: 70vh; object-fit: contain;">
             </div>
           {% endif %}
           
-          {% if product.size_chart.content_html %}
+          {% if product.size_chart.has_content %}
             <div class="size-chart-content table-responsive">
               {{ product.size_chart.content_html|safe }}
             </div>

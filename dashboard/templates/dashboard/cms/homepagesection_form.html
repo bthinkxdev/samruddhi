@@ -1,0 +1,229 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{% if form_mode == "edit" %}Edit{% else %}Add{% endif %} {{ singular_name }}{% endblock %}
+{% block page_title %}{% if form_mode == "edit" %}Edit{% else %}Add{% endif %} {{ singular_name }}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" novalidate id="section-form">
+  {% csrf_token %}
+  {{ form.config }}
+  <input type="hidden" name="cards_order" id="cards-order" value="">
+
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+  {% endif %}
+
+  <div class="row">
+    <div class="col-12 col-xl-9">
+      <div class="card mb-3">
+        <div class="card-header panel-header"><h3 class="panel-title">Section</h3></div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="{{ form.section_type.id_for_label }}">Section type <span class="text-danger">*</span></label>
+              {{ form.section_type }}
+              {% for e in form.section_type.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
+              {{ form.title }}
+              <div class="form-text">Heading shown above the section on the home page.</div>
+              {% for e in form.title.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Show on the home page</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="marketing_features" hidden>
+        <div class="card-header panel-header">
+          <div>
+            <h3 class="panel-title">Feature cards</h3>
+            <p class="panel-sub">Image cards linking to a page. Use the arrows to change the order.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="add-card"><i class="ti ti-plus me-1"></i>Add card</button>
+        </div>
+        <div class="card-body p-3">
+          <div id="card-list" class="d-flex flex-column gap-3">
+            {% for card in form.card_rows %}
+            {% include "dashboard/cms/_feature_card_row.html" with card=card %}
+            {% endfor %}
+          </div>
+          <p class="text-secondary small mb-0 mt-2" id="cards-empty" {% if form.card_rows %}hidden{% endif %}>No cards yet. Click "Add card".</p>
+          <template id="card-template">
+            {% include "dashboard/cms/_feature_card_row.html" with card=None %}
+          </template>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="subscription_banner" hidden>
+        <div class="card-header panel-header">
+          <div>
+            <h3 class="panel-title">Banner content</h3>
+            <p class="panel-sub">With an image it shows as a clickable image banner; without one, as a text banner.</p>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <div class="row">
+            {% for field in form %}{% if field.name|slice:":7" == "banner_" %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for e in field.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="instagram_gallery" hidden>
+        <div class="card-header panel-header"><h3 class="panel-title">Instagram</h3></div>
+        <div class="card-body p-4">
+          {% include "dashboard/partials/_field.html" with field=form.instagram_handle %}
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="reviews" hidden>
+        <div class="card-header panel-header"><h3 class="panel-title">Reviews</h3></div>
+        <div class="card-body p-4">
+          <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.reviews_limit %}</div>
+          <p class="text-secondary small mb-0">Only reviews approved in the Reviews module are shown.</p>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="newsletter" hidden>
+        <div class="card-header panel-header"><h3 class="panel-title">Newsletter</h3></div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.newsletter_subtitle %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.newsletter_placeholder %}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="featured_brands" hidden>
+        <div class="card-header panel-header"><h3 class="panel-title">Brands</h3></div>
+        <div class="card-body p-4">
+          {% if form.featured_brand_ids.field.queryset %}
+          <div class="row row-cols-1 row-cols-md-3 g-2 mb-2">
+            {% for choice in form.featured_brand_ids %}
+            <div class="col"><div class="form-check">{{ choice.tag }}<label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label></div></div>
+            {% endfor %}
+          </div>
+          <div class="form-text">{{ form.featured_brand_ids.help_text }}</div>
+          {% else %}
+          <p class="text-secondary mb-0">No brands are marked Featured yet.</p>
+          {% endif %}
+          <p class="text-secondary small mb-0 mt-2">Mark a brand as Featured and add its logo in <a href="{% url 'dashboard:brand-list' %}">Brands</a>.</p>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-config-panel="hero_slider" hidden>
+        <div class="card-body p-4"><p class="mb-0"><i class="ti ti-info-circle me-1"></i>Slides (images/videos) are managed in <a href="{% url 'dashboard:heroslide-list' %}">Hero Slides</a>. Nothing else to set here.</p></div>
+      </div>
+      <div class="card mb-3" data-config-panel="shop_by_collection" hidden>
+        <div class="card-body p-4"><p class="mb-0"><i class="ti ti-info-circle me-1"></i>Shows your active top-level collections with their images. Manage them in <a href="{% url 'dashboard:collection-list' %}">Collections</a>.</p></div>
+      </div>
+      <div class="card mb-3" data-config-panel="collection_products" hidden>
+        <div class="card-body p-4"><p class="mb-0"><i class="ti ti-info-circle me-1"></i>Shows a product grid for every collection with <strong>List on home page</strong> ticked in <a href="{% url 'dashboard:collection-list' %}">Collections</a>.</p></div>
+      </div>
+
+      <div class="d-flex gap-2 mt-2 mb-4">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{{ cancel_url }}" class="btn btn-light">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("section-form");
+  var typeSelect = form.querySelector('[name="section_type"]');
+
+  function syncPanels() {
+    form.querySelectorAll("[data-config-panel]").forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-config-panel") !== typeSelect.value;
+    });
+  }
+  typeSelect.addEventListener("change", syncPanels);
+  syncPanels();
+
+  var list = document.getElementById("card-list");
+  var empty = document.getElementById("cards-empty");
+  var tmpl = document.getElementById("card-template");
+  var orderInput = document.getElementById("cards-order");
+  var MAX = 12;
+  var seq = 0;
+
+  function rows() { return Array.prototype.slice.call(list.querySelectorAll("[data-card]")); }
+
+  function syncCards() {
+    var all = rows();
+    empty.hidden = all.length > 0;
+    document.getElementById("add-card").disabled = all.length >= MAX;
+    all.forEach(function (row, i) {
+      row.querySelector("[data-card-number]").textContent = i + 1;
+      row.querySelector("[data-move='up']").disabled = i === 0;
+      row.querySelector("[data-move='down']").disabled = i === all.length - 1;
+    });
+  }
+
+  document.getElementById("add-card").addEventListener("click", function () {
+    if (rows().length >= MAX) return;
+    var uid = "n" + Date.now().toString(36) + (seq++);
+    var html = tmpl.innerHTML.replace(/__uid__/g, uid);
+    var holder = document.createElement("div");
+    holder.innerHTML = html.trim();
+    var row = holder.firstElementChild;
+    list.appendChild(row);
+    syncCards();
+    row.querySelector("input[name$='-title']").focus();
+  });
+
+  list.addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    var row = btn.closest("[data-card]");
+    if (btn.hasAttribute("data-remove")) {
+      row.remove();
+    } else if (btn.getAttribute("data-move") === "up" && row.previousElementSibling) {
+      list.insertBefore(row, row.previousElementSibling);
+    } else if (btn.getAttribute("data-move") === "down" && row.nextElementSibling) {
+      list.insertBefore(row.nextElementSibling, row);
+    } else if (btn.hasAttribute("data-pick-image")) {
+      row.querySelector("input[type=file]").click();
+    }
+    syncCards();
+  });
+
+  list.addEventListener("change", function (e) {
+    var input = e.target;
+    if (input.type !== "file" || !input.files || !input.files[0]) return;
+    var row = input.closest("[data-card]");
+    var img = row.querySelector("[data-preview]");
+    if (img.src && img.src.indexOf("blob:") === 0) URL.revokeObjectURL(img.src);
+    img.src = URL.createObjectURL(input.files[0]);
+    img.hidden = false;
+    row.querySelector("[data-preview-empty]").hidden = true;
+    row.querySelector("[data-file-name]").textContent = input.files[0].name;
+  });
+
+  form.addEventListener("submit", function () {
+    orderInput.value = rows().map(function (r) { return r.getAttribute("data-card"); }).join(",");
+  });
+
+  syncCards();
+})();
+</script>
+{% endblock %}
