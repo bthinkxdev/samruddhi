@@ -1,6 +1,6 @@
 {% load i18n static storefront_tags %}
 {% with display_variant=product.display_variant %}
-{% with eff_stock=display_variant.stock_quantity|default_if_none:product.stock_quantity eff_thresh=display_variant.low_stock_threshold|default_if_none:product.low_stock_threshold eff_price=product.display_price|default:product.effective_base_price eff_base=product.effective_base_price eff_mrp=product.effective_mrp %}
+{% with eff_stock=product.effective_stock_quantity eff_thresh=product.effective_low_stock_threshold eff_price=product.display_price|default:product.effective_base_price eff_base=product.effective_base_price eff_mrp=product.effective_mrp %}
 <article class="jm-product-card card h-100" data-product-id="{{ product.pk }}" data-product-name="{{ product.name }}"
   data-product-url="{% url 'catalog:pdp' slug=product.slug %}"
   data-product-price="{% money_label eff_price display_currency %}"

@@ -1,6 +1,12 @@
 {% load i18n %}
 <section class="container mb-5 instagram-follow-section">
-  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" %}
+  {% if section_context.instagram_handle %}
+    {% with "https://instagram.com/"|add:section_context.instagram_handle as ig_url %}
+      {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" cta_url=ig_url cta_label=_("Follow on Instagram") cta_external=True %}
+    {% endwith %}
+  {% else %}
+    {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" cta_url=site_settings.instagram_url|default:"#" cta_label=_("Follow on Instagram") cta_external=True %}
+  {% endif %}
 
   <a href="{% if section_context.instagram_handle %}https://instagram.com/{{ section_context.instagram_handle }}{% else %}{{ site_settings.instagram_url|default:'#' }}{% endif %}"
      class="instagram-follow-card"

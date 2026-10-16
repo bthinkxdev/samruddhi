@@ -366,24 +366,35 @@ class Product(TimeStampedModel):
     def price(self, value):
         self.base_price = value
 
-    @property
-    def display_variant(self):
+    @staticmethod
+    def pick_display_variant(variants):
         """
-        Return the admin-marked default variant when set. Otherwise, the first
-        in-stock variant, for display on product cards (PLP/Home) and initial
-        PDP loading. If all variants are out of stock, fallback to the first
-        variant.
+        Choose the variant that represents the product on cards (PLP/Home),
+        quick view and the initial PDP selection.
+
+        Priority:
+          1. the admin-marked default (primary) variant, if it is in stock;
+          2. otherwise the first in-stock variant — a sold-out primary must not
+             make the whole product look unavailable while siblings have stock;
+          3. if every variant is sold out, the default variant;
+          4. otherwise the first variant.
         """
-        variants = self.variant_list if hasattr(self, "variant_list") else list(self.variants.all())
+        variants = list(variants)
         if not variants:
             return None
-        for v in variants:
-            if v.is_default:
-                return v
-        for v in variants:
-            if v.stock_quantity > 0:
-                return v
-        return variants[0]
+        default = next((v for v in variants if v.is_default), None)
+        if default is not None and default.stock_quantity > 0:
+            return default
+        in_stock = next((v for v in variants if v.stock_quantity > 0), None)
+        if in_stock is not None:
+            return in_stock
+        return default or variants[0]
+
+    @property
+    def display_variant(self):
+        """See ``pick_display_variant`` for the selection rules."""
+        variants = self.variant_list if hasattr(self, "variant_list") else list(self.variants.all())
+        return self.pick_display_variant(variants)
 
     @property
     def effective_base_price(self):
@@ -394,6 +405,18 @@ class Product(TimeStampedModel):
     def effective_mrp(self):
         v = self.display_variant
         return v.mrp if (v and v.mrp is not None and v.mrp > 0) else self.mrp
+
+    @property
+    def effective_stock_quantity(self) -> int:
+        """Stock shown on cards: the display variant's stock, or the product's own stock when it has no variants."""
+        v = self.display_variant
+        return v.stock_quantity if v is not None else self.stock_quantity
+
+    @property
+    def effective_low_stock_threshold(self) -> int:
+        """Low-stock threshold matching ``effective_stock_quantity``."""
+        v = self.display_variant
+        return v.low_stock_threshold if v is not None else self.low_stock_threshold
 
     @property
     def quick_view_variants_json(self):
@@ -496,8 +519,11 @@ class ProductVariant(TimeStampedModel):
         product_id = self.product_id
         res = super().delete(*args, **kwargs)
         if product_id:
-            total = ProductVariant.objects.filter(product_id=product_id).aggregate(total=models.Sum("stock_quantity"))["total"] or 0
-            Product.objects.filter(pk=product_id).update(stock_quantity=total)
+            remaining = ProductVariant.objects.filter(product_id=product_id)
+    
+            if remaining.exists():
+                total = remaining.aggregate(total=models.Sum("stock_quantity"))["total"] or 0
+                Product.objects.filter(pk=product_id).update(stock_quantity=total)
         return res
 
 

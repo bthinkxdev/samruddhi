@@ -4,6 +4,10 @@
   <h2 class="section-title">
     {% if section_context.title %}{{ section_context.title }}{% else %}{% trans fallback_key %}{% endif %}
   </h2>
-  <a href="{% url 'catalog:plp' %}" class="section-cta">{% trans "View All" %}</a>
+  {% if cta_url %}
+    <a href="{{ cta_url }}" class="section-cta"{% if cta_external %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ cta_label|default:_("View All") }}</a>
+  {% else %}
+    <a href="{% url 'catalog:plp' %}" class="section-cta">{% trans "View All" %}</a>
+  {% endif %}
 </div>
 {% endif %}

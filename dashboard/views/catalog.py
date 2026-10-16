@@ -195,11 +195,8 @@ def _render_product_form(request, product, mode):
 
                     if product.variants.exists():
                         from django.db.models import Sum
-                        default_variant = (
-                            product.variants.filter(is_default=True).first()
-                            or next((v for v in product.variants.all() if v.stock_quantity > 0), None)
-                            or product.variants.first()
-                        )
+                        
+                        default_variant = product.pick_display_variant(product.variants.all())
                         total_stock = product.variants.aggregate(total=Sum("stock_quantity"))["total"] or 0
 
                         product.stock_quantity = total_stock
@@ -207,6 +204,10 @@ def _render_product_form(request, product, mode):
                         product.mrp = default_variant.mrp
                         product.purchase_price = default_variant.purchase_price
                         product.save(update_fields=["stock_quantity", "base_price", "mrp", "purchase_price"])
+                    else:
+                    
+                        product.stock_quantity = form.cleaned_data.get("stock_quantity") or 0
+                        product.save(update_fields=["stock_quantity"])
 
                     images.instance = product
                     images.save()

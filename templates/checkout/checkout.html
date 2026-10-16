@@ -14,8 +14,8 @@
     border: 1px solid #dee2e6;
   }
   .ts-control.focus {
-    border-color: #0369A1;
-    box-shadow: 0 0 0 0.25rem rgba(3, 105, 161, 0.25);
+    border-color: #C1121F;
+    box-shadow: 0 0 0 0.25rem rgba(193, 18, 31, 0.25);
   }
 </style>
 {% endblock %}
@@ -69,7 +69,7 @@
             <div class="form-check mb-2">
               <input class="form-check-input address-radio" type="radio" name="address_id" value="{{ address.pk }}"
                 id="addr-{{ address.pk }}" {% if forloop.first %}checked{% endif %}>
-              <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}</label>
+              <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}{% if address.is_default %} <span class="badge bg-theme ms-1">{% trans "Default" %}</span>{% endif %}</label>
             </div>
             {% endfor %}
             <div class="form-check mb-2">

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from django.contrib.auth.models import User
@@ -29,6 +29,7 @@ class CustomerDashboardContext:
     default_address: Optional[Address]
     recent_orders: list[Any]
     unread_notification_count: int
+    addresses: list[Address] = field(default_factory=list)
 
 
 def get_customer_profile_for_user(*, user: User) -> Optional[CustomerProfile]:
@@ -69,15 +70,15 @@ def get_customer_dashboard_context(*, user: User) -> Optional[CustomerDashboardC
     recent_orders = orders_page["results"]
     unread_count = get_unread_notification_count(user=user)
 
-    address = profile.default_address
-    if not address:
-        address = Address.objects.filter(customer_profile=profile).first()
+    addresses = get_saved_addresses(customer_profile=profile)["results"]
+    address = next((a for a in addresses if a.is_default), None) or (addresses[0] if addresses else None)
 
     return CustomerDashboardContext(
         profile=profile,
         default_address=address,
         recent_orders=recent_orders,
         unread_notification_count=unread_count,
+        addresses=addresses,
     )
 
 

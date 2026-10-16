@@ -129,13 +129,10 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
 
     addresses = []
     if profile:
-        if profile.default_address:
-            addresses = [profile.default_address]
-        else:
-            saved_list = list(get_saved_addresses(customer_profile=profile, page_size=1)["results"])
-            if saved_list:
-                addresses = [saved_list[0]]
-            
+        # all saved addresses, default first - the template pre-selects the
+        # first one. (Previously only the default was passed, so each new
+        # checkout address appeared to replace the earlier ones.)
+        addresses = list(get_saved_addresses(customer_profile=profile)["results"])
     from delivery.models import City
     active_cities = City.objects.filter(is_active=True)
 

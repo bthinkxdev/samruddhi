@@ -28,18 +28,45 @@ class ProductDisplayVariantTests(TestCase):
         )
         self.product.collections.add(collection)
 
-    def test_display_variant_prefers_is_default_over_first_in_stock(self) -> None:
-        default_but_out_of_stock = ProductVariant.objects.create(
+    def test_display_variant_prefers_in_stock_default(self) -> None:
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="S",
+            base_price="90.00", mrp="90.00", purchase_price="50.00",
+            stock_quantity=5, is_default=False,
+        )
+        default_in_stock = ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="110.00", mrp="110.00", purchase_price="70.00",
+            stock_quantity=3, is_default=True,
+        )
+        self.assertEqual(self.product.display_variant.pk, default_in_stock.pk)
+
+    def test_sold_out_default_yields_to_in_stock_variant(self) -> None:
+       
+        ProductVariant.objects.create(
             product=self.product, variant_type="Size", name="S",
             base_price="90.00", mrp="90.00", purchase_price="50.00",
             stock_quantity=0, is_default=True,
         )
-        ProductVariant.objects.create(
+        in_stock = ProductVariant.objects.create(
             product=self.product, variant_type="Size", name="M",
             base_price="110.00", mrp="110.00", purchase_price="70.00",
             stock_quantity=5, is_default=False,
         )
-        self.assertEqual(self.product.display_variant.pk, default_but_out_of_stock.pk)
+        self.assertEqual(self.product.display_variant.pk, in_stock.pk)
+        self.assertEqual(self.product.effective_stock_quantity, 5)
+
+    def test_all_sold_out_falls_back_to_default(self) -> None:
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="S",
+            base_price="90.00", mrp="90.00", purchase_price="50.00", stock_quantity=0,
+        )
+        default = ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="110.00", mrp="110.00", purchase_price="70.00",
+            stock_quantity=0, is_default=True,
+        )
+        self.assertEqual(self.product.display_variant.pk, default.pk)
 
     def test_display_variant_falls_back_to_first_in_stock_when_no_default(self) -> None:
         ProductVariant.objects.create(
@@ -53,6 +80,47 @@ class ProductDisplayVariantTests(TestCase):
             stock_quantity=5,
         )
         self.assertEqual(self.product.display_variant.pk, in_stock.pk)
+
+    def test_effective_stock_uses_product_fields_when_no_variants(self) -> None:
+        self.product.stock_quantity = 6
+        self.product.low_stock_threshold = 10
+        self.product.save()
+        self.assertIsNone(self.product.display_variant)
+        self.assertEqual(self.product.effective_stock_quantity, 6)
+        self.assertEqual(self.product.effective_low_stock_threshold, 10)
+
+    def test_effective_stock_uses_display_variant_when_present(self) -> None:
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="110.00", mrp="110.00", purchase_price="70.00",
+            stock_quantity=3, low_stock_threshold=4,
+        )
+        self.assertEqual(self.product.effective_stock_quantity, 3)
+        self.assertEqual(self.product.effective_low_stock_threshold, 4)
+
+    def test_deleting_last_variant_keeps_product_stock(self) -> None:
+        variant = ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="110.00", mrp="110.00", purchase_price="70.00",
+            stock_quantity=9,
+        )
+        Product.objects.filter(pk=self.product.pk).update(stock_quantity=7)
+        variant.delete()
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 7)
+
+    def test_deleting_one_of_many_variants_resyncs_stock(self) -> None:
+        a = ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="S",
+            base_price="90.00", mrp="90.00", purchase_price="50.00", stock_quantity=4,
+        )
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="110.00", mrp="110.00", purchase_price="70.00", stock_quantity=6,
+        )
+        a.delete()
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 6)
 
 
 class ProductVariantDeleteProtectionTests(TestCase):
