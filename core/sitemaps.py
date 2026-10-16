@@ -48,11 +48,7 @@ class BlogPostSitemap(Sitemap):
     i18n = True
 
     def items(self):
-        now = timezone.now()
-        return BlogPost.objects.filter(
-            is_published=True,
-            publish_at__lte=now,
-        ).order_by("-publish_at")
+        return BlogPost.objects.filter(BlogPost.live_q()).order_by("-publish_at")
 
     def lastmod(self, obj: BlogPost):
         return obj.updated_at
@@ -66,11 +62,7 @@ class PageSitemap(Sitemap):
     i18n = True
 
     def items(self):
-        now = timezone.now()
-        return Page.objects.filter(
-            is_published=True,
-            publish_at__lte=now,
-        ).order_by("title")
+        return Page.objects.filter(Page.live_q()).order_by("title")
 
     def lastmod(self, obj: Page):
         return obj.updated_at

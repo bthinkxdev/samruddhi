@@ -38,6 +38,13 @@ class PublishableModel(models.Model):
     class Meta:
         abstract = True
 
+    @staticmethod
+    def live_q():
+
+        from django.db.models import Q
+
+        return Q(is_published=True) & (Q(publish_at__isnull=True) | Q(publish_at__lte=timezone.now()))
+
     @property
     def is_live(self) -> bool:
         if not self.is_published:

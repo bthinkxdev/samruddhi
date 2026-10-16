@@ -173,7 +173,8 @@ def faq_view(request: HttpRequest) -> HttpResponse:
     )
     
     from cms.models import FAQItem
-    context["faqs"] = FAQItem.objects.filter(is_published=True)
+    #published and not scheduled for later
+    context["faqs"] = FAQItem.objects.filter(FAQItem.live_q())
     
     return render(request, "core/faq.html", context)
 
@@ -187,7 +188,7 @@ def blog_view(request: HttpRequest) -> HttpResponse:
         description=_("Read our latest news and articles."),
     )
     from cms.models import BlogPost
-    context["blogs"] = BlogPost.objects.filter(is_published=True)
+    context["blogs"] = BlogPost.objects.filter(BlogPost.live_q())
     return render(request, "core/blog.html", context)
 
 
@@ -195,7 +196,7 @@ def blog_view(request: HttpRequest) -> HttpResponse:
 def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     """Render a dynamic storefront CMS page."""
     from cms.models import Page
-    page = get_object_or_404(Page, slug=slug, is_published=True)
+    page = get_object_or_404(Page.objects.filter(Page.live_q()), slug=slug)
     
     context = seo_context(
         request=request,

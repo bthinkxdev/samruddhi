@@ -65,5 +65,5 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
         "session_currency": session_currency,
 
         "shell_only": request.META.get("HTTP_X_SHELL_RERENDER") == "true",
-        "cms_pages": Page.objects.filter(is_published=True),
+        "cms_pages": Page.objects.filter(Page.live_q()),
     }
