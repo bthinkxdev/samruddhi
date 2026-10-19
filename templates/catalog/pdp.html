@@ -160,15 +160,15 @@
             </form>
           </div>
 
-          <div class="jm-pdp-buybox__cta-row {% if not price_data.is_in_stock %}d-none{% endif %}">
-            <form id="buy-now-form" method="post" action="{% url 'cart:add' %}" class="flex-grow-1"
+          <div class="jm-pdp-buybox__cta-row">
+            <form id="buy-now-form" method="post" action="{% url 'cart:add' %}" class="flex-grow-1 {% if not price_data.is_in_stock %}d-none{% endif %}"
               hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
               {% csrf_token %}
               <input type="hidden" name="product_id" value="{{ product.pk }}">
               <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
               <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
               <button type="submit" name="buy_now" value="true"
-                class="btn btn-theme w-100 jm-pdp-btn jm-pdp-btn--primary" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>
+                class="btn btn-theme w-100 jm-pdp-btn jm-pdp-btn--primary">
                 {% trans "Buy Now" %}
               </button>
             </form>
@@ -227,7 +227,7 @@
           <input type="hidden" name="product_id" value="{{ product.pk }}">
           <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
           <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
-          <button type="submit" name="buy_now" value="true" class="btn btn-theme jm-pdp-sticky__btn" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>{% trans "Buy Now" %}</button>
+          <button type="submit" name="buy_now" value="true" class="btn btn-theme jm-pdp-sticky__btn">{% trans "Buy Now" %}</button>
         </form>
       </div>
 
@@ -472,5 +472,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/pdp.js' %}?v=4"></script>
+<script src="{% static 'js/pdp.js' %}?v=5"></script>
 {% endblock %}

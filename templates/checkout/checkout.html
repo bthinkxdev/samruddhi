@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container page-container checkout-page jm-page" hx-get="{% url 'checkout:checkout' %}" hx-trigger="cartUpdated from:body" hx-select=".checkout-page" hx-swap="outerHTML">
+<div class="container page-container checkout-page jm-page">
   {% if not summary.lines %}
   <div class="text-center py-5 mt-5">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" class="mb-3 mx-auto"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -36,7 +36,7 @@
       <form id="checkout-form" method="post" action="{% url 'checkout:place-order' %}"
         hx-post="{% url 'checkout:place-order' %}" hx-target="#checkout-result" hx-swap="innerHTML" hx-select="unset" novalidate>
         {% csrf_token %}
-        <input type="hidden" name="idempotency_key" value="{{ checkout_session.pk }}-{{ summary.grand_total }}-{{ summary.lines|length }}-{{ request.user.pk|default:'guest' }}">
+        <input type="hidden" name="idempotency_key" id="checkout-idempotency-key" value="{{ checkout_session.pk }}-{{ summary.grand_total }}-{{ summary.lines|length }}-{{ request.user.pk|default:'guest' }}">
 
         <div class="checkout-step mb-4">
           <h2>{% trans "Contact Information" %}</h2>
@@ -70,6 +70,7 @@
               <input class="form-check-input address-radio" type="radio" name="address_id" value="{{ address.pk }}"
                 id="addr-{{ address.pk }}" {% if forloop.first %}checked{% endif %}>
               <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}{% if address.is_default %} <span class="badge bg-theme ms-1">{% trans "Default" %}</span>{% endif %}</label>
+              <a href="{% url 'accounts:address-edit' address.pk %}?next={{ request.get_full_path|urlencode }}" class="small text-theme fw-semibold text-decoration-none ms-2">{% trans "Edit" %}</a>
             </div>
             {% endfor %}
             <div class="form-check mb-2">
@@ -145,7 +146,7 @@
     </div>
 
     <div class="col-lg-5">
-      <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body" hx-select="#order-summary-container" hx-swap="outerHTML">
+      <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body, cartUpdated from:body" hx-select="#order-summary-container" hx-select-oob="#checkout-idempotency-key" hx-swap="outerHTML">
         {% if messages %}
         <div class="mb-3">
           {% for message in messages %}
@@ -272,8 +273,8 @@
     <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
       <span class="visually-hidden">Loading....</span>
     </div>
-    <h4 class="fw-bold text-dark">{% trans "Confirming Order!" %}</h4>
-    <p class="text-muted">{% trans "Please wait while we confirm your order..." %}</p>
+    <h4 class="fw-bold text-dark" id="order-processing-title">{% trans "Confirming Order!" %}</h4>
+    <p class="text-muted" id="order-processing-text">{% trans "Please wait while we confirm your order..." %}</p>
   </div>
 </div>
 
@@ -292,6 +293,24 @@
         });
       });
     }
+
+    function setPlaceOrderBusy(busy) {
+      var btn = document.querySelector('button[type="submit"][form="checkout-form"]');
+      if (!btn) return;
+      if (busy) {
+        if (!btn.dataset.label) btn.dataset.label = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+          '{% trans "Processing..." as t_busy %}{{ t_busy|escapejs }}';
+      } else if (btn.dataset.label) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.label;
+      }
+    }
+
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) window.location.reload();
+    });
 
     var checkoutForm = document.getElementById('checkout-form');
     if (checkoutForm) {
@@ -423,9 +442,12 @@
             return false;
           }
           var selectedGateway = document.querySelector('input[name="gateway_key"]:checked');
-          if (selectedGateway && selectedGateway.value === 'cod') {
-            document.getElementById('order-processing-overlay').classList.remove('d-none');
+          if (selectedGateway && selectedGateway.value !== 'cod') {
+            document.getElementById('order-processing-title').textContent = '{% trans "Processing your order" as t_title %}{{ t_title|escapejs }}';
+            document.getElementById('order-processing-text').textContent = '{% trans "Taking you to secure payment..." as t_text %}{{ t_text|escapejs }}';
           }
+          setPlaceOrderBusy(true);
+          document.getElementById('order-processing-overlay').classList.remove('d-none');
         }
       });
 
@@ -436,8 +458,9 @@
       checkoutForm.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.elt !== checkoutForm) return;
         var xhr = event.detail.xhr;
-        var redirecting = event.detail.successful && xhr && xhr.getResponseHeader('HX-Redirect');
+        var redirecting = xhr && xhr.getResponseHeader('HX-Redirect');
         if (!redirecting) {
+          setPlaceOrderBusy(false);
           document.getElementById('order-processing-overlay').classList.add('d-none');
           var result = document.getElementById('checkout-result');
           if (result && result.textContent.trim()) {
@@ -446,9 +469,11 @@
         }
       });
       checkoutForm.addEventListener('htmx:responseError', function(event) {
+        setPlaceOrderBusy(false);
         document.getElementById('order-processing-overlay').classList.add('d-none');
       });
       checkoutForm.addEventListener('htmx:sendError', function(event) {
+        setPlaceOrderBusy(false);
         document.getElementById('order-processing-overlay').classList.add('d-none');
       });
     }
@@ -529,6 +554,63 @@
 
     var stateSelect = document.getElementById('guest_state');
     initTomSelect(stateSelect);
+
+    document.body.addEventListener('htmx:beforeSwap', function (evt) {
+      var tgt = evt.detail.target;
+      if (tgt && tgt.id === 'order-summary-container' && evt.detail.xhr &&
+          evt.detail.xhr.status === 200 &&
+          !new DOMParser().parseFromString(evt.detail.xhr.responseText, 'text/html')
+            .getElementById('order-summary-container')) {
+        evt.detail.shouldSwap = false;
+        window.location.reload();
+      }
+    });
+
+    (function () {
+      var form = document.getElementById('checkout-form');
+      if (!form) return;
+      var KEY = 'jm-checkout-draft:{{ request.user.pk|default:"guest" }}';
+      var TEXT_FIELDS = ['guest_name', 'guest_email', 'guest_phone', 'guest_address_line1',
+        'guest_address_line2', 'guest_city', 'guest_pincode'];
+
+      function read() {
+        try { return JSON.parse(sessionStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; }
+      }
+      function save() {
+        var d = {};
+        TEXT_FIELDS.forEach(function (n) {
+          var el = form.querySelector('[name="' + n + '"]');
+          if (el) d[n] = el.value;
+        });
+        var st = form.querySelector('[name="guest_state"]');
+        if (st) d.guest_state = st.value;
+        var addr = form.querySelector('input[name="address_id"]:checked');
+        if (addr) d.address_id = addr.value;
+        try { sessionStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { /* storage unavailable */ }
+      }
+
+      var draft = read();
+      TEXT_FIELDS.forEach(function (n) {
+        var el = form.querySelector('[name="' + n + '"]');
+        if (el && typeof draft[n] === 'string' && draft[n] !== '' && !el.readOnly) el.value = draft[n];
+      });
+      if (draft.guest_state) {
+        var st = form.querySelector('[name="guest_state"]');
+        if (st && st.tomselect) st.tomselect.setValue(draft.guest_state, true);
+        else if (st) st.value = draft.guest_state;
+      }
+      if (typeof draft.address_id === 'string') {
+        var radio = Array.prototype.find.call(form.querySelectorAll('input[name="address_id"]'),
+          function (r) { return r.value === draft.address_id; });
+        if (radio && !radio.checked) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      form.addEventListener('input', save);
+      form.addEventListener('change', save);
+    })();
 
     document.body.addEventListener('htmx:load', function(evt) {
       var newSelect = document.getElementById('guest_state');

@@ -84,3 +84,15 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  // order placed: drop the saved checkout draft (see checkout.html).
+  try {
+    Object.keys(sessionStorage).forEach(function (k) {
+      if (k.indexOf('jm-checkout-draft:') === 0) sessionStorage.removeItem(k);
+    });
+  } catch (e) { /* storage unavailable */ }
+</script>
+{% endblock %}

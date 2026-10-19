@@ -27,11 +27,11 @@
               <span class="fw-semibold flex-shrink-0">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
             </div>
             {% if line.variant %}<div class="cart-line__meta">{{ line.variant.name }}</div>{% endif %}
-            {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
-            {% if not line.product.is_in_stock or max_stock <= 0 %}
+            {% with max_stock=line.max_stock %}
+            {% if line.is_out_of_stock %}
             <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
-            {% elif line.quantity > max_stock %}
-            <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+            {% elif line.quantity >= max_stock %}
+            <div class="text-danger small mt-1 cart-line__stock-limit">{% blocktrans count counter=max_stock %}Only {{ counter }} item available in stock.{% plural %}Only {{ counter }} items available in stock.{% endblocktrans %}</div>
             {% elif error_item_id == line.item.pk and error %}
             <div class="text-danger small mt-1">{{ error }}</div>
             {% endif %}
@@ -52,7 +52,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
                   <input type="hidden" name="delta" value="1">
-                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}">&plus;</button>
+                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" {% if line.quantity >= max_stock %}disabled{% endif %}>&plus;</button>
                 </form>
               </div>
               {% endwith %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Address" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4 p-md-5">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 fw-bold mb-0">{% trans "Edit Address" %}</h1>
+            <a href="{% if next %}{{ next }}{% else %}{% url 'accounts:dashboard' %}{% endif %}" class="btn btn-outline-secondary btn-sm">{% trans "Back" %}</a>
+          </div>
+          {% if address.is_default %}<p class="small text-muted mb-4"><span class="badge bg-theme">{% trans "Default" %}</span> {% trans "This is your default delivery address." %}</p>{% endif %}
+
+          <form method="post" action="{% url 'accounts:address-edit' address.pk %}" novalidate>
+            {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            {% for field in form %}
+              {% if field.name == "make_default" %}
+                {% if not address.is_default %}
+                <div class="form-check mb-4">
+                  {{ field }}
+                  <label class="form-check-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                </div>
+                {% endif %}
+              {% else %}
+              <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label small fw-semibold">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+              </div>
+              {% endif %}
+            {% endfor %}
+            <button type="submit" class="btn btn-theme w-100 py-2">{% trans "Save Address" %}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

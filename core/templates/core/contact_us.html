@@ -21,14 +21,17 @@
           <div class="mb-3">
             <label class="form-label small fw-medium">{% trans "Name" %}</label>
             {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors|join:", " }}</div>{% endif %}
           </div>
           <div class="mb-3">
             <label class="form-label small fw-medium">{% trans "Email" %}</label>
             {{ form.email }}
+            {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors|join:", " }}</div>{% endif %}
           </div>
           <div class="mb-4">
             <label class="form-label small fw-medium">{% trans "Message" %}</label>
             {{ form.message }}
+            {% if form.message.errors %}<div class="text-danger small mt-1">{{ form.message.errors|join:", " }}</div>{% endif %}
           </div>
 
           {% include "shared/image_captcha.html" with scope="contact" field_id="image_captcha_contact" label="Security check" captcha_bust=captcha_bust %}

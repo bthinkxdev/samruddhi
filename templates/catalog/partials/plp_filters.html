@@ -71,7 +71,7 @@
   </div>
   <div class="d-flex gap-2 plp-filters-footer pt-2">
     <button type="submit" class="btn btn-theme btn-sm flex-grow-1" data-bs-dismiss="offcanvas">{% trans "Apply" %}</button>
-    <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm flex-grow-1 text-center d-inline-flex align-items-center justify-content-center">{% trans "Clear" %}</a>
+    <a href="{{ request.path }}" data-plp-clear class="btn btn-outline-secondary btn-sm flex-grow-1 text-center d-inline-flex align-items-center justify-content-center">{% trans "Clear" %}</a>
   </div>
 </form>
 <script>
@@ -113,5 +113,72 @@ if (typeof window.updateSubcollections !== 'function') {
       subSelect.value = '';
     }
   };
+}
+</script>
+<script>
+if (!window.__plpFilterGuard) {
+  window.__plpFilterGuard = true;
+  (function () {
+    var DEFAULTS = { sort: 'featured' };  
+    var IGNORE = { page: true };
+
+    function normalize(pairs, form) {
+      var names = {};
+      Array.prototype.forEach.call(form.elements, function (el) { if (el.name) names[el.name] = true; });
+      var out = [];
+      pairs.forEach(function (kv) {
+        var k = kv[0], v = (kv[1] || '').trim();
+        if (!names[k] || IGNORE[k] || v === '' || DEFAULTS[k] === v) return;
+        out.push(k + '=' + v);
+      });
+      return out.sort().join('&');
+    }
+    function formState(form) {
+      return normalize(Array.from(new FormData(form).entries()), form);
+    }
+    function appliedState(form) {
+      var pairs = Array.from(new URLSearchParams(window.location.search).entries());
+      form.querySelectorAll('input[type=hidden][name]').forEach(function (h) {
+        if (!pairs.some(function (kv) { return kv[0] === h.name; })) pairs.push([h.name, h.value]);
+      });
+      return normalize(pairs, form);
+    }
+    function hiddenOnly(form) {
+      var pairs = [];
+      form.querySelectorAll('input[type=hidden][name]').forEach(function (h) { pairs.push([h.name, h.value]); });
+      return normalize(pairs, form);
+    }
+    function closeOffcanvas(form) {
+      var oc = form.closest('.offcanvas');
+      if (oc && window.bootstrap) bootstrap.Offcanvas.getOrCreateInstance(oc).hide();
+    }
+
+    document.body.addEventListener('htmx:beforeRequest', function (evt) {
+      var form = evt.detail.elt;
+      if (!form || !form.classList || !form.classList.contains('plp-filters')) return;
+      if (formState(form) === appliedState(form)) {
+        evt.preventDefault();
+        closeOffcanvas(form);
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest && e.target.closest('[data-plp-clear]');
+      if (!link) return;
+      var form = link.closest('form.plp-filters');
+      if (!form) return;
+      if (appliedState(form) !== hiddenOnly(form)) return;   
+      e.preventDefault();
+      Array.prototype.forEach.call(form.elements, function (el) {
+        if (!el.name || el.type === 'hidden') return;
+        if (el.tagName === 'SELECT') el.value = DEFAULTS[el.name] || '';
+        else if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+        else if (el.type !== 'submit' && el.type !== 'button') el.value = '';
+      });
+      var col = form.querySelector('select[name=collection]');
+      if (col && window.updateSubcollections) window.updateSubcollections(col);
+      closeOffcanvas(form);
+    });
+  })();
 }
 </script>

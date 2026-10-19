@@ -638,6 +638,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function resetQvQty() {
+    var qtyInput = document.getElementById('jm-qv-qty');
+    var formQty = document.getElementById('jm-qv-form-qty');
+    var errorMsg = document.getElementById('jm-qv-stock-error-msg');
+    if (qtyInput) qtyInput.value = '1';
+    if (formQty) formQty.value = '1';
+    if (errorMsg) {
+      errorMsg.textContent = '';
+      errorMsg.classList.add('d-none');
+    }
+  }
+
   window.handleQvQtyChange = function (delta) {
     var qtyInput = document.getElementById('jm-qv-qty');
     if (!qtyInput) return;
@@ -959,6 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (discount) {
               discount.classList.add('d-none');
             }
+
+            resetQvQty();
             updateQvState(productId ? productId.value : '', this.value, null);
           });
 
@@ -1026,6 +1040,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (card) openAddToCartModal(card);
     }
   });
+
+  function resetAtcQty() {
+    var qtyInput = document.getElementById('jm-atc-qty');
+    var errorMsg = document.getElementById('jm-atc-stock-error-msg');
+    if (qtyInput) qtyInput.value = '1';
+    if (errorMsg) {
+      errorMsg.textContent = '';
+      errorMsg.classList.add('d-none');
+    }
+  }
 
   window.handleAtcQtyChange = function (delta) {
     var qtyInput = document.getElementById('jm-atc-qty');
@@ -1305,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             label.classList.add('border-primary');
             label.style.borderWidth = '2px';
             
+            resetAtcQty();
             updateAtcState(productId ? productId.value : '', this.value, null);
           });
 
@@ -1530,11 +1555,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('pageshow', function (e) {
     syncCartStatus();
-    var isBackForward = e.persisted ||
-      (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType('navigation').length > 0 && window.performance.getEntriesByType('navigation')[0].type === 'back_forward') ||
-      (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
-    if (isBackForward) {
-      window.location.reload();
+    if (e.persisted) {
+      var loader = document.getElementById('jm-loader');
+      if (loader && !loader.classList.contains('is-done')) {
+        loader.classList.add('is-done');
+        loader.setAttribute('hidden', '');
+      }
     }
   });
   window.addEventListener('focus', syncCartStatus);

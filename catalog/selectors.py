@@ -406,7 +406,8 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
             ),
             Prefetch(
                 "images",
-                queryset=ProductImage.objects.order_by("display_order"),
+                # primary first so the PDP gallery / sticky bar / SEO image match the PLP card
+                queryset=ProductImage.objects.order_by("-is_primary", "display_order"),
             ),
             Prefetch(
                 "videos",

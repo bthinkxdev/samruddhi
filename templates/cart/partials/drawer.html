@@ -25,11 +25,11 @@
       <div class="cart-line__meta text-muted small mt-1 mb-1">{{ line.variant.name }}</div>
       {% endif %}
       <div class="cart-line__meta">{{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
-      {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
-      {% if not line.product.is_in_stock or max_stock <= 0 %}
+      {% with max_stock=line.max_stock %}
+      {% if line.is_out_of_stock %}
       <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
-      {% elif line.quantity > max_stock %}
-      <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+      {% elif line.quantity >= max_stock %}
+      <div class="text-danger small mt-1 cart-line__stock-limit">{% blocktrans count counter=max_stock %}Only {{ counter }} item available in stock.{% plural %}Only {{ counter }} items available in stock.{% endblocktrans %}</div>
       {% elif error_item_id == line.item.pk and error %}
       <div class="text-danger small mt-1">{{ error }}</div>
       {% endif %}

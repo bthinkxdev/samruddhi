@@ -11,6 +11,7 @@ from django.core.validators import validate_email
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from accounts.selectors import get_address_by_id, get_saved_addresses
@@ -105,6 +106,7 @@ def checkout_fix_stock_view(request: HttpRequest) -> HttpResponse:
     return redirect("checkout:checkout")
 
 
+@never_cache  
 @require_GET
 def checkout_view(request: HttpRequest) -> HttpResponse:
     """Multi-step checkout page with gift Order Preview partial."""

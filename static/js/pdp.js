@@ -134,7 +134,12 @@
                   if (stText) stText.textContent = 'Add to cart';
                   else stickyAtcBtn.textContent = 'Add to cart';
                 }
-                if (bnForm) bnForm.classList.remove('d-none');
+                if (bnForm) {
+                  bnForm.classList.remove('d-none');
+                  // older markup hid the wrapper row instead of the form
+                  var bnRow = bnForm.closest('.jm-pdp-buybox__cta-row');
+                  if (bnRow) bnRow.classList.remove('d-none');
+                }
                 if (stickyBnForm) stickyBnForm.classList.remove('d-none');
                 if (qtyStepper) qtyStepper.style.opacity = '1';
               } else {

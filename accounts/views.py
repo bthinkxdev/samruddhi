@@ -589,6 +589,58 @@ def address_detail_view(request: HttpRequest, address_id: int) -> HttpResponse:
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def address_edit_view(request: HttpRequest, address_id: int) -> HttpResponse:
+    """Storefront page to edit ONE saved address (default or not)."""
+    from django.contrib import messages
+    from django.http import Http404
+    from django.utils.http import url_has_allowed_host_and_scheme
+    from accounts.forms import AddressEditForm
+    from accounts.selectors import get_customer_profile_for_user
+
+    profile = get_customer_profile_for_user(user=request.user)
+    address = get_address_by_id(address_id=address_id, customer_profile=profile) if profile else None
+    if address is None:  
+        raise Http404("Address not found.")
+
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = ""
+
+    if request.method == "POST":
+        form = AddressEditForm(request.POST, current_state=address.state)
+        if form.is_valid():
+            data = form.cleaned_data
+            update_address(
+                customer_profile=profile,
+                address_id=address.pk,
+                label=data.get("label") or address.label or "Delivery Address",
+                line1=data["line1"],
+                line2=data.get("line2", ""),
+                city=data["city"],
+                state=data["state"],
+                pincode=data["pincode"],
+                is_default=bool(data.get("make_default")),
+            )
+            messages.success(request, "Address updated successfully.")
+            return redirect(next_url or "accounts:dashboard")
+    else:
+        form = AddressEditForm(
+            current_state=address.state,
+            initial={
+                "label": address.label,
+                "line1": address.line1,
+                "line2": address.line2,
+                "city": address.city,
+                "state": address.state,
+                "pincode": address.pincode,
+            },
+        )
+
+    return render(request, "accounts/address_edit.html", {"form": form, "address": address, "next": next_url})
+
+
+@login_required
 @require_GET
 def payment_methods_list_view(request: HttpRequest) -> HttpResponse:
     """List saved payment methods (token metadata only)."""
@@ -827,6 +879,14 @@ def email_otp_request_view(request: HttpRequest) -> HttpResponse:
     return redirect(f"/accounts/verify-email-otp/?{query_params}")
 
 
+def _clear_submitted_otp(form) -> None:
+    """Blank the submitted OTP before re-rendering after a failed attempt.
+    """
+    data = dict(form.data.items()) if hasattr(form.data, "items") else {}
+    data["otp_code"] = ""
+    form.data = data
+
+
 @never_cache
 @require_http_methods(["GET", "POST"])
 def email_otp_verify_view(request: HttpRequest) -> HttpResponse:
@@ -849,6 +909,7 @@ def email_otp_verify_view(request: HttpRequest) -> HttpResponse:
     data = _json_body(request) or request.POST.dict()
     form = EmailOTPVerifyForm(data)
     if not form.is_valid():
+        _clear_submitted_otp(form)
         return render(
             request, 
             "accounts/email_otp_verify.html", 
@@ -862,6 +923,7 @@ def email_otp_verify_view(request: HttpRequest) -> HttpResponse:
         verify_email_otp(email=email, otp_code=otp_code, purpose=purpose)
     except Exception as exc:
         form.add_error("otp_code", str(exc))
+        _clear_submitted_otp(form)
         return render(
             request, 
             "accounts/email_otp_verify.html", 

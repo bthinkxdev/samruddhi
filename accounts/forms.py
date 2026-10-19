@@ -268,3 +268,55 @@ class CustomerProfileEditForm(forms.Form):
     city = forms.CharField(label="City", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     state = forms.CharField(max_length=120, label="State / Province", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     pincode = forms.CharField(max_length=20, label="PIN / Postal Code", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+
+
+class AddressEditForm(forms.Form):
+    """Edit one saved delivery address (storefront). Rules mirror checkout's address checks."""
+
+    label = forms.CharField(max_length=50, required=False, label="Label",
+                            widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Home, Office"}))
+    line1 = forms.CharField(max_length=255, label="Address Line 1",
+                            widget=forms.TextInput(attrs={"class": "form-control"}))
+    line2 = forms.CharField(max_length=255, required=False, label="Address Line 2 (Optional)",
+                            widget=forms.TextInput(attrs={"class": "form-control"}))
+    city = forms.CharField(max_length=120, label="City",
+                           widget=forms.TextInput(attrs={"class": "form-control"}))
+    state = forms.ChoiceField(label="State", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
+    pincode = forms.CharField(max_length=20, label="PIN / Postal Code",
+                              widget=forms.TextInput(attrs={"class": "form-control", "inputmode": "numeric"}))
+    make_default = forms.BooleanField(required=False, label="Set as my default address",
+                                      widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
+
+    def __init__(self, *args, current_state: str = "", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        from core.models import State
+        names = list(State.objects.filter(is_active=True).values_list("name", flat=True))
+        if current_state and current_state not in names:
+            names.insert(0, current_state)  # keep a legacy value selectable
+        self.fields["state"].choices = [("", "Select state...")] + [(n, n) for n in names]
+
+    @staticmethod
+    def _text_check(value: str, what: str) -> str:
+        import re
+        value = (value or "").strip()
+        if re.fullmatch(r"\d+", value):
+            raise forms.ValidationError(f"{what} cannot consist of numbers only.")
+        if re.fullmatch(r"[^a-zA-Z0-9]+", value):
+            raise forms.ValidationError(f"{what} cannot consist of special characters only.")
+        if not re.search(r"[a-zA-Z]", value):
+            raise forms.ValidationError(f"Enter a valid {what.lower()} containing letters.")
+        return value
+
+    def clean_line1(self):
+        return self._text_check(self.cleaned_data.get("line1"), "Address")
+
+    def clean_city(self):
+        return self._text_check(self.cleaned_data.get("city"), "City")
+
+    def clean_pincode(self):
+        value = (self.cleaned_data.get("pincode") or "").strip()
+        if not value.isdigit():
+            raise forms.ValidationError("Postal code can only contain numbers.")
+        if len(value) < 3:
+            raise forms.ValidationError("Enter a valid postal code.")
+        return value

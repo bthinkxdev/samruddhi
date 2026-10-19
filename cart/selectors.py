@@ -210,7 +210,7 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
         .prefetch_related(
             Prefetch(
                 "product__images",
-                queryset=ProductImage.objects.filter(is_primary=True).order_by("display_order"),
+                queryset=ProductImage.objects.order_by("-is_primary", "display_order"),
                 to_attr="primary_images",
             ),
             "product__collections",

@@ -380,3 +380,24 @@ class StorefrontEventTests(MetaPixelTestBase):
         with override_settings(META_PIXEL_ID="123');alert(1);//"):
             response = self.client.get(reverse("catalog:plp"))
         self.assertNotContains(response, "fbevents.js")
+
+
+class ContactInquiryCaptchaTests(TestCase):
+
+    def test_invalid_captcha_keeps_entered_details(self) -> None:
+        self.client.get(reverse("core:contact-us"))
+        response = self.client.post(
+            reverse("core:submit-inquiry"),
+            {
+                "name": "QA Tester",
+                "email": "qa.tester@example.com",
+                "message": "Keep me after a wrong captcha.",
+                "image_captcha": "WRONG1",
+            },
+        )
+        self.assertEqual(response.status_code, 200)  # re-rendered, not redirected
+        self.assertContains(response, 'value="QA Tester"')
+        self.assertContains(response, 'value="qa.tester@example.com"')
+        self.assertContains(response, "Keep me after a wrong captcha.")
+        from core.models import ContactInquiry
+        self.assertFalse(ContactInquiry.objects.exists())
