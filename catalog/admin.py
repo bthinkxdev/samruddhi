@@ -101,6 +101,7 @@ class ProductAdmin(admin.ModelAdmin):
         "collections",
         "brand",
     )
+    exclude = ("hsn_code",)  
     search_fields = ("name", "slug", "sku")
     list_select_related = ("brand",)
     prepopulated_fields = {"slug": ("name",)}

@@ -2,17 +2,31 @@
 
 {% block title %}Reports{% endblock %}
 {% block page_title %}Reports{% endblock %}
-{% block breadcrumbs %}<p class="mb-0 text-secondary">Analytics over pre-aggregated report tables</p>{% endblock %}
+{% block breadcrumbs %}<p class="mb-0 text-secondary">Past days update automatically; today is live.</p>{% endblock %}
 {% block page_actions %}
-<form method="post" action="{% url 'dashboard:reports-recompute' %}" class="d-inline">
-  {% csrf_token %}
-  <button type="submit" class="btn btn-outline-secondary"><i class="ti ti-refresh me-1"></i>Recompute (yesterday)</button>
-</form>
+{% if request.user.is_superuser %}
+<div class="dropdown d-inline-block">
+  <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More report actions"><i class="ti ti-dots"></i></button>
+  <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 15rem;">
+    <form method="post" action="{% url 'dashboard:reports-recompute' %}">
+      {% csrf_token %}
+      <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">
+      <input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}">
+      <button type="submit" class="dropdown-item rounded"><i class="ti ti-refresh me-1"></i>Rebuild reports for this range</button>
+    </form>
+  </div>
+</div>
+{% endif %}
 <a href="{% url 'dashboard:reports-export' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}" class="btn btn-primary"><i class="ti ti-download me-1"></i>Export CSV</a>
 {% endblock %}
 
 {% block content %}
 {{ sales_series|json_script:"sales-chart-data" }}
+{% if reports_catching_up %}
+<div class="alert alert-info py-2 small mb-3" role="status">
+  <i class="ti ti-loader me-1"></i>Older days are being updated in the background. Refresh in a minute for complete numbers.
+</div>
+{% endif %}
 
 <div class="row">
   <div class="col-12">

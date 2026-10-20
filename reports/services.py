@@ -104,3 +104,54 @@ def aggregate_daily_reports(*, report_date: date | None = None) -> dict[str, int
         "products": len(product_rows),
         "low_stock": low_count,
     }
+
+
+MAX_BACKFILL_DAYS = 60
+
+
+def missing_report_days() -> int:
+    """How many past days (up to yesterday) have no stored daily report yet. One query."""
+    yesterday = timezone.localdate() - timedelta(days=1)
+    last = DailySalesReport.objects.order_by("-report_date").values_list("report_date", flat=True).first()
+    if last is None:
+        return 1
+    return max(0, min((yesterday - last).days, MAX_BACKFILL_DAYS))
+
+
+def ensure_daily_reports_current() -> int:
+    """
+    Fill any missing daily report rows from the last stored day up to yesterday
+    (today is always computed live), and always re-run yesterday so late orders /
+    status changes from last night are captured.
+
+    """
+    today = timezone.localdate()
+    yesterday = today - timedelta(days=1)
+
+    last = DailySalesReport.objects.order_by("-report_date").values_list("report_date", flat=True).first()
+    start = (last + timedelta(days=1)) if last else yesterday
+    if (yesterday - start).days > MAX_BACKFILL_DAYS:
+        start = yesterday - timedelta(days=MAX_BACKFILL_DAYS)
+    if start > yesterday:
+        start = yesterday
+
+    days = 0
+    current = start
+    while current <= yesterday:
+        aggregate_daily_reports(report_date=current)
+        current += timedelta(days=1)
+        days += 1
+    return days
+
+
+def rebuild_daily_reports(*, start: date, end: date) -> int:
+    """Force re-aggregation for every day in [start, end] (capped at yesterday). Returns days rebuilt."""
+    yesterday = timezone.localdate() - timedelta(days=1)
+    end = min(end, yesterday)
+    days = 0
+    current = start
+    while current <= end:
+        aggregate_daily_reports(report_date=current)
+        current += timedelta(days=1)
+        days += 1
+    return days

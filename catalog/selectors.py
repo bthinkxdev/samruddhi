@@ -91,6 +91,19 @@ def visible_root_collections_q() -> Q:
     return Q(is_active=True) & (Q(parent__isnull=True) | Q(parent__is_active=False))
 
 
+def collections_with_products_q() -> Q:
+
+    through = Product.collections.through
+    direct_ids = set(
+        through.objects.filter(product__is_active=True).values_list("collection_id", flat=True)
+    )
+    parent_ids = set(
+        Collection.objects.filter(pk__in=direct_ids, is_active=True, parent__isnull=False)
+        .values_list("parent_id", flat=True)
+    )
+    return Q(pk__in=sorted(direct_ids | parent_ids))
+
+
 def get_collection_family_ids(*, collection_id: int) -> list[int]:
     """Return the collection id plus its active direct children (one tree level)."""
     child_ids = Collection.objects.filter(parent_id=collection_id, is_active=True).values_list(
@@ -495,12 +508,16 @@ def get_collection_tree() -> list:
     if cached is not None:
         return cached
 
+    non_empty = collections_with_products_q()
     tree = list(
         Collection.objects.filter(visible_root_collections_q())
+        .filter(non_empty)
         .prefetch_related(
             Prefetch(
                 "children",
-                queryset=Collection.objects.filter(is_active=True).order_by("display_order", "name"),
+                queryset=Collection.objects.filter(is_active=True)
+                .filter(non_empty)
+                .order_by("display_order", "name"),
             )
         )
         .order_by("display_order", "name")
@@ -537,7 +554,8 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
     brands = list(Brand.objects.filter(name__icontains=clean_query)[:5])
 
     collections = list(
-        Collection.objects.filter(is_active=True, name__icontains=clean_query)[:5]
+        Collection.objects.filter(is_active=True, name__icontains=clean_query)
+        .filter(collections_with_products_q())[:5]
     )
 
     return {
@@ -550,9 +568,9 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
 def get_root_collections() -> list:
     """Return root collections for the homepage shop-by-collection rail."""
     return list(
-        Collection.objects.filter(visible_root_collections_q()).order_by(
-            "display_order", "name"
-        )
+        Collection.objects.filter(visible_root_collections_q())
+        .filter(collections_with_products_q())
+        .order_by("display_order", "name")
     )
 
 
@@ -672,16 +690,25 @@ def get_collection_by_slug(*, slug: str) -> Optional[Collection]:
 
 def get_plp_filter_options() -> dict:
     """Return sidebar filter options for PLP."""
+    # only collections / sub-collections that actually have active products.
+    non_empty = collections_with_products_q()
     collections = list(
         Collection.objects.filter(visible_root_collections_q())
-        .prefetch_related("children")
+        .filter(non_empty)
+        .prefetch_related(
+            Prefetch(
+                "children",
+                queryset=Collection.objects.filter(is_active=True)
+                .filter(non_empty)
+                .order_by("display_order", "name"),
+            )
+        )
         .order_by("display_order", "name")
     )
     subcollections_map = {
         collection.pk: [
             {"pk": child.pk, "name": child.name}
             for child in collection.children.all()
-            if child.is_active
         ]
         for collection in collections
     }

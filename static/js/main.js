@@ -1393,6 +1393,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function isCardFullyInCart(card, defaultInCart) {
+
+    if (card.dataset.isOutOfStock === 'true') return false;
     if (!window.jmCartItemKeys || window.jmCartItemKeys.size === 0) return defaultInCart;
     var pid = card.dataset.productId ? String(card.dataset.productId) : '';
     if (!pid) return defaultInCart;
@@ -1405,13 +1407,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
 
     if (variantsData && variantsData.length > 0) {
+      var anyInStock = false;
       for (var i = 0; i < variantsData.length; i++) {
         var v = variantsData[i];
-        if (v && v.stock > 0 && !window.jmCartItemKeys.has(pid + '_' + String(v.id))) {
+        if (!v || !(v.stock > 0)) continue;
+        anyInStock = true;
+        if (!window.jmCartItemKeys.has(pid + '_' + String(v.id))) {
           return false;
         }
       }
-      return true;
+      return anyInStock;
     }
     return window.jmCartItemKeys.has(pid) ? true : defaultInCart;
   }
