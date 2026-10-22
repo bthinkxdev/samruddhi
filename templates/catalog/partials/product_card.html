@@ -12,7 +12,7 @@
   data-variant-id="{{ display_variant.pk|default:'' }}"
   data-stock-quantity="{{ eff_stock }}"
   data-is-out-of-stock="{% if eff_stock <= 0 %}true{% else %}false{% endif %}"
-  data-in-cart="{% if cart_product_ids and product.pk in cart_product_ids %}true{% else %}false{% endif %}"
+  data-in-cart="{% if eff_stock > 0 and cart_product_ids and product.pk in cart_product_ids %}true{% else %}false{% endif %}"
   data-product-variants="{{ product.quick_view_variants_json }}">
   {# Media: only the image sits inside .ratio so Bootstrap does not stretch badge/actions into a full-bleed blocker. #}
   <div class="jm-product-card__media">
@@ -121,7 +121,7 @@
 
     {% if request.resolver_match.url_name != 'homepage' %}
     <div
-      class="jm-product-card__cart mt-auto {% if cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}">
+      class="jm-product-card__cart mt-auto {% if eff_stock > 0 and cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}">
       <button type="button" class="jm-product-card__atc" data-jm-add-to-cart {% if eff_stock <= 0 %}disabled{% endif %}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="9" cy="21" r="1" />
@@ -131,7 +131,7 @@
         <span>{% if eff_stock > 0 %}{% trans "Add to Cart" %}{% else %}{% trans "Unavailable" %}{% endif %}</span>
       </button>
     </div>
-    {% if cart_product_ids and product.pk in cart_product_ids %}
+    {% if eff_stock > 0 and cart_product_ids and product.pk in cart_product_ids %}
     <a href="{% url 'cart:page' %}"
       class="btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart">
       <span>{% trans "View Cart" %}</span>

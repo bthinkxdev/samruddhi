@@ -109,14 +109,20 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
     subcollections = []
     chip_parent = None  #collection whose sub-collections are shown as chips on the page
     if active_collection:
+        from django.db.models import Q
+        from catalog.selectors import collections_with_products_q
+
+        # hide empty sub-collections (but keep the one being viewed, so its own
+        # filter dropdown / chip still shows it as selected)
+        visible_children = collections_with_products_q() | Q(pk=active_collection.pk)
         #a child of a hidden parent is shown as a top-level collection
         if active_collection.parent_id and active_collection.parent.is_active:
-            subcollections = list(active_collection.parent.children.filter(is_active=True))
+            subcollections = list(active_collection.parent.children.filter(is_active=True).filter(visible_children))
             filters["subcollection_id"] = active_collection.pk
             filters["parent_collection_id"] = active_collection.parent_id
             chip_parent = active_collection.parent
         else:
-            subcollections = list(active_collection.children.filter(is_active=True))
+            subcollections = list(active_collection.children.filter(is_active=True).filter(visible_children))
             filters["parent_collection_id"] = active_collection.pk
             chip_parent = active_collection
 

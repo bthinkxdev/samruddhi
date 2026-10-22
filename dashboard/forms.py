@@ -133,7 +133,6 @@ class ProductForm(RetainUploadsMixin, SlugAutoMixin):
             "name",
             "slug",
             "sku",
-            "hsn_code",
             "collections",
             "brand",
             "size_chart",
@@ -194,7 +193,6 @@ class ProductForm(RetainUploadsMixin, SlugAutoMixin):
         )
         self.fields["labels"].queryset = Label.objects.filter(labels).order_by("display_order", "name")
         self.fields["slug"].required = False
-        self.fields["hsn_code"].required = False
         self.fields["base_price"].required = False
         self.fields["mrp"].required = False
         self.fields["purchase_price"].required = False

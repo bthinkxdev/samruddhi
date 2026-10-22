@@ -286,3 +286,67 @@ class LabelTests(TestCase):
     def test_label_can_sit_on_many_products(self) -> None:
         self.plain.labels.add(self.hot)
         self.assertEqual(self.hot.products.count(), 2)
+
+
+class EmptyCollectionVisibilityTests(TestCase):
+    """Collections with no active products are hidden from storefront nav / rails / search."""
+
+    def setUp(self) -> None:
+        from django.core.cache import cache
+        cache.clear()
+        self.collection = Collection.objects.create(name="Empty Col", slug="empty-col", is_active=True)
+
+    def _nav_slugs(self):
+        from catalog.selectors import get_collection_tree
+        return [c.slug for c in get_collection_tree()]
+
+    def test_empty_collection_hidden_until_it_has_an_active_product(self) -> None:
+        from catalog.selectors import get_root_collections, get_search_suggestions
+        self.assertNotIn("empty-col", self._nav_slugs())
+        self.assertNotIn(self.collection, get_root_collections())
+        self.assertNotIn(self.collection, get_search_suggestions(query="Empty")["collections"])
+
+        product = Product.objects.create(
+            name="Col Product", slug="col-product", sku="SKU-COL-1",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", is_active=True,
+        )
+        product.collections.add(self.collection)   # m2m signal must refresh the cached nav
+        self.assertIn("empty-col", self._nav_slugs())
+        self.assertIn(self.collection, get_root_collections())
+
+    def test_inactive_product_does_not_count(self) -> None:
+        product = Product.objects.create(
+            name="Hidden Product", slug="hidden-product", sku="SKU-COL-2",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", is_active=False,
+        )
+        product.collections.add(self.collection)
+        self.assertNotIn("empty-col", self._nav_slugs())
+
+    def test_parent_shown_when_only_its_subcollection_has_products(self) -> None:
+        child = Collection.objects.create(name="Child Col", slug="child-col", is_active=True, parent=self.collection)
+        product = Product.objects.create(
+            name="Child Product", slug="child-product", sku="SKU-COL-3",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", is_active=True,
+        )
+        product.collections.add(child)
+        from catalog.selectors import get_collection_tree
+        tree = {c.slug: c for c in get_collection_tree()}
+        self.assertIn("empty-col", tree)
+        self.assertEqual([c.slug for c in tree["empty-col"].children.all()], ["child-col"])
+
+    def test_plp_filter_options_skip_empty_collections_and_subcollections(self) -> None:
+        from catalog.selectors import get_plp_filter_options
+        full = Collection.objects.create(name="Full Col", slug="full-col", is_active=True)
+        full_child = Collection.objects.create(name="Full Child", slug="full-child", is_active=True, parent=full)
+        Collection.objects.create(name="Empty Child", slug="empty-child", is_active=True, parent=full)
+        product = Product.objects.create(
+            name="Filter Product", slug="filter-product", sku="SKU-COL-4",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", is_active=True,
+        )
+        product.collections.add(full_child)
+
+        options = get_plp_filter_options()
+        slugs = [c.slug for c in options["collections"]]
+        self.assertIn("full-col", slugs)          # has products via its sub-collection
+        self.assertNotIn("empty-col", slugs)      # no products at all
+        self.assertEqual([c["name"] for c in options["subcollections_map"][full.pk]], ["Full Child"])

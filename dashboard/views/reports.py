@@ -19,7 +19,57 @@ from reports.selectors import (
     get_live_today_sales_report,
     get_live_today_customer_report,
 )
-from reports.services import aggregate_daily_reports
+from reports.services import ensure_daily_reports_current, rebuild_daily_reports
+
+
+INLINE_BACKFILL_MAX_DAYS = 3
+
+
+def _ensure_reports_current() -> bool:
+    """
+    Fill missing past days before showing reports, so the page is correct even
+    if the nightly Celery job didn't run. Returns True while a background
+    catch-up is still running (the page shows a short notice).
+
+    """
+    import logging
+    import threading
+
+    from django.core.cache import cache
+    from django.db import connection
+    from reports.services import missing_report_days
+
+    log = logging.getLogger(__name__)
+    lock_key = "reports:gapfill:lock"
+    if cache.get(lock_key):
+        return True  # a catch-up is already running
+
+    missing = missing_report_days()
+    if missing == 0:
+        return False
+    if not cache.add(lock_key, "1", timeout=15 * 60):
+        return True
+
+    def run() -> None:
+        try:
+            ensure_daily_reports_current()
+        except Exception:  # noqa: BLE001 - never break the reports page over a backfill
+            log.exception("Report gap-fill failed")
+        finally:
+            cache.delete(lock_key)
+
+    if missing <= INLINE_BACKFILL_MAX_DAYS:
+        run()
+        return False
+
+    def run_in_thread() -> None:
+        try:
+            run()
+        finally:
+            connection.close()  # thread-local DB connection
+
+    threading.Thread(target=run_in_thread, daemon=True, name="reports-backfill").start()
+    return True
 
 
 def _parse_date(value: str, default: date) -> date:
@@ -36,6 +86,8 @@ def reports_view(request: HttpRequest) -> HttpResponse:
         request.session.pop("reports_start", None)
         request.session.pop("reports_end", None)
         return redirect("dashboard:reports")
+
+    reports_catching_up = _ensure_reports_current()
 
     today = timezone.localdate()
     
@@ -108,6 +160,7 @@ def reports_view(request: HttpRequest) -> HttpResponse:
         "sales_series": chart,
         "total_revenue": total_revenue,
         "total_orders": total_orders,
+        "reports_catching_up": reports_catching_up,
     }
     return render(request, "dashboard/reports/index.html", context)
 
@@ -143,7 +196,7 @@ def reports_export_csv(request: HttpRequest) -> HttpResponse:
     response["Content-Disposition"] = f'attachment; filename="sales_details_{start}_{end}.csv"'
     writer = csv.writer(response)
     writer.writerow([
-        "Date", "Order ID", "SKU", "HSN Code", "Quantity", 
+        "Date", "Order ID", "SKU", "Quantity", 
         "Unit Price", "Total Price", "Customer Name", "Phone", 
         "Address", "City", "State", "Pincode"
     ])
@@ -157,7 +210,6 @@ def reports_export_csv(request: HttpRequest) -> HttpResponse:
             order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             order.order_number,
             item.product.sku,
-            item.product.hsn_code or "",
             item.quantity,
             item.unit_price,
             item.quantity * item.unit_price,
@@ -174,11 +226,23 @@ def reports_export_csv(request: HttpRequest) -> HttpResponse:
 @dashboard_required
 @require_POST
 def reports_recompute(request: HttpRequest) -> HttpResponse:
-    """Manually re-run aggregation for a given date (default: yesterday)."""
-    target = _parse_date(request.POST.get("date", ""), timezone.localdate() - timedelta(days=1))
+    """Superuser-only: force-rebuild the stored daily reports for the selected range.
+
+    """
+    from django.core.exceptions import PermissionDenied
+
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    today = timezone.localdate()
+    end = _parse_date(request.POST.get("end", ""), today - timedelta(days=1))
+    start = _parse_date(request.POST.get("start", ""), end)
+    if start > end:
+        start, end = end, start
+    if (end - start).days > 92:
+        start = end - timedelta(days=92)
     try:
-        aggregate_daily_reports(report_date=target)
-        messages.success(request, f"Reports recomputed for {target}.")
+        days = rebuild_daily_reports(start=start, end=end)
+        messages.success(request, f"Reports rebuilt for {days} day(s): {start} to {min(end, today - timedelta(days=1))}.")
     except Exception as exc:  # noqa: BLE001 - surface any aggregation failure to admin
-        messages.error(request, f"Recompute failed: {exc}")
+        messages.error(request, f"Rebuild failed: {exc}")
     return redirect("dashboard:reports")
