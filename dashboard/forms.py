@@ -28,6 +28,7 @@ from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, Poli
 from core.models import SiteSettings, Currency
 
 from marketing.models import Coupon, FlashSale, NewsletterSubscriber
+from whatsapp.models import WhatsAppTemplate
 
 _DATE = forms.DateInput(attrs={"type": "date"})
 _DATETIME = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
@@ -932,6 +933,12 @@ class FAQItemForm(forms.ModelForm):
         widgets = {"publish_at": _DATETIME}
 
 
+class WhatsAppTemplateForm(forms.ModelForm):
+    class Meta:
+        model = WhatsAppTemplate
+        fields = ["event", "template_id", "body_variables", "button_url_variable", "is_active"]
+
+
 class PolicyDocumentForm(SlugAutoMixin):
     class Meta:
         model = PolicyDocument
@@ -992,6 +999,7 @@ class SiteSettingsForm(forms.ModelForm):
         "meta_pixel_id",
         "meta_capi_access_token",
         "clear_meta_capi_access_token",
+        "whatsapp_otp_template_id",
     ]
 
     clear_meta_capi_access_token = forms.BooleanField(
@@ -1024,6 +1032,7 @@ class SiteSettingsForm(forms.ModelForm):
             "razorpay_key_secret",
             "meta_pixel_id",
             "meta_capi_access_token",
+            "whatsapp_otp_template_id",
         ]
         labels = {
             "vendor_email": "Email",

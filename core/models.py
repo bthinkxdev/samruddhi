@@ -273,6 +273,13 @@ class SiteSettings(TimeStampedModel):
     )
     order_email_template_slug = models.CharField(max_length=80, default="order-status")
     whatsapp_template_slug = models.CharField(max_length=80, default="order-whatsapp")
+    whatsapp_otp_template_id = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        verbose_name="WhatsApp OTP Template ID",
+        help_text="Gupshup template ID (UUID) used to send WhatsApp OTP verification codes.",
+    )
     razorpay_key_id = models.CharField(
         max_length=120,
         blank=True,

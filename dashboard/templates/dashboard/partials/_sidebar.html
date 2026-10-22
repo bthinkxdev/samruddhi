@@ -134,6 +134,11 @@
       </a>
     </li>
     <li>
+      <a class="nav-link {% if nav_section == 'whatsapptemplates' %}active{% endif %}" href="{% url 'dashboard:whatsapptemplate-list' %}">
+        <i class="ti ti-brand-whatsapp"></i><span class="nav-text">WhatsApp Templates</span>
+      </a>
+    </li>
+    <li>
       <a class="nav-link {% if nav_section == 'settings' %}active{% endif %}" href="{% url 'dashboard:settings' %}">
         <i class="ti ti-settings"></i><span class="nav-text">Settings</span>
       </a>

@@ -10,7 +10,7 @@ class WhatsAppError(Exception):
 
 
 class WhatsAppNotConfigured(WhatsAppError):
-    """Access token / phone number id missing."""
+    """API key / source number / app name missing."""
 
 
 class InvalidPhoneNumber(WhatsAppError):
@@ -18,7 +18,7 @@ class InvalidPhoneNumber(WhatsAppError):
 
 
 class WhatsAppAPIError(WhatsAppError):
-    """Meta rejected the request — permanent, do not retry."""
+    """Gupshup rejected the request — permanent, do not retry."""
 
     def __init__(
         self,

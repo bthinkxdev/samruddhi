@@ -32,14 +32,14 @@
   {% else %}
   <h1 class="section-title jm-page-title">{% trans "Checkout" %}</h1>
   <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-lg-7 checkout-form-col">
       <form id="checkout-form" method="post" action="{% url 'checkout:place-order' %}"
         hx-post="{% url 'checkout:place-order' %}" hx-target="#checkout-result" hx-swap="innerHTML" hx-select="unset" novalidate>
         {% csrf_token %}
         <input type="hidden" name="idempotency_key" id="checkout-idempotency-key" value="{{ checkout_session.pk }}-{{ summary.grand_total }}-{{ summary.lines|length }}-{{ request.user.pk|default:'guest' }}">
 
         <div class="checkout-step mb-4">
-          <h2>{% trans "Contact Information" %}</h2>
+          <h2><span class="checkout-step__number">1</span>{% trans "Contact Information" %}</h2>
           <div class="row g-2 mb-3">
             <div class="col-md-6">
               <label class="form-label small">{% trans "Full Name" %} <span class="text-danger">*</span></label>
@@ -47,20 +47,40 @@
               <div id="error-guest_name" class="text-danger small mt-1"></div>
             </div>
             <div class="col-md-6">
-              <label class="form-label small">{% trans "Email Address" %} <span class="text-danger">*</span></label>
+              <label class="form-label small">{% trans "Email Address" %} <span class="text-muted fw-normal">({% trans "optional" %})</span></label>
               <input type="email" name="guest_email" class="form-control form-control-sm" value="{% if checkout_session.customer_profile %}{{ checkout_session.customer_profile.user.email }}{% elif request.user.is_authenticated %}{{ request.user.email }}{% endif %}">
               <div id="error-guest_email" class="text-danger small mt-1"></div>
             </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label small">{% trans "Phone Number" %} <span class="text-danger">*</span></label>
-            <input type="tel" name="guest_phone" class="form-control form-control-sm" value="{{ checkout_session.customer_profile.phone|default:'' }}">
-            <div id="error-guest_phone" class="text-danger small mt-1"></div>
+          <div class="mb-1">
+            <label class="form-label small">{% trans "WhatsApp Number" %} <span class="text-danger">*</span></label>
+            <div class="jm-wa-verify">
+              <div class="d-flex gap-2">
+                <input type="tel" name="guest_phone" id="checkout-whatsapp-phone" class="form-control form-control-sm"
+                  value="{{ checkout_session.customer_profile.phone|default:'' }}">
+                <button type="button" id="checkout-whatsapp-verify-btn" class="btn btn-outline-theme btn-sm text-nowrap">
+                  {% trans "Verify" %}
+                </button>
+              </div>
+              <div id="error-guest_phone" class="text-danger small mt-1"></div>
+              <div id="checkout-whatsapp-status" class="small mt-1"></div>
+
+              <div id="checkout-whatsapp-otp-row" class="d-flex gap-2 mt-2 d-none">
+                <input type="text" inputmode="numeric" maxlength="6" id="checkout-whatsapp-otp-input"
+                  class="form-control form-control-sm" placeholder="{% trans 'Enter 6-digit code' %}" style="max-width: 180px;">
+                <button type="button" id="checkout-whatsapp-otp-verify-btn" class="btn btn-theme btn-sm text-nowrap">
+                  {% trans "Verify Code" %}
+                </button>
+                <button type="button" id="checkout-whatsapp-otp-resend-btn" class="btn btn-link btn-sm text-nowrap">
+                  {% trans "Resend" %}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="checkout-step mb-4">
-          <h2>{% trans "Delivery Address" %}</h2>
+          <h2><span class="checkout-step__number">2</span>{% trans "Delivery Address" %}</h2>
 
           {% if addresses %}
           <div class="mb-4">
@@ -120,32 +140,45 @@
 
 
         <div class="checkout-step">
-          <h2>{% trans "Payment Method" %}</h2>
-          {% for key, adapter in payment_gateways.items %}
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="gateway_key" value="{{ key }}" id="gw-{{ key }}" 
-              hx-post="{% url 'checkout:update-delivery-charge' %}"
-              hx-target="#order-summary-container"
-              hx-select="#order-summary-container"
-              hx-swap="outerHTML"
-              {% if selected_gateway_key == key %}checked{% elif not selected_gateway_key and forloop.first %}checked{% endif %}>
-            <label class="form-check-label small" for="gw-{{ key }}">
-              {{ adapter.display_name }}
-              {% if key == 'cod' and settings.cod_delivery_charge > 0 %}
-                ({{ display_currency.symbol|default:"₹" }}{{ settings.cod_delivery_charge|floatformat:0 }} {% trans "extra charge" %})
-              {% endif %}
+          <h2><span class="checkout-step__number">3</span>{% trans "Payment Method" %}</h2>
+          <div class="jm-pay-options">
+            {% for key, adapter in payment_gateways.items %}
+            <label class="jm-pay-option" for="gw-{{ key }}">
+              <input class="jm-pay-option__input" type="radio" name="gateway_key" value="{{ key }}" id="gw-{{ key }}"
+                hx-post="{% url 'checkout:update-delivery-charge' %}"
+                hx-target="#order-summary-container"
+                hx-select="#order-summary-container"
+                hx-swap="outerHTML"
+                {% if selected_gateway_key == key %}checked{% elif not selected_gateway_key and forloop.first %}checked{% endif %}>
+              <span class="jm-pay-option__body">
+                <span class="jm-pay-option__icon">
+                  {% if key == 'cod' %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 6v12M18 6v12"/></svg>
+                  {% else %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                  {% endif %}
+                </span>
+                <span class="jm-pay-option__text">
+                  <span class="jm-pay-option__label">{{ adapter.display_name }}</span>
+                  {% if key == 'cod' and settings.cod_delivery_charge > 0 %}
+                  <span class="jm-pay-option__hint">+{{ display_currency.symbol|default:"₹" }}{{ settings.cod_delivery_charge|floatformat:0 }} {% trans "delivery charge" %}</span>
+                  {% elif key != 'cod' %}
+                  <span class="jm-pay-option__hint">{% trans "UPI, Cards, Netbanking & Wallets" %}</span>
+                  {% endif %}
+                </span>
+                <span class="jm-pay-option__check" aria-hidden="true"></span>
+              </span>
             </label>
+            {% endfor %}
           </div>
-          {% endfor %}
           <div id="error-gateway_key" class="text-danger small mt-1"></div>
-
         </div>
 
       </form>
       <div id="checkout-result" class="mt-3"></div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="col-lg-5 checkout-summary-col">
       <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body, cartUpdated from:body" hx-select="#order-summary-container" hx-select-oob="#checkout-idempotency-key" hx-swap="outerHTML">
         {% if messages %}
         <div class="mb-3">
@@ -344,10 +377,7 @@
           isValid = false;
         }
 
-        if (!guestEmail) {
-          document.getElementById('error-guest_email').innerText = 'Email is required.';
-          isValid = false;
-        } else if (!/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(guestEmail) || guestEmail.includes('@.')) {
+        if (guestEmail && (!/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(guestEmail) || guestEmail.includes('@.'))) {
           document.getElementById('error-guest_email').innerText = 'Enter a valid email address.';
           isValid = false;
         }
@@ -360,6 +390,9 @@
           isValid = false;
         } else if (!/^\+?\d{10,15}$/.test(guestPhone)) {
           document.getElementById('error-guest_phone').innerText = 'Enter a valid phone number.';
+          isValid = false;
+        } else if (window.checkoutWhatsAppVerifiedPhone !== guestPhone) {
+          document.getElementById('error-guest_phone').innerText = 'Please verify your WhatsApp number.';
           isValid = false;
         }
 
@@ -522,6 +555,109 @@
       if (!/^\d+$/.test(val)) return "Postal code can only contain numbers.";
       return "";
     });
+
+    (function () {
+      var verifyBtn = document.getElementById('checkout-whatsapp-verify-btn');
+      var phoneInput = document.getElementById('checkout-whatsapp-phone');
+      var statusEl = document.getElementById('checkout-whatsapp-status');
+      var otpRow = document.getElementById('checkout-whatsapp-otp-row');
+      var otpInput = document.getElementById('checkout-whatsapp-otp-input');
+      var otpVerifyBtn = document.getElementById('checkout-whatsapp-otp-verify-btn');
+      var resendBtn = document.getElementById('checkout-whatsapp-otp-resend-btn');
+      if (!verifyBtn || !phoneInput) return;
+
+      window.checkoutWhatsAppVerifiedPhone = null;
+
+      function csrfToken() {
+        var el = document.querySelector('input[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+      }
+
+      function setStatus(text, isError) {
+        statusEl.innerText = text || '';
+        statusEl.className = 'small mt-1 ' + (isError ? 'text-danger' : 'text-success');
+      }
+
+      function postForm(url, data) {
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: new URLSearchParams(data)
+        }).then(function (res) {
+          return res.json().then(function (json) { return { ok: res.ok, json: json }; });
+        });
+      }
+
+      function sendOtp() {
+        var phone = phoneInput.value.trim();
+        if (!phone) {
+          setStatus('{% trans "Enter your WhatsApp number first." %}', true);
+          return;
+        }
+        verifyBtn.disabled = true;
+        var originalLabel = verifyBtn.innerText;
+        verifyBtn.innerText = '{% trans "Sending..." %}';
+        postForm("{% url 'checkout:whatsapp-otp-send' %}", { phone: phone }).then(function (r) {
+          verifyBtn.disabled = false;
+          verifyBtn.innerText = originalLabel;
+          if (r.json.success) {
+            otpRow.classList.remove('d-none');
+            otpInput.value = '';
+            otpInput.focus();
+            setStatus(r.json.message || '{% trans "Code sent." %}', false);
+          } else {
+            setStatus(r.json.message || '{% trans "Could not send the code." %}', true);
+          }
+        }).catch(function () {
+          verifyBtn.disabled = false;
+          verifyBtn.innerText = originalLabel;
+          setStatus('{% trans "Network error — please try again." %}', true);
+        });
+      }
+
+      function verifyOtpCode() {
+        var phone = phoneInput.value.trim();
+        var code = otpInput.value.trim();
+        if (!code) {
+          setStatus('{% trans "Enter the code we sent you." %}', true);
+          return;
+        }
+        otpVerifyBtn.disabled = true;
+        otpVerifyBtn.innerText = '{% trans "Verifying..." %}';
+        postForm("{% url 'checkout:whatsapp-otp-verify' %}", { phone: phone, otp_code: code }).then(function (r) {
+          otpVerifyBtn.disabled = false;
+          otpVerifyBtn.innerText = '{% trans "Verify Code" %}';
+          if (r.json.success) {
+            window.checkoutWhatsAppVerifiedPhone = phone;
+            otpRow.classList.add('d-none');
+            setStatus('{% trans "✓ WhatsApp number verified." %}', false);
+          } else {
+            setStatus(r.json.message || '{% trans "Incorrect code." %}', true);
+          }
+        }).catch(function () {
+          otpVerifyBtn.disabled = false;
+          otpVerifyBtn.innerText = '{% trans "Verify Code" %}';
+          setStatus('{% trans "Network error — please try again." %}', true);
+        });
+      }
+
+      verifyBtn.addEventListener('click', sendOtp);
+      if (resendBtn) resendBtn.addEventListener('click', sendOtp);
+      if (otpVerifyBtn) otpVerifyBtn.addEventListener('click', verifyOtpCode);
+
+      // editing the number after verifying invalidates the verified state client-side;
+      // the server re-checks independently at order placement either way.
+      phoneInput.addEventListener('input', function () {
+        if (window.checkoutWhatsAppVerifiedPhone && phoneInput.value.trim() !== window.checkoutWhatsAppVerifiedPhone) {
+          window.checkoutWhatsAppVerifiedPhone = null;
+          otpRow.classList.add('d-none');
+          setStatus('{% trans "Number changed — please verify again." %}', true);
+        }
+      });
+    })();
   });
 </script>
 {% endblock %}

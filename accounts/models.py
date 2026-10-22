@@ -14,6 +14,7 @@ class OTPPurpose(models.TextChoices):
     LOGIN = "login", "Login"
     SIGNUP = "signup", "Sign Up"
     PASSWORD_RESET = "password_reset", "Password Reset"
+    CHECKOUT_PHONE = "checkout_phone", "Checkout phone verification"
 
 
 

@@ -39,7 +39,7 @@ def variable_choices() -> list[tuple[str, str]]:
 
 class WhatsAppTemplate(TimeStampedModel):
     """
-    Maps a store event to a Meta-approved WhatsApp message template.
+    Maps a store event to a Gupshup-approved WhatsApp message template.
 
     """
 
@@ -50,16 +50,10 @@ class WhatsAppTemplate(TimeStampedModel):
         verbose_name="Event",
         help_text="Store event that sends this template.",
     )
-    template_name = models.CharField(
+    template_id = models.CharField(
         max_length=512,
-        verbose_name="Meta template name",
-        help_text="Exact template name as approved in WhatsApp Manager, e.g. order_confirmed.",
-    )
-    language_code = models.CharField(
-        max_length=15,
-        default="en",
-        verbose_name="Language code",
-        help_text="Template language as approved in Meta, e.g. en, en_US, ml.",
+        verbose_name="Gupshup template ID",
+        help_text="Template UUID exactly as approved in the Gupshup dashboard.",
     )
     body_variables = models.JSONField(
         default=list,
@@ -91,7 +85,7 @@ class WhatsAppTemplate(TimeStampedModel):
         ordering = ["event"]
 
     def __str__(self) -> str:
-        return f"{self.get_event_display()} → {self.template_name}"
+        return f"{self.get_event_display()} → {self.template_id}"
 
     def clean(self) -> None:
         super().clean()
@@ -136,8 +130,7 @@ class WhatsAppMessage(TimeStampedModel):
     )
     event = models.CharField(max_length=40, blank=True, db_index=True)
     message_type = models.CharField(max_length=20, default="template")
-    template_name = models.CharField(max_length=512, blank=True)
-    language_code = models.CharField(max_length=15, blank=True)
+    template_id = models.CharField(max_length=512, blank=True)
     body_params = models.JSONField(default=list, blank=True)
     button_url_param = models.CharField(max_length=255, blank=True)
     text = models.TextField(blank=True, help_text="Free-text body (text messages / inbound).")
@@ -154,12 +147,13 @@ class WhatsAppMessage(TimeStampedModel):
         default=MessageStatus.QUEUED,
         db_index=True,
     )
-    wamid = models.CharField(
+    provider_message_id = models.CharField(
         max_length=255,
         unique=True,
         null=True,
         blank=True,
-        verbose_name="WhatsApp message id",
+        verbose_name="Gupshup message id",
+        help_text="Gupshup's messageId, returned on submit and used to correlate webhook events.",
     )
     idempotency_key = models.CharField(
         max_length=120,
@@ -187,5 +181,5 @@ class WhatsAppMessage(TimeStampedModel):
         ]
 
     def __str__(self) -> str:
-        label = self.template_name or self.message_type
+        label = self.template_id or self.message_type
         return f"{self.get_direction_display()} {label} → {self.phone} ({self.status})"

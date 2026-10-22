@@ -1,10 +1,11 @@
 """
-Thin HTTP client for the Meta WhatsApp Cloud API (Graph API ``/{phone-number-id}/messages``).
+Thin HTTP client for the Gupshup WhatsApp Business API (``/wa/api/v1/...``).
 
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Optional, Sequence
 
@@ -15,136 +16,114 @@ from whatsapp.exceptions import WhatsAppAPIError, WhatsAppNotConfigured, WhatsAp
 
 logger = logging.getLogger(__name__)
 
-# meta error codes that are temporary (rate limits / transient platform errors).
-# https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
-RETRYABLE_ERROR_CODES = {1, 2, 4, 80007, 130429, 131000, 131048, 131056}
 
-
-class WhatsAppClient:
-    """Sends messages through one WhatsApp Business phone number."""
+class GupshupClient:
+    """Sends messages through one Gupshup WhatsApp source number."""
 
     def __init__(
         self,
         *,
-        access_token: Optional[str] = None,
-        phone_number_id: Optional[str] = None,
-        api_version: Optional[str] = None,
+        api_key: Optional[str] = None,
+        source: Optional[str] = None,
+        app_name: Optional[str] = None,
         timeout: Optional[int] = None,
         session: Optional[requests.Session] = None,
     ) -> None:
-        self.access_token = access_token if access_token is not None else conf.access_token()
-        self.phone_number_id = (
-            phone_number_id if phone_number_id is not None else conf.phone_number_id()
-        )
-        self.api_version = api_version or conf.api_version()
+        self.api_key = api_key if api_key is not None else conf.api_key()
+        self.source = source if source is not None else conf.source_number()
+        self.app_name = app_name if app_name is not None else conf.app_name()
         self.timeout = timeout or conf.request_timeout()
         self.session = session or requests.Session()
-        if not (self.access_token and self.phone_number_id):
+        if not (self.api_key and self.source and self.app_name):
             raise WhatsAppNotConfigured(
-                "WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID must be set."
+                "GUPSHUP_API_KEY, GUPSHUP_SOURCE_NUMBER and GUPSHUP_APP_NAME must be set."
             )
 
     @property
-    def messages_url(self) -> str:
-        return f"{conf.GRAPH_API_BASE_URL}/{self.api_version}/{self.phone_number_id}/messages"
+    def template_url(self) -> str:
+        return f"{conf.API_BASE_URL}/wa/api/v1/template/msg"
+
+    @property
+    def msg_url(self) -> str:
+        return f"{conf.API_BASE_URL}/wa/api/v1/msg"
 
     # ------------------------------------------------------------------ #
-    # Payload builders (pure — also used to store request_payload in logs)
+    # Payload builders (also used to store request_payload in logs)
     # ------------------------------------------------------------------ #
 
-    @staticmethod
     def build_template_payload(
+        self,
         *,
         to: str,
-        template_name: str,
-        language_code: str = "en",
+        template_id: str,
         body_params: Sequence[str] = (),
         button_url_param: Optional[str] = None,
     ) -> dict[str, Any]:
-        components: list[dict[str, Any]] = []
-        if body_params:
-            components.append(
-                {
-                    "type": "body",
-                    "parameters": [{"type": "text", "text": str(p)} for p in body_params],
-                }
-            )
+        # Gupshup fills every template placeholder — body variables and a dynamic
+        # URL-button suffix alike — from one ordered params list.
+        params = [str(p) for p in body_params]
         if button_url_param:
-            components.append(
-                {
-                    "type": "button",
-                    "sub_type": "url",
-                    "index": "0",
-                    "parameters": [{"type": "text", "text": str(button_url_param)}],
-                }
-            )
-        template: dict[str, Any] = {"name": template_name, "language": {"code": language_code}}
-        if components:
-            template["components"] = components
+            params = [*params, str(button_url_param)]
         return {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "template",
-            "template": template,
+            "channel": "whatsapp",
+            "source": self.source,
+            "destination": to,
+            "src.name": self.app_name,
+            "template": json.dumps({"id": template_id, "params": params}),
         }
 
-    @staticmethod
-    def build_text_payload(*, to: str, text: str, preview_url: bool = False) -> dict[str, Any]:
+    def build_text_payload(self, *, to: str, text: str) -> dict[str, Any]:
         return {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "text",
-            "text": {"body": text, "preview_url": preview_url},
+            "channel": "whatsapp",
+            "source": self.source,
+            "destination": to,
+            "src.name": self.app_name,
+            "message": json.dumps({"type": "text", "text": text}),
         }
 
     # ------------------------------------------------------------------ #
-    # Senders
+    # Sender
     # ------------------------------------------------------------------ #
 
     def send_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """POST a prepared payload. Returns Meta's JSON (contains ``messages[0].id``)."""
+        """POST a prepared form payload. Returns Gupshup's JSON (contains ``messageId``)."""
+        url = self.template_url if "template" in payload else self.msg_url
         headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json",
+            "apikey": self.api_key,
+            "Content-Type": "application/x-www-form-urlencoded",
         }
         try:
-            response = self.session.post(
-                self.messages_url, json=payload, headers=headers, timeout=self.timeout
-            )
+            response = self.session.post(url, data=payload, headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:
-            raise WhatsAppRetryableError(f"Network error calling WhatsApp API: {exc}") from exc
+            raise WhatsAppRetryableError(f"Network error calling Gupshup API: {exc}") from exc
 
         try:
             data = response.json()
         except ValueError:
             data = {"raw": response.text[:1000]}
 
-        if response.status_code < 300:
+        if (
+            response.status_code < 300
+            and isinstance(data, dict)
+            and data.get("status") == "submitted"
+        ):
             return data
 
-        error = data.get("error", {}) if isinstance(data, dict) else {}
-        code = error.get("code")
-        details = (error.get("error_data") or {}).get("details") or ""
-        message = error.get("message") or f"HTTP {response.status_code}"
-        if details:
-            message = f"{message} — {details}"
+        message = (
+            data.get("message") if isinstance(data, dict) else None
+        ) or f"HTTP {response.status_code}"
 
         exc_class = (
             WhatsAppRetryableError
-            if response.status_code == 429
-            or response.status_code >= 500
-            or code in RETRYABLE_ERROR_CODES
+            if response.status_code == 429 or response.status_code >= 500
             else WhatsAppAPIError
         )
         logger.warning(
-            "WhatsApp API error status=%s code=%s message=%s",
+            "Gupshup API error status=%s message=%s",
             response.status_code,
-            code,
             message,
         )
-        raise exc_class(message, code=code, status_code=response.status_code, payload=data)
+        raise exc_class(message, code=None, status_code=response.status_code, payload=data)
 
     def send_template(self, **kwargs: Any) -> dict[str, Any]:
         return self.send_payload(self.build_template_payload(**kwargs))
@@ -154,6 +133,5 @@ class WhatsAppClient:
 
 
 def extract_message_id(response_data: dict[str, Any]) -> str:
-    """Meta's message id (``wamid.xxx``) from a successful send response."""
-    messages = response_data.get("messages") or []
-    return (messages[0].get("id") if messages else "") or ""
+    """Gupshup's message id (used to correlate later webhook events)."""
+    return response_data.get("messageId") or ""

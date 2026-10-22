@@ -1,1 +1,1 @@
-"""WhatsApp Business (Meta Cloud API) integration — outbound template messages + webhook."""
+"""WhatsApp Business (Gupshup) integration — outbound template messages + webhook."""

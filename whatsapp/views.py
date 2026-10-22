@@ -1,11 +1,13 @@
 """
-Meta WhatsApp webhook endpoint.
+Gupshup WhatsApp webhook endpoint.
 
+Gupshup does not sign its webhook calls (no HMAC, no verification handshake like
+Meta's hub.challenge). Our own protection is a shared-secret ``token`` query
+parameter on the callback URL registered in the Gupshup dashboard.
 """
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import json
 import logging
@@ -13,7 +15,7 @@ import logging
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_POST
 
 from whatsapp import conf
 from whatsapp.services import process_webhook_payload
@@ -21,36 +23,23 @@ from whatsapp.services import process_webhook_payload
 logger = logging.getLogger(__name__)
 
 
-def verify_signature(raw_body: bytes, signature_header: str) -> bool:
-    """Constant-time check of Meta's ``sha256=<hex>`` signature."""
-    secret = conf.app_secret()
+def _verify_token(request: HttpRequest) -> bool:
+    secret = conf.webhook_secret()
     if not secret:
-        # Without an App Secret we cannot authenticate Meta. Allow only in local DEBUG.
+        # Without a shared secret we cannot authenticate Gupshup. Allow only in local DEBUG.
         return bool(settings.DEBUG)
-    if not signature_header or not signature_header.startswith("sha256="):
-        return False
-    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature_header.split("=", 1)[1])
+    supplied = request.GET.get("token", "")
+    return bool(supplied) and hmac.compare_digest(supplied, secret)
 
 
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
+@require_POST
 def webhook(request: HttpRequest) -> HttpResponse:
-    if request.method == "GET":
-        token = conf.webhook_verify_token()
-        if (
-            token
-            and request.GET.get("hub.mode") == "subscribe"
-            and hmac.compare_digest(request.GET.get("hub.verify_token", ""), token)
-        ):
-            return HttpResponse(request.GET.get("hub.challenge", ""), content_type="text/plain")
-        return HttpResponseForbidden("Verification failed.")
-
-    if not verify_signature(request.body, request.headers.get("X-Hub-Signature-256", "")):
+    if not _verify_token(request):
         logger.warning(
-            "WhatsApp webhook: invalid signature from %s", request.META.get("REMOTE_ADDR")
+            "Gupshup webhook: invalid/missing token from %s", request.META.get("REMOTE_ADDR")
         )
-        return HttpResponseForbidden("Invalid signature.")
+        return HttpResponseForbidden("Invalid token.")
 
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -59,7 +48,7 @@ def webhook(request: HttpRequest) -> HttpResponse:
 
     try:
         counts = process_webhook_payload(payload)
-    except Exception:  # noqa: BLE001 — always 200 so Meta doesn't hammer retries; we log it
-        logger.exception("WhatsApp webhook processing failed")
+    except Exception:  # noqa: BLE001 — always 200 so Gupshup doesn't hammer retries; we log it
+        logger.exception("Gupshup webhook processing failed")
         counts = {}
     return JsonResponse({"ok": True, **counts})

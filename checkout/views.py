@@ -8,7 +8,7 @@ import re
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
@@ -205,6 +205,74 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     )
 
 
+@require_POST
+def checkout_whatsapp_otp_send_view(request: HttpRequest) -> HttpResponse:
+    """Send a WhatsApp OTP to verify the checkout contact number."""
+    from accounts.exceptions import OTPRateLimitError
+    from accounts.models import OTPPurpose
+    from accounts.services import request_otp
+    from whatsapp.exceptions import InvalidPhoneNumber
+    from whatsapp.services import normalize_phone
+
+    raw_phone = request.POST.get("phone", "").strip()
+    if not raw_phone:
+        return JsonResponse({"success": False, "message": "Phone number is required."}, status=400)
+
+    try:
+        phone = normalize_phone(raw_phone)
+    except InvalidPhoneNumber:
+        return JsonResponse(
+            {"success": False, "message": "Enter a valid phone number."}, status=400
+        )
+
+    try:
+        request_otp(phone=phone, purpose=OTPPurpose.CHECKOUT_PHONE, channel="whatsapp")
+    except OTPRateLimitError as exc:
+        return JsonResponse({"success": False, "message": str(exc)}, status=429)
+    except Exception:
+        logger.exception("Failed to send checkout WhatsApp OTP to %s", phone)
+        return JsonResponse(
+            {"success": False, "message": "Could not send the code. Please try again."},
+            status=502,
+        )
+
+    request.session["checkout_otp_phone"] = phone
+    request.session.pop("checkout_verified_phone", None)
+    return JsonResponse({"success": True, "message": "Verification code sent on WhatsApp."})
+
+
+@require_POST
+def checkout_whatsapp_otp_verify_view(request: HttpRequest) -> HttpResponse:
+    """Verify the WhatsApp OTP and mark the phone verified for this checkout session."""
+    from accounts.exceptions import OTPVerificationError
+    from accounts.models import OTPPurpose
+    from accounts.services import verify_otp
+    from whatsapp.exceptions import InvalidPhoneNumber
+    from whatsapp.services import normalize_phone
+
+    raw_phone = request.POST.get("phone", "").strip()
+    otp_code = request.POST.get("otp_code", "").strip()
+    if not raw_phone or not otp_code:
+        return JsonResponse(
+            {"success": False, "message": "Phone and code are required."}, status=400
+        )
+
+    try:
+        phone = normalize_phone(raw_phone)
+    except InvalidPhoneNumber:
+        return JsonResponse(
+            {"success": False, "message": "Enter a valid phone number."}, status=400
+        )
+
+    try:
+        verify_otp(phone=phone, otp_code=otp_code, purpose=OTPPurpose.CHECKOUT_PHONE)
+    except OTPVerificationError as exc:
+        return JsonResponse({"success": False, "message": str(exc)}, status=400)
+
+    request.session["checkout_verified_phone"] = phone
+    return JsonResponse({"success": True, "message": "Number verified."})
+
+
 @require_http_methods(["POST"])
 def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
     """Place order and process payment in one HTMX step."""
@@ -249,9 +317,7 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
     if not guest_name:
         errors["guest_name"] = ["Name is required."]
 
-    if not guest_email:
-        errors["guest_email"] = ["Email is required."]
-    else:
+    if guest_email:
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", guest_email) or "@." in guest_email:
             errors["guest_email"] = ["Enter a valid email address."]
         else:
@@ -267,6 +333,18 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             errors["guest_phone"] = ["Phone number can only contain numbers."]
         elif not re.match(r'^\+?\d{10,15}$', guest_phone):
             errors["guest_phone"] = ["Enter a valid phone number."]
+
+    if guest_phone and "guest_phone" not in errors:
+        from whatsapp.exceptions import InvalidPhoneNumber
+        from whatsapp.services import normalize_phone
+
+        verified_phone = request.session.get("checkout_verified_phone")
+        try:
+            normalized_guest_phone = normalize_phone(guest_phone)
+        except InvalidPhoneNumber:
+            normalized_guest_phone = None
+        if not verified_phone or normalized_guest_phone != verified_phone:
+            errors["guest_phone"] = ["Please verify your WhatsApp number before placing the order."]
 
     if not address:
         guest_address_line1 = request.POST.get("guest_address_line1", "").strip()
@@ -321,13 +399,17 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             status=200,
         )
 
-    if not profile and not request.user.is_authenticated and guest_email:
-        from accounts.services import login_or_create_customer_by_email
-        profile = login_or_create_customer_by_email(email=guest_email, name=guest_name)
+    if not profile and not request.user.is_authenticated:
+        if guest_email:
+            from accounts.services import login_or_create_customer_by_email
+            profile = login_or_create_customer_by_email(email=guest_email, name=guest_name)
+        else:
+            from accounts.services import login_or_create_customer_by_phone
+            profile = login_or_create_customer_by_phone(phone=normalized_guest_phone)
 
     if profile:
-        if guest_phone and profile.phone != guest_phone:
-            profile.phone = guest_phone
+        if normalized_guest_phone and profile.phone != normalized_guest_phone:
+            profile.phone = normalized_guest_phone
             profile.save(update_fields=["phone", "updated_at"])
         if guest_name:
             parts = guest_name.split(" ", 1)
@@ -522,22 +604,10 @@ def razorpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
     currency_code = order.currency.code if order.currency else (default_curr.code if default_curr else "AED")
     razorpay_order_id = payment_tx.external_intent_id if payment_tx else f"rzp_order_{order.pk}"
 
-    #determine prefill method based on gateway key
+    # single generic online-payment entry point — let Razorpay's own widget
+    # show its default method tab rather than forcing one.
     prefill_method = ""
-    payment_method_name = "Razorpay"
-    if payment_tx and payment_tx.gateway_key:
-        if payment_tx.gateway_key == "razorpay_upi":
-            prefill_method = "upi"
-            payment_method_name = "UPI"
-        elif payment_tx.gateway_key == "razorpay_card":
-            prefill_method = "card"
-            payment_method_name = "Credit/Debit Card"
-        elif payment_tx.gateway_key == "razorpay_netbanking":
-            prefill_method = "netbanking"
-            payment_method_name = "Net Banking"
-        elif payment_tx.gateway_key == "razorpay_wallet":
-            prefill_method = "wallet"
-            payment_method_name = "Wallet"
+    payment_method_name = "Online Payment"
 
     #store order_id in session so the callback can retrieve it
     request.session["razorpay_order_pk"] = order.pk

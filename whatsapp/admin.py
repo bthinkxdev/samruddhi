@@ -10,19 +10,18 @@ from whatsapp.services import retry_messages
 
 @admin.register(WhatsAppTemplate)
 class WhatsAppTemplateAdmin(admin.ModelAdmin):
-    """Map store events to Meta-approved templates."""
+    """Map store events to Gupshup-approved templates."""
 
     list_display = (
         "event",
-        "template_name",
-        "language_code",
+        "template_id",
         "body_variables",
         "is_active",
         "updated_at",
     )
-    list_filter = ("is_active", "language_code")
+    list_filter = ("is_active",)
     list_editable = ("is_active",)
-    search_fields = ("template_name", "event")
+    search_fields = ("template_id", "event")
 
 
 @admin.register(WhatsAppMessage)
@@ -34,14 +33,14 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         "direction",
         "phone",
         "event",
-        "template_name",
+        "template_id",
         "status",
         "order",
         "attempts",
         "error_code",
     )
     list_filter = ("direction", "status", "event", "message_type")
-    search_fields = ("phone", "wamid", "template_name", "order__order_number", "text")
+    search_fields = ("phone", "provider_message_id", "template_id", "order__order_number", "text")
     date_hierarchy = "created_at"
     list_select_related = ("order",)
     actions = ["retry_selected"]

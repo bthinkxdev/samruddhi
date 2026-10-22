@@ -22,6 +22,11 @@
               <h5 class="border-bottom pb-2 fw-semibold text-dark">Meta Pixel (Facebook / Instagram tracking)</h5>
             </div>
             {% endif %}
+            {% if field.name == 'whatsapp_otp_template_id' %}
+            <div class="col-12 mt-3 mb-2">
+              <h5 class="border-bottom pb-2 fw-semibold text-dark">WhatsApp OTP</h5>
+            </div>
+            {% endif %}
             <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %} mb-3">
               {% if field.name == 'logo' %}
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>

@@ -115,22 +115,21 @@ def _get_active_otp(*, phone: str, purpose: str) -> Optional[OTPRequest]:
     )
 
 
-@transaction.atomic
-def request_otp(*, phone: str, purpose: str) -> OTPRequest:
+def request_otp(*, phone: str, purpose: str, channel: str = "sms") -> OTPRequest:
     """
-    Create a hashed OTP request and dispatch an async SMS via Celery.
+    Create a hashed OTP request and dispatch the code via SMS or WhatsApp.
 
     Rate-limited to 3 requests per phone per 10 minutes via Redis (not DB).
     Params:
         phone: Target phone number.
-        purpose: OTPPurpose value (login, signup, password_reset).
+        purpose: OTPPurpose value (login, signup, password_reset, checkout_phone).
+        channel: "sms" (default, async via Celery) or "whatsapp" (synchronous —
+            the caller is a customer actively waiting for the code).
     Returns:
-        Created OTPRequest instance (plaintext OTP is only sent via SMS).
+        Created OTPRequest instance (plaintext OTP is only sent via the channel).
     Raises:
         OTPRateLimitError: When the Redis rate limit is exceeded.
     """
-    from accounts.tasks import send_otp_sms
-
     normalized_phone = _normalize_phone(phone)
     _check_otp_rate_limit(phone=normalized_phone)
     _increment_otp_rate_limit(phone=normalized_phone)
@@ -138,14 +137,24 @@ def request_otp(*, phone: str, purpose: str) -> OTPRequest:
     otp_code = _generate_otp_code()
     expires_at = timezone.now() + timedelta(seconds=settings.ACCOUNTS_OTP_EXPIRY_SECONDS)
 
-    otp_request = OTPRequest.objects.create(
-        phone=normalized_phone,
-        otp_hash=make_password(otp_code),
-        purpose=purpose,
-        expires_at=expires_at,
-    )
+    with transaction.atomic():
+        otp_request = OTPRequest.objects.create(
+            phone=normalized_phone,
+            otp_hash=make_password(otp_code),
+            purpose=purpose,
+            expires_at=expires_at,
+        )
 
-    send_otp_sms.delay(phone=normalized_phone, otp_code=otp_code)
+    # dispatched outside the transaction — a synchronous WhatsApp send should not
+    # hold the DB connection open for the duration of an external HTTP round-trip.
+    if channel == "whatsapp":
+        from whatsapp.services import send_otp as send_whatsapp_otp
+
+        send_whatsapp_otp(normalized_phone, otp_code)
+    else:
+        from accounts.tasks import send_otp_sms
+
+        send_otp_sms.delay(phone=normalized_phone, otp_code=otp_code)
     return otp_request
 
 
@@ -526,6 +535,9 @@ def login_or_create_customer_by_phone(*, phone: str) -> CustomerProfile:
         phone=normalized_phone,
         phone_verified=True,
         preferred_currency=currency,
+        # the email above is a synthetic placeholder, not a real address —
+        # never let notification dispatch treat it as one.
+        notify_via_email=False,
     )
 
 

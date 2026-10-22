@@ -1858,6 +1858,146 @@ body.mobile-search-open {
   border-color: var(--theme-primary);
 }
 
+/* ==========================================================================
+   CHECKOUT PAGE — step cards, payment option cards, WhatsApp verify box.
+   Scoped under .checkout-form-col / .checkout-summary-col so it never
+   touches .checkout-step usage on other pages (e.g. the cart page).
+   ========================================================================== */
+
+.checkout-form-col .checkout-step {
+  box-shadow: var(--theme-shadow-sm);
+}
+
+.checkout-form-col .checkout-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.checkout-step__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--theme-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.checkout-form-col .jm-wa-verify {
+  padding: 0.9rem;
+  border: 1px solid var(--theme-border-light);
+  border-radius: var(--theme-radius);
+  background: #fafafa;
+}
+
+.jm-pay-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.jm-pay-option {
+  display: block;
+  margin: 0;
+  cursor: pointer;
+}
+
+.jm-pay-option__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jm-pay-option__body {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid var(--theme-border);
+  border-radius: var(--theme-radius);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.jm-pay-option__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--jm-accent-soft);
+  color: var(--theme-primary);
+}
+
+.jm-pay-option__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.jm-pay-option__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.jm-pay-option__label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--jm-ink, #1a1a1a);
+}
+
+.jm-pay-option__hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--jm-muted, #64748b);
+  margin-top: 0.1rem;
+}
+
+.jm-pay-option__check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--theme-border);
+  position: relative;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.jm-pay-option__input:checked + .jm-pay-option__body {
+  border-color: var(--theme-primary);
+  background: var(--jm-accent-soft);
+}
+
+.jm-pay-option__input:checked + .jm-pay-option__body .jm-pay-option__check {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary);
+}
+
+.jm-pay-option__input:checked + .jm-pay-option__body .jm-pay-option__check::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.jm-pay-option__input:focus-visible + .jm-pay-option__body {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+.checkout-summary-col .checkout-step {
+  box-shadow: var(--theme-shadow);
+}
+
 
 .gift-builder {
   background: var(--theme-white);
@@ -5901,6 +6041,21 @@ button.jm-product-card__atc--in-cart:hover {
   .checkout-step h2 {
     font-size: 0.92rem;
     margin-bottom: 0.65rem;
+  }
+
+  .jm-pay-option__body {
+    padding: 0.7rem 0.85rem;
+    gap: 0.65rem;
+  }
+
+  .jm-pay-option__icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .jm-pay-option__icon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .cart-page-line {

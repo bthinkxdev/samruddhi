@@ -274,14 +274,12 @@ META_TEST_EVENT_CODE = env("META_TEST_EVENT_CODE", default="").strip()
 META_API_VERSION = env("META_API_VERSION", default="v21.0")
 
 
-#whatsapp (Meta WhatsApp Cloud API) — see whatsapp/ and docs/whatsapp.md.
+#whatsapp (Gupshup WhatsApp Business API) — see whatsapp/.
 #WHATSAPP_ENABLED is the master switch for automatic order messages (off by default).
 WHATSAPP_ENABLED = env.bool("WHATSAPP_ENABLED", default=False)
-WHATSAPP_ACCESS_TOKEN = env("WHATSAPP_ACCESS_TOKEN", default="").strip()
-WHATSAPP_PHONE_NUMBER_ID = env("WHATSAPP_PHONE_NUMBER_ID", default="").strip()
-WHATSAPP_BUSINESS_ACCOUNT_ID = env("WHATSAPP_BUSINESS_ACCOUNT_ID", default="").strip()
-WHATSAPP_APP_SECRET = env("WHATSAPP_APP_SECRET", default="").strip()
-WHATSAPP_WEBHOOK_VERIFY_TOKEN = env("WHATSAPP_WEBHOOK_VERIFY_TOKEN", default="").strip()
-WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", default="v21.0")
+GUPSHUP_API_KEY = env("GUPSHUP_API_KEY", default="").strip()
+GUPSHUP_SOURCE_NUMBER = env("GUPSHUP_SOURCE_NUMBER", default="").strip()
+GUPSHUP_APP_NAME = env("GUPSHUP_APP_NAME", default="").strip()
+GUPSHUP_WEBHOOK_SECRET = env("GUPSHUP_WEBHOOK_SECRET", default="").strip()
 WHATSAPP_DEFAULT_COUNTRY_CODE = env("WHATSAPP_DEFAULT_COUNTRY_CODE", default="91")
 WHATSAPP_REQUEST_TIMEOUT = env.int("WHATSAPP_REQUEST_TIMEOUT", default=10)

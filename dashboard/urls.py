@@ -14,6 +14,7 @@ from dashboard.views import (
     misc,
     orders,
     reports,
+    whatsapp,
 )
 
 app_name = "dashboard"
@@ -165,6 +166,13 @@ urlpatterns += _crud(
     cms.FAQItemCreateView,
     cms.FAQItemUpdateView,
     cms.FAQItemDeleteView,
+)
+urlpatterns += _crud(
+    "whatsapptemplate",
+    whatsapp.WhatsAppTemplateListView,
+    whatsapp.WhatsAppTemplateCreateView,
+    whatsapp.WhatsAppTemplateUpdateView,
+    whatsapp.WhatsAppTemplateDeleteView,
 )
 urlpatterns += _crud(
     "policy",

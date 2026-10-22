@@ -1,5 +1,5 @@
 """
-Write operations and business rules for the WhatsApp app.
+Write operations and business rules for the WhatsApp app (Gupshup WhatsApp Business API).
 
 """
 
@@ -15,7 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from whatsapp import conf
-from whatsapp.client import WhatsAppClient, extract_message_id
+from whatsapp.client import GupshupClient, extract_message_id
 from whatsapp.exceptions import (
     InvalidPhoneNumber,
     WhatsAppAPIError,
@@ -40,7 +40,8 @@ STATUS_RANK = {
     MessageStatus.READ: 3,
 }
 
-# receipt statuses Meta sends in webhooks.
+# receipt statuses Gupshup sends in "message-event" webhooks ("enqueued" has no
+# corresponding MessageStatus and is ignored).
 RECEIPT_STATUSES = {"sent", "delivered", "read", "failed"}
 
 # inbound replies that opt the customer out of WhatsApp order updates.
@@ -56,7 +57,7 @@ PARAM_MAX_LENGTH = 1000
 
 def normalize_phone(raw: str, *, country_code: Optional[str] = None) -> str:
     """
-    Normalise a stored phone number to the digits-only international format Meta expects.
+    Normalise a stored phone number to the digits-only international format Gupshup expects.
 
     """
     raw = (raw or "").strip()
@@ -79,8 +80,8 @@ def normalize_phone(raw: str, *, country_code: Optional[str] = None) -> str:
 
 def _clean_param(value: Any) -> str:
     """
-    Meta rejects template parameters that are empty, contain newlines/tabs or more
-    than four consecutive spaces.
+    WhatsApp rejects template parameters that are empty, contain newlines/tabs or more
+    than four consecutive spaces — this applies regardless of BSP, including Gupshup.
     """
     text = re.sub(r"[\r\n\t]+", " ", str(value if value is not None else "")).strip()
     text = re.sub(r" {4,}", "   ", text)
@@ -190,8 +191,7 @@ def queue_order_event(
             "phone": to,
             "event": event,
             "message_type": "template",
-            "template_name": template.template_name,
-            "language_code": template.language_code,
+            "template_id": template.template_id,
             "body_params": body_params,
             "button_url_param": button_param,
             "order": order,
@@ -207,13 +207,12 @@ def queue_order_event(
     return message
 
 
-def _build_payload(message: WhatsAppMessage) -> dict[str, Any]:
+def _build_payload(message: WhatsAppMessage, client: GupshupClient) -> dict[str, Any]:
     if message.message_type == "text":
-        return WhatsAppClient.build_text_payload(to=message.phone, text=message.text)
-    return WhatsAppClient.build_template_payload(
+        return client.build_text_payload(to=message.phone, text=message.text)
+    return client.build_template_payload(
         to=message.phone,
-        template_name=message.template_name,
-        language_code=message.language_code or "en",
+        template_id=message.template_id,
         body_params=message.body_params or [],
         button_url_param=message.button_url_param or None,
     )
@@ -232,10 +231,10 @@ def _mark_failed(
 
 
 def deliver_message(
-    message_id: int, *, client: Optional[WhatsAppClient] = None
+    message_id: int, *, client: Optional[GupshupClient] = None
 ) -> Optional[WhatsAppMessage]:
     """
-    Send one QUEUED outbound message through Meta.
+    Send one QUEUED outbound message through Gupshup.
 
     """
     retry_exc: Optional[WhatsAppRetryableError] = None
@@ -250,13 +249,16 @@ def deliver_message(
             return message
 
         message.attempts += 1
-        payload = _build_payload(message)
-        message.request_payload = payload
         try:
-            data = (client or WhatsAppClient()).send_payload(payload)
+            active_client = client or GupshupClient()
         except WhatsAppNotConfigured as exc:
             _mark_failed(message, exc, status=MessageStatus.SKIPPED)
             return message
+
+        payload = _build_payload(message, active_client)
+        message.request_payload = payload
+        try:
+            data = active_client.send_payload(payload)
         except WhatsAppRetryableError as exc:
             message.error_code = str(exc.code or exc.status_code or "")[:20]
             message.error_message = str(exc)[:2000]
@@ -266,7 +268,7 @@ def deliver_message(
             _mark_failed(message, exc)
             return message
         else:
-            message.wamid = extract_message_id(data) or None
+            message.provider_message_id = extract_message_id(data) or None
             message.status = MessageStatus.SENT
             message.sent_at = timezone.now()
             message.response_payload = data
@@ -289,8 +291,7 @@ def mark_message_failed(message_id: int, exc: Exception) -> None:
 def send_adhoc_message(
     *,
     to: str,
-    template_name: str = "",
-    language_code: str = "en",
+    template_id: str = "",
     body_params: Sequence[str] = (),
     text: str = "",
 ) -> WhatsAppMessage:
@@ -302,8 +303,7 @@ def send_adhoc_message(
         direction=MessageDirection.OUTBOUND,
         phone=normalize_phone(to),
         message_type="text" if text else "template",
-        template_name="" if text else template_name,
-        language_code="" if text else language_code,
+        template_id="" if text else template_id,
         body_params=[] if text else [_clean_param(p) for p in body_params],
         text=text,
         event="manual",
@@ -314,6 +314,19 @@ def send_adhoc_message(
         mark_message_failed(message.pk, exc)
     message.refresh_from_db()
     return message
+
+
+def send_otp(phone: str, otp_code: str) -> WhatsAppMessage:
+    """
+    Send a one-time password through the configured Gupshup OTP (copy-code) template.
+
+    Synchronous — callers are a customer actively waiting for the code.
+    """
+    return send_adhoc_message(
+        to=phone,
+        template_id=conf.otp_template_id(),
+        body_params=[otp_code],
+    )
 
 
 def retry_messages(messages: Iterable[WhatsAppMessage]) -> int:
@@ -343,34 +356,38 @@ def retry_messages(messages: Iterable[WhatsAppMessage]) -> int:
 # --------------------------------------------------------------------------- #
 
 
-def _from_timestamp(value: Any) -> datetime:
+def _from_timestamp_ms(value: Any) -> datetime:
     try:
-        return datetime.fromtimestamp(int(value), tz=dt_timezone.utc)
+        return datetime.fromtimestamp(int(value) / 1000, tz=dt_timezone.utc)
     except (TypeError, ValueError):
         return timezone.now()
 
 
-def handle_status_update(status: dict[str, Any]) -> Optional[WhatsAppMessage]:
-    """Apply a sent / delivered / read / failed receipt to the matching outbound message."""
-    wamid = status.get("id")
-    new_status = status.get("status")
-    if not wamid or new_status not in RECEIPT_STATUSES:
+def handle_status_update(envelope: dict[str, Any]) -> Optional[WhatsAppMessage]:
+    """Apply a sent / delivered / read / failed receipt to the matching outbound message.
+
+    ``envelope`` is the full Gupshup webhook envelope: ``{"timestamp", "payload": {...}}``.
+    """
+    event = envelope.get("payload") or {}
+    # Gupshup's correlator: ``gsId`` is our stored provider_message_id on DLR events
+    # (sent/delivered/read/async-failed); for enqueued/sync-failed events there is no
+    # ``gsId`` and ``id`` itself is the Gupshup message id.
+    provider_message_id = event.get("gsId") or event.get("id")
+    new_status = event.get("type")
+    if not provider_message_id or new_status not in RECEIPT_STATUSES:
         return None
 
-    message = WhatsAppMessage.objects.filter(wamid=wamid).first()
+    message = WhatsAppMessage.objects.filter(provider_message_id=provider_message_id).first()
     if message is None:
         return None
 
-    at = _from_timestamp(status.get("timestamp"))
+    at = _from_timestamp_ms(envelope.get("timestamp"))
+    detail = event.get("payload") or {}
     if new_status == MessageStatus.FAILED:
-        error = (status.get("errors") or [{}])[0]
-        details = (error.get("error_data") or {}).get("details") or ""
         message.status = MessageStatus.FAILED
         message.failed_at = at
-        message.error_code = str(error.get("code") or "")[:20]
-        message.error_message = " — ".join(
-            filter(None, [error.get("title") or error.get("message"), details])
-        )[:2000]
+        message.error_code = str(detail.get("code") or "")[:20]
+        message.error_message = str(detail.get("reason") or "")[:2000]
     else:
         setattr(message, f"{new_status}_at", getattr(message, f"{new_status}_at") or at)
         if message.status != MessageStatus.FAILED and STATUS_RANK[new_status] > STATUS_RANK.get(
@@ -381,16 +398,10 @@ def handle_status_update(status: dict[str, Any]) -> Optional[WhatsAppMessage]:
     return message
 
 
-def _inbound_text(msg: dict[str, Any]) -> str:
-    msg_type = msg.get("type")
+def _inbound_text(event: dict[str, Any]) -> str:
+    msg_type = event.get("type")
     if msg_type == "text":
-        return (msg.get("text") or {}).get("body", "")
-    if msg_type == "button":
-        return (msg.get("button") or {}).get("text", "")
-    if msg_type == "interactive":
-        interactive = msg.get("interactive") or {}
-        reply = interactive.get("button_reply") or interactive.get("list_reply") or {}
-        return reply.get("title", "")
+        return (event.get("payload") or {}).get("text", "")
     return f"[{msg_type}]"
 
 
@@ -401,7 +412,7 @@ def opt_out_phone(phone: str) -> int:
     last10 = re.sub(r"\D", "", phone or "")[-10:]
     if len(last10) < 10:
         return 0
- 
+
     candidates = CustomerProfile.objects.filter(
         phone__endswith=last10[-2:], notify_via_whatsapp=True
     ).only("pk", "phone")
@@ -411,23 +422,23 @@ def opt_out_phone(phone: str) -> int:
     return CustomerProfile.objects.filter(pk__in=ids).update(notify_via_whatsapp=False)
 
 
-def handle_inbound_message(msg: dict[str, Any]) -> Optional[WhatsAppMessage]:
-    """Log a customer message (Meta may redeliver webhooks — deduplicated by wamid)."""
-    wamid = msg.get("id")
-    phone = msg.get("from") or ""
-    if not wamid or not phone:
+def handle_inbound_message(event: dict[str, Any]) -> Optional[WhatsAppMessage]:
+    """Log a customer message (Gupshup may redeliver webhooks — deduplicated by message id)."""
+    message_id = event.get("id")
+    phone = event.get("source") or ""
+    if not message_id or not phone:
         return None
 
-    text = _inbound_text(msg)
+    text = _inbound_text(event)
     message, created = WhatsAppMessage.objects.get_or_create(
-        wamid=wamid,
+        provider_message_id=message_id,
         defaults={
             "direction": MessageDirection.INBOUND,
             "phone": phone[:20],
-            "message_type": (msg.get("type") or "")[:20],
+            "message_type": (event.get("type") or "")[:20],
             "text": text,
             "status": MessageStatus.RECEIVED,
-            "response_payload": msg,
+            "response_payload": event,
         },
     )
     if created and text.strip().upper() in OPT_OUT_KEYWORDS:
@@ -437,20 +448,13 @@ def handle_inbound_message(msg: dict[str, Any]) -> Optional[WhatsAppMessage]:
 
 
 def process_webhook_payload(payload: dict[str, Any]) -> dict[str, int]:
-    """Walk Meta's webhook envelope. Returns counts (handy for logs / tests)."""
+    """Dispatch one Gupshup webhook envelope. Returns counts (handy for logs / tests)."""
     counts = {"statuses": 0, "messages": 0}
-    if payload.get("object") != "whatsapp_business_account":
-        return counts
-
-    for entry in payload.get("entry") or []:
-        for change in entry.get("changes") or []:
-            if change.get("field") != "messages":
-                continue
-            value = change.get("value") or {}
-            for status in value.get("statuses") or []:
-                if handle_status_update(status):
-                    counts["statuses"] += 1
-            for msg in value.get("messages") or []:
-                if handle_inbound_message(msg):
-                    counts["messages"] += 1
+    event_type = payload.get("type")
+    if event_type == "message-event":
+        if handle_status_update(payload):
+            counts["statuses"] += 1
+    elif event_type == "message":
+        if handle_inbound_message(payload.get("payload") or {}):
+            counts["messages"] += 1
     return counts

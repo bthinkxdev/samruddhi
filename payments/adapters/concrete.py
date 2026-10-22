@@ -356,16 +356,4 @@ class RazorpayAdapter(PaymentGatewayAdapter):
 
 class RazorpayUPIAdapter(RazorpayAdapter):
     key = "razorpay_upi"
-    display_name = "UPI"
-
-class RazorpayCardAdapter(RazorpayAdapter):
-    key = "razorpay_card"
-    display_name = "Credit/Debit Card"
-
-class RazorpayNetbankingAdapter(RazorpayAdapter):
-    key = "razorpay_netbanking"
-    display_name = "Net Banking"
-
-class RazorpayWalletAdapter(RazorpayAdapter):
-    key = "razorpay_wallet"
-    display_name = "Wallet"
+    display_name = "Online Payment"
