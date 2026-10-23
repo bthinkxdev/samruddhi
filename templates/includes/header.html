@@ -102,7 +102,7 @@
 
         <div class="jm-search__field">
           <input type="search" id="site-search-input" name="q" class="jm-search__input"
-            placeholder="{% trans 'Search gym wear, activewear, brands...' %}"
+            placeholder="{% trans 'Search jewellery, bangles, earrings...' %}"
             hx-get="{% url 'catalog:search-suggest' %}" hx-trigger="keyup changed delay:300ms, search"
             hx-target="#search-suggestions" hx-indicator="#search-suggestions-indicator" hx-swap="innerHTML"
             autocomplete="off" spellcheck="false" role="combobox" aria-controls="search-suggestions"
@@ -246,7 +246,7 @@
           <path d="M21 21l-3.6-3.6" />
         </svg>
         <input type="search" id="mobile-search-input" name="q" class="mobile-search__input"
-          placeholder="{% trans 'Search gym wear, activewear...' %}" hx-get="{% url 'catalog:search-suggest' %}"
+          placeholder="{% trans 'Search jewellery, bangles, earrings...' %}" hx-get="{% url 'catalog:search-suggest' %}"
           hx-trigger="keyup changed delay:250ms, search" hx-target="#mobile-search-results" hx-swap="innerHTML"
           autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="{% trans 'Search' %}"
           aria-controls="mobile-search-results">

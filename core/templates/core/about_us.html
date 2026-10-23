@@ -8,7 +8,7 @@
   <h1 class="section-title mb-4">{% trans "About Us" %}</h1>
 
   <div class="card p-4">
-    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings premium gym wear and activewear to customers.{% endblocktrans %}</p>
+    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings beautifully crafted traditional and contemporary jewellery to customers.{% endblocktrans %}</p>
     <p class="mb-0">{% trans "Have questions about who we are? Reach out any time — our team is here to help." %}
       <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
     </p>
