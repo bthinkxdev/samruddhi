@@ -4,7 +4,7 @@
     <div class="jm-newsletter__card">
       <div class="jm-newsletter__copy">
         <h2 class="section-title">{% if section_context.title %}{{ section_context.title }}{% else %}{% trans "Stay Informed" %}{% endif %}</h2>
-        <p class="section-subtitle mb-0">{% if section_context.subtitle %}{{ section_context.subtitle }}{% else %}{% trans "Latest product drops, styling tips, and exclusive activewear offers — no spam." %}{% endif %}</p>
+        <p class="section-subtitle mb-0">{% if section_context.subtitle %}{{ section_context.subtitle }}{% else %}{% trans "New arrivals, styling tips and exclusive jewellery offers — no spam." %}{% endif %}</p>
       </div>
       <form id="jm-newsletter-form" class="jm-newsletter__form" method="post" action="{% url 'marketing:newsletter-subscribe' %}" novalidate>
         {% csrf_token %}

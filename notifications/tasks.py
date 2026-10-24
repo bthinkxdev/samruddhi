@@ -59,7 +59,7 @@ def dispatch_order_status_notification(
         "picked_up": f"Your package ({order.order_number}) has been picked up by Delhivery.",
         "in_transit": f"Your shipment ({order.order_number}) is on the way.",
         "out_for_delivery": f"Your order ({order.order_number}) is out for delivery today! Please make sure someone is available to receive it.",
-        "delivered": f"Your order ({order.order_number}) has been delivered successfully! We hope you love your new equipment. (You can now leave a review in your dashboard!).",
+        "delivered": f"Your order ({order.order_number}) has been delivered successfully! We hope you love your new jewellery. (You can now leave a review in your dashboard!).",
         "cancelled": f"Your order ({order.order_number}) has been cancelled.",
         "refunded": f"Your order ({order.order_number}) has been refunded."
     }

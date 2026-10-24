@@ -4922,12 +4922,18 @@ button.jm-product-card__atc--in-cart:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0;
   font-size: 0.875rem;
   line-height: 1.45;
   color: var(--jm-slate, #5C5C5C);
+}
+
+.jm-locations__branches li:not(:last-child)::after {
+  content: "\00B7";
+  margin: 0 0.5rem;
+  color: var(--jm-muted, #8A8A8A);
 }
 
 .jm-locations--compact {
