@@ -45,8 +45,6 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
 
     if occasion_id := request.GET.get("occasion"):
         filters["occasion_id"] = int(occasion_id)
-    if brand_id := request.GET.get("brand"):
-        filters["brand_id"] = int(brand_id)
     if recipient_id := request.GET.get("recipient"):
         filters["recipient_id"] = int(recipient_id)
     if color := request.GET.get("color"):
@@ -152,7 +150,6 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
             "filters": filters,
             "sort": sort,
             "collections": filter_options["collections"],
-            "brands": filter_options["brands"],
             "labels": filter_options["labels"],
             "subcollections": subcollections,
             "chip_parent": chip_parent if subcollections else None,
@@ -292,7 +289,6 @@ def search_suggestions_view(request: HttpRequest) -> HttpResponse:
             "catalog/partials/search_suggestions.html",
             {
                 "products": [],
-                "brands": [],
                 "collections": [],
                 "query": "",
             },
@@ -302,7 +298,6 @@ def search_suggestions_view(request: HttpRequest) -> HttpResponse:
     suggestions = get_search_suggestions(query=query)
     context = {
         "products": suggestions.get("products", []),
-        "brands": suggestions.get("brands", []),
         "collections": suggestions.get("collections", []),
         "query": query,
     }
@@ -364,7 +359,6 @@ def rental_list_view(request: HttpRequest) -> HttpResponse:
     from catalog.selectors import _primary_image_prefetch, PLP_CARD_FIELDS
     products = (
         Product.objects.filter(is_active=True, is_rental=True, show_rental_storefront=True)
-        .select_related("brand")
         .prefetch_related(_primary_image_prefetch())
         .only(*PLP_CARD_FIELDS)
     )

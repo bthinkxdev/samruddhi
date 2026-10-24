@@ -69,6 +69,30 @@
         </button>
       </form>
     </div>
+
+    {% if request.resolver_match.url_name == 'homepage' %}
+    <div class="jm-product-card__fab {% if eff_stock > 0 and cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}">
+      <button type="button" class="jm-product-card__icon-btn jm-product-card__icon-btn--cart" data-jm-add-to-cart
+        {% if eff_stock <= 0 %}disabled{% endif %}
+        aria-label="{% if eff_stock > 0 %}{% trans 'Add to Cart' %}{% else %}{% trans 'Unavailable' %}{% endif %}"
+        title="{% if eff_stock > 0 %}{% trans 'Add to Cart' %}{% else %}{% trans 'Unavailable' %}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="9" cy="21" r="1" />
+          <circle cx="20" cy="21" r="1" />
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+      </button>
+    </div>
+    {% if eff_stock > 0 and cart_product_ids and product.pk in cart_product_ids %}
+    <a href="{% url 'cart:page' %}"
+      class="jm-product-card__fab jm-product-card__icon-btn jm-product-card__icon-btn--cart jm-dynamic-view-cart"
+      aria-label="{% trans 'View Cart' %}" title="{% trans 'View Cart' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    </a>
+    {% endif %}
+    {% endif %}
   </div>
 
   <div class="card-body jm-product-card__body d-flex flex-column">

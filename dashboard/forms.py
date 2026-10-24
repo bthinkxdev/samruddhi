@@ -12,7 +12,6 @@ from django.utils.text import slugify
 
 from accounts.models import CustomerProfile
 from catalog.models import (
-    Brand,
     Collection,
     Label,
     Product,
@@ -24,7 +23,7 @@ from catalog.models import (
 )
 from cms.services import next_homepage_section_order
 from dashboard.uploads import RetainUploadsMixin
-from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
+from cms.models import AnnouncementBarItem, BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
 from core.models import SiteSettings, Currency
 
 from marketing.models import Coupon, FlashSale, NewsletterSubscriber
@@ -134,7 +133,6 @@ class ProductForm(RetainUploadsMixin, SlugAutoMixin):
             "slug",
             "sku",
             "collections",
-            "brand",
             "size_chart",
             "base_price",
             "mrp",
@@ -287,16 +285,6 @@ class LabelForm(SlugAutoMixin):
             "background_color": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
             "text_color": forms.TextInput(attrs={"type": "color", "class": "form-control-color"}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["slug"].required = False
-
-
-class BrandForm(SlugAutoMixin):
-    class Meta:
-        model = Brand
-        fields = ["name", "slug", "logo", "is_featured"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -642,12 +630,6 @@ class HomepageSectionForm(forms.ModelForm):
         max_length=80, required=False, label="Email box placeholder",
         help_text='Hint shown inside the email box, e.g. "Your email address".',
     )
-    featured_brand_ids = forms.ModelMultipleChoiceField(
-        queryset=None, required=False, widget=forms.CheckboxSelectMultiple,
-        label="Brands to show",
-        help_text="Tick the brands to show. Leave all unticked to show every brand marked Featured.",
-    )
-
     class Meta:
         model = HomepageSection
         fields = ["section_type", "title", "is_active", "config"]
@@ -655,7 +637,6 @@ class HomepageSectionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from catalog.models import Brand
         from cms.homepage_forms import BannerConfigForm, get_section_config_form
 
         self.fields["config"].required = False
@@ -680,10 +661,6 @@ class HomepageSectionForm(forms.ModelForm):
         if saved_type == "newsletter":
             self.fields["newsletter_subtitle"].initial = config.get("subtitle", "")
             self.fields["newsletter_placeholder"].initial = config.get("placeholder", "")
-        self.fields["featured_brand_ids"].queryset = Brand.objects.filter(is_featured=True).order_by("name")
-        if saved_type == "featured_brands":
-            self.fields["featured_brand_ids"].initial = config.get("brand_ids") or []
-
         self.card_errors: dict[str, list[str]] = {}
         self._pending_card_uploads: dict[str, object] = {}
         self._saved_cards = config.get("cards", []) if saved_type == "marketing_features" else []
@@ -805,8 +782,6 @@ class HomepageSectionForm(forms.ModelForm):
                 "subtitle": (cleaned.get("newsletter_subtitle") or "").strip(),
                 "placeholder": (cleaned.get("newsletter_placeholder") or "").strip(),
             }
-        elif section_type == "featured_brands":
-            config = {"brand_ids": [b.pk for b in cleaned.get("featured_brand_ids") or []]}
         elif section_type in ("hero_slider", "shop_by_collection", "collection_products"):
             #content comes from Hero Slides / Collections; keep any legacy data untouched
             config = previous if self.instance.pk and self.instance.section_type == section_type else {}
@@ -929,6 +904,12 @@ class FAQItemForm(forms.ModelForm):
         model = FAQItem
         fields = ["question", "answer", "display_order", "is_published", "publish_at"]
         widgets = {"publish_at": _DATETIME}
+
+
+class AnnouncementBarItemForm(forms.ModelForm):
+    class Meta:
+        model = AnnouncementBarItem
+        fields = ["text", "icon", "display_order", "is_active"]
 
 
 class WhatsAppTemplateForm(forms.ModelForm):

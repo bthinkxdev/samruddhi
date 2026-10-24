@@ -1,9 +1,0 @@
-{% load i18n %}<li class="jm-brand"{% if is_clone %} aria-hidden="true"{% endif %}>
-  <a href="{% url 'catalog:plp' %}?brand={{ brand.pk }}" class="jm-brand__link{% if brand.logo %} jm-brand__link--logo{% endif %}"{% if is_clone %} tabindex="-1"{% else %} aria-label="{% blocktrans with name=brand.name %}Shop {{ name }}{% endblocktrans %}"{% endif %}>
-    {% if brand.logo %}
-    <img class="jm-brand__logo" src="{{ brand.logo.url }}" alt="{{ brand.name }}" loading="lazy" decoding="async">
-    {% else %}
-    <span class="jm-brand__fallback">{{ brand.name }}</span>
-    {% endif %}
-  </a>
-</li>

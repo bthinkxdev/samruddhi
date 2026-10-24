@@ -35,7 +35,6 @@ PLP_CARD_FIELDS: tuple[str, ...] = (
     "color",
     "stock_quantity",
     "low_stock_threshold",
-    "brand_id",
 )
 
 HOMEPAGE_RAIL_LIMIT = 12
@@ -132,7 +131,6 @@ def get_collection_products(*, collection: Collection, limit: int | None = None)
     qs = (
         Product.objects.filter(is_active=True)
         .filter(products_in_collections(get_collection_family_ids(collection_id=collection.pk)))
-        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
@@ -220,8 +218,6 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(
             products_in_collections(get_collection_family_ids(collection_id=collection_id))
         )
-    if brand_id := filters.get("brand_id"):
-        queryset = queryset.filter(brand_id=brand_id)
     if color := filters.get("color"):
         queryset = queryset.filter(color__iexact=color)
     if label_slug := filters.get("label"):
@@ -293,7 +289,6 @@ def get_plp_products(
     filters = filters or {}
     queryset = (
         Product.objects.filter(is_active=True)
-        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
@@ -347,7 +342,7 @@ def get_plp_products(
 
 def get_product_detail(*, slug: str) -> Optional[Product]:
     """
-    1) product + select_related(brand), collections prefetch
+    1) product, collections prefetch
     2) variants prefetch
     3) images prefetch (ordered)
     4) videos prefetch
@@ -375,10 +370,7 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
         queryset=ProductRelation.objects.filter(
             relation_type=RelationType.RELATED,
         )
-        .select_related(
-            "related_product",
-            "related_product__brand",
-        )
+        .select_related("related_product")
         .prefetch_related(
             Prefetch(
                 "related_product__images",
@@ -393,10 +385,7 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
         queryset=ProductRelation.objects.filter(
             relation_type=RelationType.FREQUENTLY_BOUGHT_TOGETHER,
         )
-        .select_related(
-            "related_product",
-            "related_product__brand",
-        )
+        .select_related("related_product")
         .prefetch_related(
             Prefetch(
                 "related_product__images",
@@ -409,7 +398,6 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
 
     return (
         Product.objects.filter(is_active=True, slug=slug)
-        .select_related("brand")
         .prefetch_related(
             "collections",
             Prefetch(
@@ -490,7 +478,6 @@ def get_recently_viewed(
 
     products = (
         Product.objects.filter(id__in=product_ids, is_active=True)
-        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
@@ -533,16 +520,13 @@ def invalidate_collection_tree_cache() -> None:
 
 def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
     """
-    Return product, brand, and collection matches for HTMX live search.
+    Return product and collection matches for HTMX live search.
     """
     if not query or len(query.strip()) < 2:
         return {
             "products": [],
-            "brands": [],
             "collections": [],
         }
-
-    from catalog.models import Brand
 
     clean_query = query.strip()
     products = list(
@@ -551,8 +535,6 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
-    brands = list(Brand.objects.filter(name__icontains=clean_query)[:5])
-
     collections = list(
         Collection.objects.filter(is_active=True, name__icontains=clean_query)
         .filter(collections_with_products_q())[:5]
@@ -560,7 +542,6 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
 
     return {
         "products": products,
-        "brands": brands,
         "collections": collections,
     }
 
@@ -574,21 +555,11 @@ def get_root_collections() -> list:
     )
 
 
-def get_featured_brands(*, brand_ids: list[int] | None = None) -> list:
-    """Return featured brands for homepage brand rail."""
-    from catalog.models import Brand
-
-    qs = Brand.objects.filter(is_featured=True).order_by("name")
-    if brand_ids:
-        qs = qs.filter(pk__in=brand_ids)
-    return list(qs)
-
-
 def get_products_for_section_config(*, config: dict) -> list[Product]:
     """
     Return products for collection sections driven by CMS config JSON.
 
-    Config keys: product_ids, collection_id, brand_id, recipient_id, min_price,
+    Config keys: product_ids, collection_id, recipient_id, min_price,
     limit, flags (model booleans).
     Query guarantee: 1 SELECT + 1 primary-image prefetch.
     """
@@ -597,8 +568,6 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
         qs = qs.filter(pk__in=product_ids)
     if collection_id := config.get("collection_id"):
         qs = qs.filter(products_in_collections([collection_id]))
-    if brand_id := config.get("brand_id"):
-        qs = qs.filter(brand_id=brand_id)
     if min_price := config.get("min_price"):
         qs = qs.filter(base_price__gte=min_price)
     for flag in config.get("flags", []):
@@ -606,8 +575,7 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
             qs = qs.filter(**{flag: True})
     limit = config.get("limit", HOMEPAGE_RAIL_LIMIT)
     return list(
-        qs.select_related("brand")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
+        qs.prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
         .order_by("-created_at")[:limit]
     )
@@ -715,7 +683,6 @@ def get_plp_filter_options() -> dict:
 
     return {
         "collections": collections,
-        "brands": get_featured_brands(),
         "labels": list(Label.objects.filter(is_active=True)),
         "subcollections_map": subcollections_map,
     }
@@ -733,7 +700,6 @@ def get_product_for_cart_add(
     """
     product = (
         Product.objects.filter(pk=product_id, is_active=True)
-        .select_related("brand")
         .first()
     )
     if product is None:
@@ -763,7 +729,7 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     1) Query explicit RELATED relationships.
     2) Fallback to active products sharing a collection.
     3) Fallback to active products in general.
-    Optimized with select_related for brand, and prefetches primary images.
+    Prefetches primary images for the returned products.
     """
     #explicit related products
     explicit_ids = list(
@@ -775,7 +741,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     
     products = list(
         Product.objects.filter(pk__in=explicit_ids, is_active=True)
-        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
@@ -788,7 +753,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         collection_products = (
             Product.objects.filter(products_in_collections(collection_ids), is_active=True)
             .exclude(pk__in=exclude_ids)
-            .select_related("brand")
             .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
             .only(*PLP_CARD_FIELDS)[:needed]
         )
@@ -801,7 +765,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         fallback_products = (
             Product.objects.filter(is_active=True)
             .exclude(pk__in=exclude_ids)
-            .select_related("brand")
             .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
             .only(*PLP_CARD_FIELDS)[:needed]
         )

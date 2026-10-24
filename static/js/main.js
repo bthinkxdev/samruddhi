@@ -574,35 +574,6 @@
   });
 })();
 
-// Featured brands rail: arrow scrolling + auto-hide disabled state
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.brand-rail').forEach((rail) => {
-    const track = rail.querySelector('[data-brand-track]');
-    const prevBtn = rail.querySelector('[data-brand-scroll="prev"]');
-    const nextBtn = rail.querySelector('[data-brand-scroll="next"]');
-    if (!track || !prevBtn || !nextBtn) return;
-
-    const scrollByCard = (dir) => {
-      const card = track.querySelector('.brand-card');
-      const gap = 20;
-      const distance = card ? card.offsetWidth + gap : 220;
-      track.scrollBy({ left: dir * distance * 2, behavior: 'smooth' });
-    };
-
-    prevBtn.addEventListener('click', () => scrollByCard(-1));
-    nextBtn.addEventListener('click', () => scrollByCard(1));
-
-    const updateArrowState = () => {
-      const maxScroll = track.scrollWidth - track.clientWidth - 1;
-      prevBtn.disabled = track.scrollLeft <= 0;
-      nextBtn.disabled = track.scrollLeft >= maxScroll || maxScroll <= 0;
-    };
-
-    track.addEventListener('scroll', updateArrowState, { passive: true });
-    window.addEventListener('resize', updateArrowState);
-    updateArrowState();
-  });
-});
 /* Desert Star: product rail arrows, quick view, wishlist, search category */
 (function () {
   'use strict';
@@ -1036,6 +1007,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (atcBtn) {
       event.preventDefault();
       event.stopPropagation();
+      atcBtn.classList.remove('jm-btn-press');
+      // eslint-disable-next-line no-unused-expressions
+      void atcBtn.offsetWidth; // restart the animation if clicked again quickly
+      atcBtn.classList.add('jm-btn-press');
       var card = atcBtn.closest('.jm-product-card');
       if (card) openAddToCartModal(card);
     }
@@ -1166,23 +1141,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) { }
 
-    if (variantsData.length <= 1) {
-      var selectedVid = variantsData.length === 1 ? String(variantsData[0].id) : (card.dataset.variantId || '');
-      var form = document.getElementById('jm-atc-cart');
-      if (form && window.htmx) {
-        var pidInput = document.getElementById('jm-atc-product-id');
-        var vidInput = document.getElementById('jm-atc-variant-id');
-        var qtyInput = document.getElementById('jm-atc-qty');
-        
-        if (pidInput) pidInput.value = card.dataset.productId || '';
-        if (vidInput) vidInput.value = selectedVid;
-        if (qtyInput) qtyInput.value = '1';
-        
-        htmx.trigger(form, 'submit');
-      }
-      return;
-    }
-
     var title = document.getElementById('jmAddToCartTitle');
     var pName = document.getElementById('jm-atc-product-name');
     var price = document.getElementById('jm-atc-price');
@@ -1237,10 +1195,13 @@ document.addEventListener('DOMContentLoaded', () => {
     var selectedVid = card.dataset.variantId || '';
 
     if (variantsWrap && variantsGroup) {
-      if (!variantsData || !variantsData.length) {
+      if (!variantsData || variantsData.length <= 1) {
+        if (variantsData && variantsData.length === 1) {
+          selectedVid = String(variantsData[0].id);
+        }
         variantsWrap.classList.add('d-none');
         variantsGroup.innerHTML = '';
-        if (title) title.textContent = 'Select quantity';
+        if (title) title.textContent = 'Add to Cart';
         if (variantId) variantId.value = selectedVid;
         updateAtcState(productId ? productId.value : '', selectedVid, card);
       } else {
@@ -1348,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       if (variantId) variantId.value = selectedVid;
-      if (title) title.textContent = 'Select quantity';
+      if (title) title.textContent = 'Add to Cart';
       updateAtcState(productId ? productId.value : '', selectedVid, card);
     }
 
@@ -1425,7 +1386,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.jm-product-card[data-product-id="' + productId + '"]').forEach(function (card) {
       var fullyInCart = isCardFullyInCart(card, inCart);
       card.dataset.inCart = fullyInCart ? 'true' : 'false';
-      var form = card.querySelector('.jm-product-card__cart');
+      // homepage uses the icon FAB (.jm-product-card__fab); PLP/PDP use the full button (.jm-product-card__cart)
+      var fab = card.querySelector('.jm-product-card__fab');
+      var form = fab || card.querySelector('.jm-product-card__cart');
       var viewCartLink = card.querySelector('.jm-dynamic-view-cart');
 
       if (fullyInCart) {
@@ -1434,10 +1397,18 @@ document.addEventListener('DOMContentLoaded', () => {
           var cartUrl = '/cart/';
           var existingLink = document.querySelector('a[href*="/cart/"]');
           if (existingLink) cartUrl = existingLink.getAttribute('href');
-
           newLink.href = cartUrl;
-          newLink.className = 'btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart';
-          newLink.innerHTML = '<span>View Cart</span>';
+
+          if (fab) {
+            newLink.className = 'jm-product-card__fab jm-product-card__icon-btn jm-product-card__icon-btn--cart jm-dynamic-view-cart';
+            newLink.setAttribute('aria-label', 'View Cart');
+            newLink.setAttribute('title', 'View Cart');
+            newLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+          } else {
+            newLink.className = 'btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart';
+            newLink.innerHTML = '<span>View Cart</span>';
+          }
+          newLink.classList.add('jm-pop-in');
 
           form.classList.add('d-none');
           if (viewCartLink) viewCartLink.replaceWith(newLink);
@@ -1486,7 +1457,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lastSync = 0;
     syncCartStatus();
+
+    // Success animation on the Add to Cart modal's submit button, then close.
+    var atcModalEl = document.getElementById('jmAddToCartModal');
+    if (atcModalEl && atcModalEl.classList.contains('show')) {
+      var addBtn = document.getElementById('jm-atc-add-btn');
+      if (addBtn && !addBtn.classList.contains('is-success')) {
+        addBtn.disabled = true;
+        addBtn.classList.add('is-success');
+        addBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="jm-atc-check"><path d="M20 6L9 17l-5-5"/></svg> Added!';
+      }
+      setTimeout(function () {
+        if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(atcModalEl).hide();
+      }, 650);
+    }
   });
+
+  (function () {
+    var atcModalEl = document.getElementById('jmAddToCartModal');
+    if (!atcModalEl) return;
+    atcModalEl.addEventListener('hidden.bs.modal', function () {
+      var addBtn = document.getElementById('jm-atc-add-btn');
+      if (addBtn) {
+        addBtn.disabled = false;
+        addBtn.classList.remove('is-success');
+        addBtn.innerHTML = 'Add';
+      }
+    });
+  })();
 
   document.body.addEventListener('cartItemRemoved', function (event) {
     var pid = (event.detail && event.detail.product_id) ? String(event.detail.product_id) : '';
@@ -1682,10 +1681,82 @@ document.addEventListener('DOMContentLoaded', () => {
     start();
   }
 
+  function initNavDropdowns() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) return;
+    var canHover = window.matchMedia('(hover: hover) and (min-width: 992px)').matches;
+    var instances = [];
+
+    document.querySelectorAll('.jm-nav__dropdown').forEach(function (item) {
+      var toggle = item.querySelector('[data-bs-toggle="dropdown"]');
+      var menu = item.querySelector('.jm-nav__menu');
+      if (!toggle || !menu) return;
+      var dropdown = bootstrap.Dropdown.getOrCreateInstance(toggle);
+      instances.push({ item: item, toggle: toggle, menu: menu, dropdown: dropdown });
+
+      // .jm-nav clips overflow (for its edge fade-mask), which also clips a
+      // position:fixed Popper menu nested inside it — so while the dropdown
+      // is open, move the menu to <body> (outside the clipping ancestor) and
+      // put it back once closed.
+      toggle.addEventListener('show.bs.dropdown', function () {
+        document.body.appendChild(menu);
+        menu.classList.remove('jm-nav__menu--ready');
+      });
+      // Popper positions the menu asynchronously; reveal it only once that's
+      // done so it never flashes at its unpositioned (top-left) default spot.
+      toggle.addEventListener('shown.bs.dropdown', function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            menu.classList.add('jm-nav__menu--ready');
+          });
+        });
+      });
+      toggle.addEventListener('hidden.bs.dropdown', function () {
+        menu.classList.remove('jm-nav__menu--ready');
+        item.appendChild(menu);
+      });
+    });
+
+    if (!canHover) return;
+
+    var closeTimer = null;
+    function cancelClose() {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    }
+
+    instances.forEach(function (rec) {
+      function scheduleClose() {
+        cancelClose();
+        closeTimer = setTimeout(function () { rec.dropdown.hide(); }, 150);
+      }
+      function openThis() {
+        cancelClose();
+        // Only one nav dropdown open at a time — close any sibling instantly.
+        instances.forEach(function (other) {
+          if (other !== rec && other.toggle.classList.contains('show')) {
+            other.dropdown.hide();
+          }
+        });
+        rec.dropdown.show();
+        // show() focuses the toggle for keyboard users; a mouse-triggered
+        // open shouldn't leave a focus ring behind.
+        rec.toggle.blur();
+      }
+
+      rec.item.addEventListener('mouseenter', openThis);
+      rec.item.addEventListener('mouseleave', scheduleClose);
+      rec.menu.addEventListener('mouseenter', cancelClose);
+      rec.menu.addEventListener('mouseleave', scheduleClose);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     syncHeaderStickyOffset();
     initHeaderScrollHide();
     initTrustAutoSlide(document);
+    initNavDropdowns();
   });
 
   window.addEventListener('resize', syncHeaderStickyOffset);

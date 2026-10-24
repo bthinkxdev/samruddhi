@@ -88,14 +88,6 @@ urlpatterns += _crud(
 )
 
 urlpatterns += _crud(
-    "brand",
-    catalog.BrandListView,
-    catalog.BrandCreateView,
-    catalog.BrandUpdateView,
-    catalog.BrandDeleteView,
-)
-
-urlpatterns += _crud(
     "sizechart",
     catalog.SizeChartListView,
     catalog.SizeChartCreateView,
@@ -180,6 +172,13 @@ urlpatterns += _crud(
     cms.PolicyDocumentCreateView,
     cms.PolicyDocumentUpdateView,
     cms.PolicyDocumentDeleteView,
+)
+urlpatterns += _crud(
+    "announcement",
+    cms.AnnouncementBarItemListView,
+    cms.AnnouncementBarItemCreateView,
+    cms.AnnouncementBarItemUpdateView,
+    cms.AnnouncementBarItemDeleteView,
 )
 
 

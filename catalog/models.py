@@ -145,40 +145,6 @@ class Label(TimeStampedModel):
         return self.name
 
 
-class Brand(TimeStampedModel):
-    """Product brand for filtering and brand pages."""
-
-    name = models.CharField(max_length=120, verbose_name="Name")
-    slug = models.SlugField(
-        max_length=120,
-        unique=True,
-        db_index=True,
-        verbose_name="Slug",
-    )
-    logo = models.ImageField(
-        upload_to="brands/logos/",
-        blank=True,
-        verbose_name="Logo",
-    )
-    is_featured = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name="Is featured",
-        help_text="Featured brands appear on the homepage.",
-    )
-
-    class Meta:
-        verbose_name = "Brand"
-        verbose_name_plural = "Brands"
-        indexes = [
-            models.Index(fields=["is_featured"], name="cat_brand_is_featured_idx"),
-        ]
-
-    def __str__(self) -> str:
-        return self.name
-
-
-
 class SizeChart(TimeStampedModel):
     """Reusable size chart that can be assigned to multiple products."""
 
@@ -270,14 +236,6 @@ class Product(TimeStampedModel):
         blank=True,
         related_name="products",
         verbose_name="Collections",
-    )
-    brand = models.ForeignKey(
-        Brand,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="products",
-        verbose_name="Brand",
     )
     size_chart = models.ForeignKey(
         SizeChart,

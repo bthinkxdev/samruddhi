@@ -1,5 +1,5 @@
 {% load i18n static %}
-{% if products or brands or collections %}
+{% if products or collections %}
 <div class="search-suggestions-container" role="presentation">
   
   {# products #}
@@ -25,38 +25,7 @@
           {% endwith %}
           <div class="text-truncate flex-grow-1">
             <span class="fw-medium text-dark d-block text-truncate">{{ product.name }}</span>
-            {% if product.brand %}
-              <span class="text-muted d-block text-truncate" style="font-size: 0.75rem; margin-top: 1px;">{{ product.brand.name }}</span>
-            {% endif %}
           </div>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-
-  {# brands #}
-  {% if brands %}
-  <div class="search-suggestions-section mt-2">
-    <ul class="list-unstyled mb-0" role="presentation">
-      {% for brand in brands %}
-      <li role="presentation">
-        <a href="{% url 'catalog:plp' %}?brand={{ brand.id }}"
-           class="search-suggestion-link d-flex align-items-center px-3 py-2 rounded text-dark text-decoration-none transition-all"
-           role="option"
-           id="search-suggestion-brand-{{ forloop.counter }}"
-           style="gap: 12px; font-size: 0.875rem;">
-          <div class="rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 30px; height: 30px; flex-shrink: 0; border: 1px solid var(--theme-border-light);">
-            {% if brand.logo %}
-              <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" class="rounded bg-light" style="width: 28px; height: 28px; object-fit: contain;">
-            {% else %}
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.125 1.125 0 001.592 0l4.318-4.318a1.125 1.125 0 000-1.592l-9.58-9.581a1.125 1.125 0 00-1.591-.659zm0 0L3 9.57" />
-              </svg>
-            {% endif %}
-          </div>
-          <span class="fw-medium text-dark text-truncate">{{ brand.name }}</span>
         </a>
       </li>
       {% endfor %}

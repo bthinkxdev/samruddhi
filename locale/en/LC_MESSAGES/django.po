@@ -30,9 +30,6 @@ msgstr "Shop by Occasion"
 msgid "Shop by Category"
 msgstr "Shop by Category"
 
-msgid "Featured Brands"
-msgstr "Featured Brands"
-
 msgid "Customer Reviews"
 msgstr "Customer Reviews"
 

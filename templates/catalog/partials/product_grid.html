@@ -1,7 +1,7 @@
 {% load i18n catalog_tags %}
-<div class="row g-3 product-grid-inner">
+<div class="row g-0 product-grid-inner">
   {% for product in plp.results %}
-  <div class="col-6 col-md-4 col-lg-3 product-grid-item">
+  <div class="col-6 col-md-4 col-lg-3 product-grid-item jm-product-col">
     {% include "catalog/partials/product_card.html" with product=product %}
   </div>
   {% empty %}

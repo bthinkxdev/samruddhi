@@ -7,7 +7,7 @@ import json
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_POST
 
-from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
+from cms.models import AnnouncementBarItem, BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
 from cms.services import reorder_homepage_sections
 from dashboard import forms
 from dashboard.access import dashboard_required
@@ -219,6 +219,48 @@ class FAQItemDeleteView(DashboardDeleteView):
     nav_section = "faqs"
     url_basename = "faq"
     singular_name = "FAQ"
+
+
+class AnnouncementBarItemListView(DashboardListView):
+    model = AnnouncementBarItem
+    name_object_in_messages = False
+    nav_section = "announcements"
+    url_basename = "announcement"
+    singular_name = "Announcement"
+    plural_name = "Announcement Bar Items"
+    search_fields = ["text"]
+    columns = [
+        {"label": "Text", "name": "text"},
+        {"label": "Icon", "name": "icon"},
+        {"label": "Order", "name": "display_order"},
+        {"label": "Active", "name": "is_active", "type": "bool"},
+    ]
+
+
+class AnnouncementBarItemCreateView(DashboardCreateView):
+    model = AnnouncementBarItem
+    name_object_in_messages = False
+    form_class = forms.AnnouncementBarItemForm
+    nav_section = "announcements"
+    url_basename = "announcement"
+    singular_name = "Announcement"
+
+
+class AnnouncementBarItemUpdateView(DashboardUpdateView):
+    model = AnnouncementBarItem
+    name_object_in_messages = False
+    form_class = forms.AnnouncementBarItemForm
+    nav_section = "announcements"
+    url_basename = "announcement"
+    singular_name = "Announcement"
+
+
+class AnnouncementBarItemDeleteView(DashboardDeleteView):
+    model = AnnouncementBarItem
+    name_object_in_messages = False
+    nav_section = "announcements"
+    url_basename = "announcement"
+    singular_name = "Announcement"
 
 
 class PolicyDocumentListView(DashboardListView):

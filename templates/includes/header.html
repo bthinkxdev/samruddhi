@@ -1,26 +1,27 @@
 {% load i18n static %}
 <header class="site-header jm-header sticky-top">
+  {% if announcement_items %}
   <div class="jm-topbar d-block">
     <div class="container jm-topbar__inner">
       <div class="jm-topbar__trust">
+        {% for item in announcement_items %}
         <span class="jm-topbar__item">
+          {% if item.icon == "lightning" %}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
           </svg>
-          {% trans "Fast & Secure Delivery" %}
-        </span>
-        <span class="jm-topbar__item">
+          {% elif item.icon == "shield" %}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
-          {% trans "Quality Assured Products" %}
-        </span>
-        <span class="jm-topbar__item">
+          {% elif item.icon == "star" %}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
-          {% trans "Crafted for Everyday Style" %}
+          {% endif %}
+          {{ item.text }}
         </span>
+        {% endfor %}
       </div>
       <div class="jm-topbar__meta">
         {% if site_settings.whatsapp_number %}
@@ -36,11 +37,12 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   <div class="jm-header__main">
     <div class="container jm-header__main-inner">
       <div class="jm-header__start">
-        <button class="jm-menu-toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#jmMainNav"
+        <button class="jm-menu-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#jmMainNav"
           aria-controls="jmMainNav" aria-expanded="false" aria-label="{% trans 'Menu' %}">
           <svg class="jm-menu-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
             stroke-linecap="round" aria-hidden="true">
@@ -51,8 +53,7 @@
         <a class="jm-logo" href="{% url 'cms:homepage' %}" aria-label="{{ site_settings.site_name }}">
           <img
             src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}"
-            alt="" width="40" height="40" class="jm-logo__mark">
-          <span class="jm-logo__text">{{ site_settings.site_name }}</span>
+            alt="" width="56" height="56" class="jm-logo__mark">
         </a>
       </div>
 
@@ -60,7 +61,7 @@
         <ul class="jm-nav__links">
           {# Keep in sync with the mobile menu (#jmMainNav) below: Home, Shop All, collections, About Us, Contact Us #}
           <li><a
-              class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref != 'brands' %}is-active{% endif %}"
+              class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' %}is-active{% endif %}"
               href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
           <li><a
               class="jm-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
@@ -102,7 +103,7 @@
 
         <div class="jm-search__field">
           <input type="search" id="site-search-input" name="q" class="jm-search__input"
-            placeholder="{% trans 'Search gym wear, activewear, brands...' %}"
+            placeholder="{% trans 'Search necklaces, earrings, bangles...' %}"
             hx-get="{% url 'catalog:search-suggest' %}" hx-trigger="keyup changed delay:300ms, search"
             hx-target="#search-suggestions" hx-indicator="#search-suggestions-indicator" hx-swap="innerHTML"
             autocomplete="off" spellcheck="false" role="combobox" aria-controls="search-suggestions"
@@ -200,9 +201,20 @@
 
   </div>
 
-  <div class="collapse d-lg-none" id="jmMainNav">
-    <div class="jm-mobile-nav container">
-      <a class="{% if request.resolver_match.url_name == 'homepage' and request.GET.ref != 'brands' %}is-active{% endif %}"
+</header>
+
+<div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="jmMainNav" aria-labelledby="jmMainNavLabel">
+  <div class="offcanvas-header">
+    <a class="jm-logo" href="{% url 'cms:homepage' %}" aria-label="{{ site_settings.site_name }}" id="jmMainNavLabel">
+      <img
+        src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}"
+        alt="" width="44" height="44" class="jm-logo__mark">
+    </a>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="jm-mobile-nav">
+      <a class="{% if request.resolver_match.url_name == 'homepage' %}is-active{% endif %}"
         href="{% url 'cms:homepage' %}">{% trans "Home" %}</a>
       <a class="{% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}" href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a>
       {% for collection in collection_tree %}
@@ -220,7 +232,7 @@
         href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a>
     </div>
   </div>
-</header>
+</div>
 
 {% with wa=site_settings.whatsapp_number %}{% if wa %}
 {% blocktrans with name=site_settings.site_name asvar enquiry_text %}Hi {{ name }}, I have an enquiry.{% endblocktrans %}
@@ -246,7 +258,7 @@
           <path d="M21 21l-3.6-3.6" />
         </svg>
         <input type="search" id="mobile-search-input" name="q" class="mobile-search__input"
-          placeholder="{% trans 'Search gym wear, activewear...' %}" hx-get="{% url 'catalog:search-suggest' %}"
+          placeholder="{% trans 'Search necklaces, earrings...' %}" hx-get="{% url 'catalog:search-suggest' %}"
           hx-trigger="keyup changed delay:250ms, search" hx-target="#mobile-search-results" hx-swap="innerHTML"
           autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="{% trans 'Search' %}"
           aria-controls="mobile-search-results">
@@ -372,7 +384,7 @@
                 aria-label="{% trans 'Increase quantity' %}">&plus;</button>
             </div>
             
-            <button type="submit" id="jm-atc-add-btn" class="btn btn-theme btn-lg flex-grow-1 fw-bold rounded-3" data-bs-dismiss="modal">{% trans "Add" %}</button>
+            <button type="submit" id="jm-atc-add-btn" class="btn btn-theme btn-lg flex-grow-1 fw-bold rounded-3">{% trans "Add" %}</button>
           </form>
           <a id="jm-atc-view-cart" href="{% url 'cart:page' %}" class="btn btn-outline-theme btn-lg w-100 fw-bold rounded-3 d-none">{% trans "View Cart" %}</a>
         </div>

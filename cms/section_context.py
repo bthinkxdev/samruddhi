@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from catalog.selectors import (
-    get_featured_brands,
     get_homepage_collections,
     get_recent_approved_reviews,
     get_root_collections,
@@ -32,7 +31,6 @@ def build_section_context(*, section: dict[str, Any]) -> dict[str, Any]:
         "shop_by_occasion": _empty,
         "shop_by_recipient": _empty,
         "shop_by_collection": _shop_by_collection,
-        "featured_brands": _featured_brands,
         "corporate_gifts_banner": _empty,
         "subscription_banner": _banner,
         "marketing_features": _marketing_features,
@@ -81,11 +79,6 @@ def _shop_by_recipient(config: dict[str, Any]) -> dict[str, Any]:
 
 def _shop_by_collection(config: dict[str, Any]) -> dict[str, Any]:
     return {"collections": get_root_collections()}
-
-
-def _featured_brands(config: dict[str, Any]) -> dict[str, Any]:
-    brand_ids = config.get("brand_ids")
-    return {"brands": get_featured_brands(brand_ids=brand_ids)}
 
 
 def _banner(config: dict[str, Any]) -> dict[str, Any]:

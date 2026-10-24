@@ -1,4 +1,4 @@
-"""Catalog management views: products, collections, brands, size charts, reviews."""
+"""Catalog management views: products, collections, size charts, reviews."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from catalog.models import Brand, Collection, Label, Product, ProductImage, Review, HomePageProduct, SizeChart
+from catalog.models import Collection, Label, Product, ProductImage, Review, HomePageProduct, SizeChart
 from catalog.selectors import get_collection_family_ids, products_in_collections
 from core.models import Currency
 from dashboard import forms
@@ -31,7 +31,7 @@ class ProductListView(DashboardListView):
     singular_name = "Product"
     plural_name = "Products"
     search_fields = ["name", "sku"]
-    select_related = ["brand", "homepage_featured"]
+    select_related = ["homepage_featured"]
     prefetch_related = ["images", "collections", "labels"]
     paginate_by = 20
 
@@ -466,44 +466,6 @@ class LabelDeleteView(DashboardDeleteView):
     nav_section = "labels"
     url_basename = "label"
     singular_name = "Label"
-
-
-class BrandListView(DashboardListView):
-    model = Brand
-    nav_section = "brands"
-    url_basename = "brand"
-    singular_name = "Brand"
-    plural_name = "Brands"
-    search_fields = ["name", "slug"]
-    filter_by_featured_status = True
-    columns = [
-        {"label": "Name", "name": "name"},
-        {"label": "Slug", "name": "slug"},
-        {"label": "Featured", "name": "is_featured", "type": "bool"},
-    ]
-
-
-class BrandCreateView(DashboardCreateView):
-    model = Brand
-    form_class = forms.BrandForm
-    nav_section = "brands"
-    url_basename = "brand"
-    singular_name = "Brand"
-
-
-class BrandUpdateView(DashboardUpdateView):
-    model = Brand
-    form_class = forms.BrandForm
-    nav_section = "brands"
-    url_basename = "brand"
-    singular_name = "Brand"
-
-
-class BrandDeleteView(DashboardDeleteView):
-    model = Brand
-    nav_section = "brands"
-    url_basename = "brand"
-    singular_name = "Brand"
 
 
 

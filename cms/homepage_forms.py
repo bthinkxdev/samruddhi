@@ -27,11 +27,6 @@ class ProductCollectionConfigForm(BaseSectionConfigForm):
         required=False,
     )
     collection_key = forms.CharField(max_length=80, required=False)
-    brand_id = forms.IntegerField(
-        required=False,
-        min_value=1,
-        help_text="Optional: limit this collection to a single brand (Brand Campaign).",
-    )
 
     def to_config(self) -> dict:
         raw = self.cleaned_data.get("product_ids", "")
@@ -39,8 +34,6 @@ class ProductCollectionConfigForm(BaseSectionConfigForm):
         config: dict = {"product_ids": ids}
         if self.cleaned_data.get("collection_key"):
             config["collection_key"] = self.cleaned_data["collection_key"]
-        if self.cleaned_data.get("brand_id"):
-            config["brand_id"] = self.cleaned_data["brand_id"]
         return config
 
 
@@ -120,7 +113,6 @@ class EmptyConfigForm(BaseSectionConfigForm):
 SECTION_CONFIG_FORMS: dict[str, type[BaseSectionConfigForm]] = {
     HomepageSectionType.HERO_SLIDER: HeroSliderConfigForm,
     HomepageSectionType.SHOP_BY_COLLECTION: EmptyConfigForm,
-    HomepageSectionType.FEATURED_BRANDS: EmptyConfigForm,
     HomepageSectionType.SUBSCRIPTION_BANNER: BannerConfigForm,
     HomepageSectionType.MARKETING_FEATURES: MarketingFeaturesConfigForm,
     HomepageSectionType.REVIEWS: EmptyConfigForm,

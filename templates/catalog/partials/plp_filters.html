@@ -30,15 +30,6 @@
     </div>
 
     <div class="mb-3">
-      <label class="form-label small">{% trans "Brand" %}</label>
-      <select name="brand" class="form-select form-select-sm">
-        <option value="">{% trans "All" %}</option>
-        {% for brand in brands %}
-        <option value="{{ brand.pk }}" {% if filters.brand_id == brand.pk %}selected{% endif %}>{{ brand.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="mb-3">
       <label class="form-label small">{% trans "Price" %}</label>
       <div class="input-group input-group-sm">
         <input type="number" name="min_price" class="form-control" placeholder="Min" value="{{ request.GET.min_price }}">

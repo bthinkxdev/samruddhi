@@ -51,12 +51,6 @@
     </li>
 
     <li>
-      <a class="nav-link {% if nav_section == 'brands' %}active{% endif %}" href="{% url 'dashboard:brand-list' %}">
-        <i class="ti ti-tag"></i><span class="nav-text">Brands</span>
-      </a>
-    </li>
-
-    <li>
       <a class="nav-link {% if nav_section == 'reviews' %}active{% endif %}" href="{% url 'dashboard:review-list' %}">
         <i class="ti ti-star"></i><span class="nav-text">Reviews</span>
       </a>
@@ -122,6 +116,11 @@
     <li>
       <a class="nav-link {% if nav_section == 'faqs' %}active{% endif %}" href="{% url 'dashboard:faq-list' %}">
         <i class="ti ti-help"></i><span class="nav-text">FAQs</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'announcements' %}active{% endif %}" href="{% url 'dashboard:announcement-list' %}">
+        <i class="ti ti-speakerphone"></i><span class="nav-text">Announcement Bar</span>
       </a>
     </li>
 

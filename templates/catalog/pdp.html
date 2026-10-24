@@ -25,7 +25,7 @@
 
     <div class="col-lg-6 jm-pdp-buybox pdp-info">
       <p class="jm-pdp-buybox__meta pdp-meta">
-        {% with collection=product.collections.all|first %}{% if collection %}{{ collection.name }}{% endif %}{% endwith %}{% if product.brand %}{% if product.collections.all %} · {% endif %}{{ product.brand.name }}{% endif %}
+        {% with collection=product.collections.all|first %}{% if collection %}{{ collection.name }}{% endif %}{% endwith %}
       </p>
       <h1 class="jm-pdp-buybox__title">{{ product.name }}</h1>
 

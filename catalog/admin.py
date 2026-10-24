@@ -5,7 +5,6 @@ from __future__ import annotations
 from django.contrib import admin
 
 from catalog.models import (
-    Brand,
     Collection,
     Label,
     Product,
@@ -52,16 +51,6 @@ class LabelAdmin(admin.ModelAdmin):
     ordering = ("display_order", "name")
 
 
-@admin.register(Brand)
-class BrandAdmin(admin.ModelAdmin):
-    """Admin for product brands."""
-
-    list_display = ("name", "slug", "is_featured", "updated_at")
-    list_filter = ("is_featured",)
-    search_fields = ("name", "slug")
-    prepopulated_fields = {"slug": ("name",)}
-
-
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1
@@ -89,7 +78,6 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "sku",
-        "brand",
         "base_price",
         "is_active",
         "stock_quantity",
@@ -99,11 +87,9 @@ class ProductAdmin(admin.ModelAdmin):
         "is_active",
         "labels",
         "collections",
-        "brand",
     )
-    exclude = ("hsn_code",)  
+    exclude = ("hsn_code",)
     search_fields = ("name", "slug", "sku")
-    list_select_related = ("brand",)
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = ("collections", "labels")
     inlines = [

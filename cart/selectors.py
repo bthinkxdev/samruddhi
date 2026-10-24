@@ -192,7 +192,7 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
     Return a fully computed cart summary for drawer, checkout, and payment.
 
     Query guarantee:
-      1) cart items SELECT with select_related(product, variant, brand)
+      1) cart items SELECT with select_related(product, variant)
       2) one gifting.get_gift_customization_snapshot call per customized line
          (each is a constant 1 SELECT + prefetches inside gifting — no cart ORM
          into gifting tables)
@@ -204,7 +204,6 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
         CartItem.objects.filter(cart=cart)
         .select_related(
             "product",
-            "product__brand",
             "variant",
         )
         .prefetch_related(

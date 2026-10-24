@@ -14,7 +14,6 @@ class HomepageSectionType(models.TextChoices):
 
     HERO_SLIDER = "hero_slider", "Hero Slider"
     SHOP_BY_COLLECTION = "shop_by_collection", "Shop by Collection"
-    FEATURED_BRANDS = "featured_brands", "Featured Brands"
     SUBSCRIPTION_BANNER = "subscription_banner", "Subscription Banner"
     MARKETING_FEATURES = "marketing_features", "Marketing Feature Cards"
     REVIEWS = "reviews", "Reviews"
@@ -200,6 +199,31 @@ class FAQItem(TimeStampedModel, PublishableModel):
 
     def __str__(self) -> str:
         return self.question
+
+
+class AnnouncementBarItem(TimeStampedModel):
+    """A single rotating message shown in the header's top announcement bar."""
+
+    class Icon(models.TextChoices):
+        NONE = "none", "None"
+        LIGHTNING = "lightning", "Lightning bolt"
+        SHIELD = "shield", "Shield"
+        STAR = "star", "Star"
+
+    text = models.CharField(max_length=120, verbose_name="Text")
+    icon = models.CharField(
+        max_length=20, choices=Icon.choices, default=Icon.NONE, blank=True, verbose_name="Icon"
+    )
+    display_order = models.PositiveIntegerField(default=0, db_index=True, verbose_name="Display order")
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Announcement bar item"
+        verbose_name_plural = "Announcement bar items"
+
+    def __str__(self) -> str:
+        return self.text
 
 
 class PolicyDocument(TimeStampedModel, SEOModel, PublishableModel):

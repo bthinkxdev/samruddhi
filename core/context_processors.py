@@ -46,7 +46,7 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
     )
     wishlist_product_ids = get_wishlist_product_ids(request=request)
     
-    from cms.models import Page
+    from cms.models import AnnouncementBarItem, Page
 
     site_settings = get_site_settings()
 
@@ -54,6 +54,7 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
         "meta_pixel_id": meta_pixel.pixel_id(site_settings),
         "site_settings": site_settings,
         "collection_tree": get_collection_tree(),
+        "announcement_items": AnnouncementBarItem.objects.filter(is_active=True).order_by("display_order"),
         "cart_count": get_cart_count(request=request),
         "cart_product_ids": get_cart_product_ids(request=request),
         "cart_item_keys": get_cart_item_keys(request=request),
