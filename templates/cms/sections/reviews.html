@@ -28,38 +28,36 @@
     <div class="jm-reviews__grid">
       {% for review in section_context.reviews %}
       <article class="jm-review-card d-flex flex-column h-100">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div class="jm-review-card__stars mb-0" aria-label="{% trans 'Rating' %} {{ review.rating }}">
-            {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %} </div>
+        <div class="jm-review-card__stars" aria-label="{% trans 'Rating' %} {{ review.rating }}">
+          {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+        </div>
+        <h3 class="jm-review-card__title">{{ review.title }}</h3>
+        <p class="jm-review-card__body flex-grow-1">{{ review.body|truncatewords:28 }}</p>
 
+        <div class="d-flex align-items-center mt-3 pt-3 border-top">
+          <div class="rounded-circle d-flex align-items-center justify-content-center text-white me-3"
+            style="width: 42px; height: 42px; flex-shrink: 0; background-color: var(--jm-accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
           </div>
-          <h3 class="jm-review-card__title">{{ review.title }}</h3>
-          <p class="jm-review-card__body flex-grow-1">{{ review.body|truncatewords:28 }}</p>
-
-          <div class="d-flex align-items-center mt-3 pt-3 border-top">
-            <div class="rounded-circle d-flex align-items-center justify-content-center text-white me-3"
-              style="width: 42px; height: 42px; flex-shrink: 0; background-color: var(--jm-accent);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
+          <div>
+            <div class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">{{ review.customer }}</div>
+            {% if review.product %}
+            <div class="text-muted" style="font-size: 0.75rem;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" class="me-1">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
               </svg>
+              {{ review.product.name }}
             </div>
-            <div>
-              <div class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">{{ review.customer }}</div>
-              {% if review.product %}
-              <div class="text-muted" style="font-size: 0.75rem;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" class="me-1">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <path d="M16 10a4 4 0 0 1-8 0"></path>
-                </svg>
-                {{ review.product.name }}
-              </div>
-              {% endif %}
-            </div>
+            {% endif %}
           </div>
+        </div>
       </article>
       {% empty %}
       <!-- 

@@ -1752,11 +1752,76 @@
     });
   }
 
+  function initInfoPageTOC() {
+    var page = document.querySelector('.jm-info-page');
+    if (!page) return;
+    var toc = page.querySelector('.jm-info-toc');
+    var list = page.querySelector('.jm-info-toc__list');
+    var sections = page.querySelectorAll('.jm-info-section');
+    if (!toc || !list || !sections.length) return;
+
+    var links = [];
+    sections.forEach(function (section, i) {
+      var heading = section.querySelector('h2');
+      if (!heading) return;
+      if (!section.id) section.id = 'info-section-' + (i + 1);
+
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.className = 'jm-info-toc__link';
+      a.href = '#' + section.id;
+      a.textContent = heading.textContent;
+      li.appendChild(a);
+      list.appendChild(li);
+      links.push({ link: a, section: section });
+    });
+
+    if (!links.length) {
+      toc.hidden = true;
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var match = links.find(function (l) { return l.section === entry.target; });
+        if (!match) return;
+        match.link.classList.toggle('is-active', entry.isIntersecting);
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    links.forEach(function (l) { observer.observe(l.section); });
+  }
+
+  function initRevealOnScroll() {
+    var items = document.querySelectorAll('.jm-reveal');
+    if (!items.length) return;
+
+    if (!('IntersectionObserver' in window)) {
+      items.forEach(function (el) { el.classList.add('is-visible'); });
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        obs.unobserve(entry.target);
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    items.forEach(function (el, i) {
+      el.style.transitionDelay = Math.min(i * 0.06, 0.3) + 's';
+      observer.observe(el);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     syncHeaderStickyOffset();
     initHeaderScrollHide();
     initTrustAutoSlide(document);
     initNavDropdowns();
+    initInfoPageTOC();
+    initRevealOnScroll();
   });
 
   window.addEventListener('resize', syncHeaderStickyOffset);

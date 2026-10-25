@@ -3,7 +3,7 @@
   {% for grid in section_context.collection_sections %}
   <div class="mb-5">
     <div class="d-flex justify-content-between align-items-baseline mb-4">
-      <h2 class="text-uppercase mb-0" style="font-weight: bold; font-size: 1.25rem;">{{ grid.collection.name }}</h2>
+      <h2 class="section-title mb-0">{{ grid.collection.name }}</h2>
       <a href="{% url 'catalog:plp-collection' collection_slug=grid.collection.slug %}" class="small fw-semibold">{% trans "View all" %}</a>
     </div>
     <div class="row g-0 jm-home-product-grid">

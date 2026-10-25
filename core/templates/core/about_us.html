@@ -4,22 +4,63 @@
 {% block title %}{{ seo_title }}{% endblock %}
 
 {% block content %}
-<div class="container page-container py-4">
-  <h1 class="section-title mb-4">{% trans "About Us" %}</h1>
+<div class="jm-info-page">
+  <header class="jm-info-page__hero">
+    <div class="container">
+      <span class="jm-info-page__eyebrow">{% trans "About" %}</span>
+      <h1 class="jm-info-page__title">{% trans "About Us" %}</h1>
+    </div>
+  </header>
 
-  <div class="card p-4">
-    <p>{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings exquisite, finely crafted jewelry to customers.{% endblocktrans %}</p>
-    <p class="mb-0">{% trans "Have questions about who we are? Reach out any time — our team is here to help." %}
-      <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
-    </p>
-  </div>
+  <div class="container">
+    <div class="jm-info-page__content" style="max-width: 44rem; margin-inline: auto;">
+      <p class="jm-info-intro jm-reveal">{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings exquisite, finely crafted jewelry to customers.{% endblocktrans %}
+        {% trans "Have questions about who we are? Reach out any time — our team is here to help." %}
+        <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
+      </p>
 
-  <div class="card p-4 mt-4">
-    <h6 class="mb-3">{% trans "Company Details" %}</h6>
-    <p class="mb-1">{% trans "Trade name" %}: {{ site_settings.site_name }}</p>
-    <p class="mb-1">{% trans "Phone number" %}: <a href="tel:{{ site_settings.contact_phone|cut:' ' }}">{{ site_settings.contact_phone }}</a></p>
-    <p class="mb-1">{% trans "Email" %}: <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a></p>
-    <p class="mb-0">{% trans "Physical address" %}: {{ site_settings.address|linebreaksbr }}</p>
+      <div class="jm-info-card jm-reveal">
+        <h2>{% trans "Company Details" %}</h2>
+        <div class="jm-info-card__grid">
+          <div class="jm-info-card__item">
+            <span class="jm-info-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1M9 21v-4h6v4"/></svg>
+            </span>
+            <span>
+              <span class="jm-info-card__item-label">{% trans "Trade name" %}</span>
+              <span class="jm-info-card__item-value">{{ site_settings.site_name }}</span>
+            </span>
+          </div>
+          <div class="jm-info-card__item">
+            <span class="jm-info-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </span>
+            <span>
+              <span class="jm-info-card__item-label">{% trans "Phone number" %}</span>
+              <span class="jm-info-card__item-value"><a href="tel:{{ site_settings.contact_phone|cut:' ' }}">{{ site_settings.contact_phone }}</a></span>
+            </span>
+          </div>
+          <div class="jm-info-card__item">
+            <span class="jm-info-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9 6 9-6M4 4h16v16H4z"/></svg>
+            </span>
+            <span>
+              <span class="jm-info-card__item-label">{% trans "Email" %}</span>
+              <span class="jm-info-card__item-value"><a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a></span>
+            </span>
+          </div>
+          <div class="jm-info-card__item">
+            <span class="jm-info-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <span>
+              <span class="jm-info-card__item-label">{% trans "Physical address" %}</span>
+              <span class="jm-info-card__item-value">{{ site_settings.address|linebreaksbr }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
