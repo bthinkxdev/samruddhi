@@ -105,10 +105,6 @@ def build_order_context(order: Any) -> dict[str, str]:
     names = [item.product.name for item in items[:3]]
     order_items = ", ".join(names) + (" and more" if len(items) > 3 else "")
 
-    tracking_number = ""
-    if _has_shipment(order):
-        tracking_number = order.delhivery_shipment.waybill_number or ""
-
     return {
         "customer_name": customer_name,
         "order_number": order.order_number or str(order.pk),
@@ -116,17 +112,7 @@ def build_order_context(order: Any) -> dict[str, str]:
         "order_total": f"{symbol} {order.total_amount}",
         "order_status": order.get_order_status_display(),
         "order_items": order_items,
-        "tracking_number": tracking_number,
     }
-
-
-def _has_shipment(order: Any) -> bool:
-    from django.core.exceptions import ObjectDoesNotExist
-
-    try:
-        return order.delhivery_shipment is not None
-    except ObjectDoesNotExist:
-        return False
 
 
 def get_active_template(event: str) -> Optional[WhatsAppTemplate]:

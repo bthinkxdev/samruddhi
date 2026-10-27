@@ -39,10 +39,18 @@ ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
     OrderStatus.CHECKOUT_PENDING: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
     OrderStatus.PLACED_COD: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
     OrderStatus.CONFIRMED: {OrderStatus.READY_TO_SHIP, OrderStatus.CANCELLED},
-    OrderStatus.READY_TO_SHIP: {OrderStatus.CANCELLED},
-    OrderStatus.PICKED_UP: set(),
-    OrderStatus.IN_TRANSIT: set(),
-    OrderStatus.OUT_FOR_DELIVERY: set(),
+    OrderStatus.READY_TO_SHIP: {
+        OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT, OrderStatus.OUT_FOR_DELIVERY,
+        OrderStatus.DELIVERED, OrderStatus.CANCELLED,
+    },
+    OrderStatus.PICKED_UP: {
+        OrderStatus.IN_TRANSIT, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED,
+        OrderStatus.CANCELLED,
+    },
+    OrderStatus.IN_TRANSIT: {
+        OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.CANCELLED,
+    },
+    OrderStatus.OUT_FOR_DELIVERY: {OrderStatus.DELIVERED, OrderStatus.CANCELLED},
     OrderStatus.DELIVERED: {OrderStatus.REFUNDED},
     OrderStatus.CANCELLED: {OrderStatus.REFUNDED},
     OrderStatus.REFUNDED: set(),

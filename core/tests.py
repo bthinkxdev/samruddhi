@@ -59,10 +59,6 @@ class MetaPixelTestBase(TestCase):
             stock_quantity=100,
         )
         self.product.collections.add(collection)
-        for target in ("delhivery.tasks.create_shipment_for_order.delay",):
-            patcher = patch(target)
-            patcher.start()
-            self.addCleanup(patcher.stop)
 
     def make_order(self, gateway_key: str, key: str):
         cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)

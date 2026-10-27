@@ -40,7 +40,6 @@ urlpatterns = [
     path("orders/bulk-invoice/", orders.order_bulk_invoice_detail, name="order-bulk-invoice"),
     path("orders/<int:pk>/transition/", orders.order_transition, name="order-transition"),
     path("orders/<int:pk>/payment-transition/", orders.order_payment_transition, name="order-payment-transition"),
-    path("orders/<int:pk>/tracking-update/", orders.order_tracking_update, name="order-tracking-update"),
     path("orders/<int:pk>/address/", orders.order_address_update, name="order-address-update"),
     path("reports/", reports.reports_view, name="reports"),
     path("reports/export/", reports.reports_export_csv, name="reports-export"),

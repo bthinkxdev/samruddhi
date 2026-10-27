@@ -324,28 +324,3 @@ def order_address_update(request: HttpRequest, pk: int) -> HttpResponse:
         messages.error(request, str(exc))
 
     return redirect("dashboard:order-detail", pk=pk)
-
-
-@dashboard_required
-@require_POST
-def order_tracking_update(request: HttpRequest, pk: int) -> HttpResponse:
-    """Manually update or create the tracking ID (waybill number)."""
-    from delhivery.models import DelhiveryShipment
-    
-    order = get_object_or_404(Order, pk=pk)
-    waybill_number = request.POST.get("waybill_number", "").strip()
-    
-    if waybill_number:
-        shipment, created = DelhiveryShipment.objects.get_or_create(order=order)
-        shipment.waybill_number = waybill_number
-        if created:
-            shipment.tracking_status = "Initiated"
-        shipment.save(update_fields=["waybill_number", "tracking_status", "updated_at"] if not created else None)
-        messages.success(request, f"Tracking ID saved: {waybill_number}")
-    else:
-        if hasattr(order, 'delhivery_shipment'):
-            order.delhivery_shipment.waybill_number = None
-            order.delhivery_shipment.save(update_fields=["waybill_number", "updated_at"])
-            messages.info(request, "Tracking ID cleared.")
-            
-    return redirect("dashboard:order-detail", pk=pk)

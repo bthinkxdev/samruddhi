@@ -126,9 +126,6 @@ class OrderFixtureMixin:
             stock_quantity=100,
         )
         product.collections.add(collection)
-        patcher = patch("delhivery.tasks.create_shipment_for_order.delay")
-        patcher.start()
-        self.addCleanup(patcher.stop)
         cart = Cart.objects.create(customer_profile=self.profile, currency=currency)
         CartItem.objects.create(
             cart=cart, product=product, quantity=1, unit_price_at_add=product.base_price

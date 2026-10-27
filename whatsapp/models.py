@@ -18,7 +18,6 @@ TEMPLATE_VARIABLES: dict[str, str] = {
     "order_total": "Order total with currency",
     "order_status": "Order status label",
     "order_items": "First few product names",
-    "tracking_number": "Delhivery waybill / AWB",
 }
 
 

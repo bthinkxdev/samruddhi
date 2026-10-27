@@ -25,16 +25,20 @@ from django.db import migrations, models
 def migrate_statuses_forward(apps, schema_editor):
     Order = apps.get_model("orders", "Order")
     PaymentTransaction = apps.get_model("payments", "PaymentTransaction")
-    DelhiveryShipment = apps.get_model("delhivery", "DelhiveryShipment")
 
     cod_order_ids = set(
         PaymentTransaction.objects.filter(gateway_key="cod").values_list("order_id", flat=True)
     )
-    shipped_order_ids = set(
-        DelhiveryShipment.objects.exclude(waybill_number="")
-        .exclude(waybill_number__isnull=True)
-        .values_list("order_id", flat=True)
-    )
+    
+    shipped_order_ids = set()
+    connection = schema_editor.connection
+    if "delhivery_delhiveryshipment" in connection.introspection.table_names():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT order_id FROM delhivery_delhiveryshipment "
+                "WHERE waybill_number IS NOT NULL AND waybill_number <> ''"
+            )
+            shipped_order_ids = {row[0] for row in cursor.fetchall()}
 
     placed_orders = Order.objects.filter(order_status="placed")
     placed_orders.filter(pk__in=cod_order_ids).update(order_status="placed_cod")
@@ -59,7 +63,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ("orders", "0007_alter_order_order_status"),
         ("payments", "0001_phase6_cart_checkout_payments"),
-        ("delhivery", "0001_initial"),
     ]
 
     operations = [

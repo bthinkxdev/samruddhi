@@ -36,7 +36,7 @@
               </div>
               <div class="col-md-2 text-md-end">
                 <a href="{% url 'orders:detail' order_id=order.pk %}" class="btn btn-outline-theme btn-sm w-100 mb-2 fw-medium">{% trans "View Details" %}</a>
-                <a href="{% if order.delhivery_shipment.waybill_number %}https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}{% else %}https://www.delhivery.com/tracking{% endif %}" target="_blank" class="btn btn-light border btn-sm w-100">{% trans "Track" %}</a>
+                <a href="{% url 'orders:tracking' order.pk %}" class="btn btn-light border btn-sm w-100">{% trans "Track" %}</a>
               </div>
             </div>
           </div>

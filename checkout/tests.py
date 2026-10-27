@@ -46,9 +46,6 @@ class RazorpayCallbackViewTests(TestCase):
             stock_quantity=100,
         )
         self.product.collections.add(collection)
-        self._delhivery_patch = patch("delhivery.tasks.create_shipment_for_order.delay")
-        self._delhivery_patch.start()
-        self.addCleanup(self._delhivery_patch.stop)
 
         cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
         CartItem.objects.create(
@@ -150,9 +147,6 @@ class PlaceOrderCodAfterAbandonedOnlineAttemptTests(TestCase):
             stock_quantity=100,
         )
         self.product.collections.add(collection)
-        self._delhivery_patch = patch("delhivery.tasks.create_shipment_for_order.delay")
-        self._delhivery_patch.start()
-        self.addCleanup(self._delhivery_patch.stop)
 
         self.cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
         CartItem.objects.create(
@@ -271,9 +265,6 @@ class CheckoutWhatsAppVerificationTests(TestCase):
             stock_quantity=100,
         )
         self.product.collections.add(collection)
-        self._delhivery_patch = patch("delhivery.tasks.create_shipment_for_order.delay")
-        self._delhivery_patch.start()
-        self.addCleanup(self._delhivery_patch.stop)
 
         self.client.force_login(self.profile.user)
         cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
@@ -392,9 +383,6 @@ class CheckoutEmailOptionalTests(TestCase):
             stock_quantity=100,
         )
         self.product.collections.add(collection)
-        self._delhivery_patch = patch("delhivery.tasks.create_shipment_for_order.delay")
-        self._delhivery_patch.start()
-        self.addCleanup(self._delhivery_patch.stop)
 
         # force an anonymous session, then give it a cart — mirrors how an
         # unauthenticated guest's cart is resolved by session_key.

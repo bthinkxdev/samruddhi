@@ -56,7 +56,7 @@ def dispatch_order_status_notification(
         "placed_cod": f"Thanks for your Cash on Delivery order ({order.order_number})! Our team will contact you shortly to confirm it.",
         "confirmed": f"Your order ({order.order_number}) has been confirmed.",
         "ready_to_ship": f"Your order ({order.order_number}) is packed and ready for dispatch.",
-        "picked_up": f"Your package ({order.order_number}) has been picked up by Delhivery.",
+        "picked_up": f"Your package ({order.order_number}) has been picked up by our delivery partner.",
         "in_transit": f"Your shipment ({order.order_number}) is on the way.",
         "out_for_delivery": f"Your order ({order.order_number}) is out for delivery today! Please make sure someone is available to receive it.",
         "delivered": f"Your order ({order.order_number}) has been delivered successfully! We hope you love your new jewellery. (You can now leave a review in your dashboard!).",

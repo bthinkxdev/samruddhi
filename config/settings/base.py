@@ -37,7 +37,6 @@ LOCAL_APPS = [
     "notifications",
     "reports",
     "dashboard",
-    "delhivery",
     "whatsapp",
 ]
 
@@ -255,12 +254,6 @@ EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="desertmobiles@gmail.com")
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
-
-#delhivery settings
-DELHIVERY_API_KEY = env("DELHIVERY_API_KEY", default="")
-DELHIVERY_BASE_URL = env("DELHIVERY_BASE_URL", default="https://staging-express.delhivery.com")
-DELHIVERY_WEBHOOK_TOKEN = env("DELHIVERY_WEBHOOK_TOKEN", default="")
-DELHIVERY_PICKUP_LOCATION = env("DELHIVERY_PICKUP_LOCATION", default="Primary")
 
 #razorpay webhook — separate from the razorpay_key_id/secret stored on SiteSettings,
 #this is deployment-only config for verifying payments.views.razorpay_webhook_view

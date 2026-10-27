@@ -102,9 +102,6 @@ class RazorpayWebhookTests(TestCase):
 
         # These are real order-confirmation side effects (admin/plugin notifications) that
         # this test suite doesn't own — silence them so tests stay hermetic and fast.
-        self._delhivery_patch = patch("delhivery.tasks.create_shipment_for_order.delay")
-        self._delhivery_patch.start()
-        self.addCleanup(self._delhivery_patch.stop)
 
     def _make_pending_order(self, order_number_suffix: str = "1"):
         cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
