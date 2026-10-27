@@ -4342,6 +4342,19 @@ body.mobile-search-open .jm-wa-float {
   color: #fff;
 }
 
+.jm-product-card__wish:not(.is-active):hover {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--jm-accent);
+  color: var(--jm-accent);
+}
+
+@media (hover: none) {
+  .jm-product-card__wish:not(.is-active):hover {
+    border-color: var(--jm-border);
+    color: var(--jm-ink);
+  }
+}
+
 .jm-product-card__icon-btn svg {
   width: 16px;
   height: 16px;

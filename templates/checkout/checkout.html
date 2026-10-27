@@ -57,7 +57,7 @@
             <div class="jm-wa-verify">
               <div class="d-flex gap-2">
                 <input type="tel" name="guest_phone" id="checkout-whatsapp-phone" class="form-control form-control-sm"
-                  value="{{ checkout_session.customer_profile.phone|default:'' }}">
+                  value="{{ checkout_session.customer_profile.phone|default:checkout_verified_phone|default:'' }}">
                 <button type="button" id="checkout-whatsapp-verify-btn" class="btn btn-outline-theme btn-sm text-nowrap">
                   {% trans "Verify" %}
                 </button>
@@ -566,7 +566,14 @@
       var resendBtn = document.getElementById('checkout-whatsapp-otp-resend-btn');
       if (!verifyBtn || !phoneInput) return;
 
-      window.checkoutWhatsAppVerifiedPhone = null;
+      var serverVerifiedPhone = '{{ checkout_verified_phone|default:""|escapejs }}';
+      var inputDigits = phoneInput.value.replace(/\D/g, '');
+      if (serverVerifiedPhone && (!inputDigits || inputDigits.slice(-10) === serverVerifiedPhone.slice(-10))) {
+        phoneInput.value = serverVerifiedPhone;
+        window.checkoutWhatsAppVerifiedPhone = serverVerifiedPhone;
+      } else {
+        window.checkoutWhatsAppVerifiedPhone = null;
+      }
 
       function csrfToken() {
         var el = document.querySelector('input[name=csrfmiddlewaretoken]');
@@ -597,6 +604,7 @@
           setStatus('{% trans "Enter your WhatsApp number first." %}', true);
           return;
         }
+        window.checkoutWhatsAppVerifiedPhone = null;
         verifyBtn.disabled = true;
         var originalLabel = verifyBtn.innerText;
         verifyBtn.innerText = '{% trans "Sending..." %}';
@@ -647,6 +655,10 @@
       verifyBtn.addEventListener('click', sendOtp);
       if (resendBtn) resendBtn.addEventListener('click', sendOtp);
       if (otpVerifyBtn) otpVerifyBtn.addEventListener('click', verifyOtpCode);
+
+      if (window.checkoutWhatsAppVerifiedPhone) {
+        setStatus('{% trans "✓ WhatsApp number verified." %}', false);
+      }
 
       // editing the number after verifying invalidates the verified state client-side;
       // the server re-checks independently at order placement either way.

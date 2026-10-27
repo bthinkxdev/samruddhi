@@ -201,6 +201,7 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             "selected_gateway_key": selected_gateway_key,
             "has_active_coupons": has_any_active_coupons(),
             "is_buy_now": is_buy_now,
+            "checkout_verified_phone": request.session.get("checkout_verified_phone", ""),
         },
     )
 

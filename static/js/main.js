@@ -123,7 +123,8 @@
 
   function loadCartDrawerIfNeeded() {
     var body = document.getElementById('cart-drawer-body');
-    if (!body || body.dataset.drawerHydrated === 'true' || !window.htmx) {
+    // always refetch on open: stock/price may have changed since the last render
+    if (!body || !window.htmx) {
       return;
     }
     var url = body.getAttribute('hx-get');
@@ -136,7 +137,7 @@
 
   var cartOffcanvas = document.getElementById('cartOffcanvas');
   if (cartOffcanvas) {
-    cartOffcanvas.addEventListener('shown.bs.offcanvas', function () {
+    cartOffcanvas.addEventListener('show.bs.offcanvas', function () {
       loadCartDrawerIfNeeded();
     });
   }
