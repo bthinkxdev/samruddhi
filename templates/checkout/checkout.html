@@ -391,8 +391,9 @@
         } else if (!/^\+?\d{10,15}$/.test(guestPhone)) {
           document.getElementById('error-guest_phone').innerText = 'Enter a valid phone number.';
           isValid = false;
-        } else if (window.checkoutWhatsAppVerifiedPhone !== guestPhone) {
+        } else if (!(window.checkoutIsWhatsAppVerified && window.checkoutIsWhatsAppVerified(guestPhone))) {
           document.getElementById('error-guest_phone').innerText = 'Please verify your WhatsApp number.';
+          if (window.checkoutResetWhatsAppVerified) window.checkoutResetWhatsAppVerified();
           isValid = false;
         }
 
@@ -587,6 +588,19 @@
         verifyBtn.innerText = isVerified ? '{% trans "Verified" %}' : verifyBtnLabel;
       }
 
+      function isSamePhone(a, b) {
+        var x = (a || '').replace(/\D/g, ''), y = (b || '').replace(/\D/g, '');
+        return !!x && !!y && x.slice(-10) === y.slice(-10);
+      }
+      window.checkoutIsWhatsAppVerified = function (phone) {
+        return isSamePhone(window.checkoutWhatsAppVerifiedPhone, phone);
+      };
+      window.checkoutResetWhatsAppVerified = function () {
+        window.checkoutWhatsAppVerifiedPhone = null;
+        setVerifyBtnVerified(false);
+        setStatus('', false);
+      };
+
       function setStatus(text, isError) {
         statusEl.innerText = text || '';
         statusEl.className = 'small mt-1 ' + (isError ? 'text-danger' : 'text-success');
@@ -672,7 +686,7 @@
       // editing the number after verifying invalidates the verified state client-side;
       // the server re-checks independently at order placement either way.
       phoneInput.addEventListener('input', function () {
-        if (window.checkoutWhatsAppVerifiedPhone && phoneInput.value.trim() !== window.checkoutWhatsAppVerifiedPhone) {
+        if (window.checkoutWhatsAppVerifiedPhone && !isSamePhone(phoneInput.value, window.checkoutWhatsAppVerifiedPhone)) {
           window.checkoutWhatsAppVerifiedPhone = null;
           setVerifyBtnVerified(false);
           otpRow.classList.add('d-none');
