@@ -43,12 +43,12 @@
           <div class="row g-2 mb-3">
             <div class="col-md-6">
               <label class="form-label small">{% trans "Full Name" %} <span class="text-danger">*</span></label>
-              <input type="text" name="guest_name" class="form-control form-control-sm" value="{% if checkout_session.customer_profile %}{{ checkout_session.customer_profile.user.get_full_name|default:checkout_session.customer_profile.user.first_name|default:checkout_session.customer_profile.user.username }}{% elif request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.first_name|default:request.user.username }}{% endif %}">
+              <input type="text" name="guest_name" class="form-control form-control-sm" value="{{ checkout_prefill_name }}">
               <div id="error-guest_name" class="text-danger small mt-1"></div>
             </div>
             <div class="col-md-6">
               <label class="form-label small">{% trans "Email Address" %} <span class="text-muted fw-normal">({% trans "optional" %})</span></label>
-              <input type="email" name="guest_email" class="form-control form-control-sm" value="{% if checkout_session.customer_profile %}{{ checkout_session.customer_profile.user.email }}{% elif request.user.is_authenticated %}{{ request.user.email }}{% endif %}">
+              <input type="email" name="guest_email" class="form-control form-control-sm" value="{{ checkout_prefill_email }}">
               <div id="error-guest_email" class="text-danger small mt-1"></div>
             </div>
           </div>
@@ -565,6 +565,7 @@
       var otpVerifyBtn = document.getElementById('checkout-whatsapp-otp-verify-btn');
       var resendBtn = document.getElementById('checkout-whatsapp-otp-resend-btn');
       if (!verifyBtn || !phoneInput) return;
+      var verifyBtnLabel = verifyBtn.innerText.trim();
 
       var serverVerifiedPhone = '{{ checkout_verified_phone|default:""|escapejs }}';
       var inputDigits = phoneInput.value.replace(/\D/g, '');
@@ -578,6 +579,12 @@
       function csrfToken() {
         var el = document.querySelector('input[name=csrfmiddlewaretoken]');
         return el ? el.value : '';
+      }
+
+      // Verified number: disable the Verify button and show "Verified"; editing the number re-enables it.
+      function setVerifyBtnVerified(isVerified) {
+        verifyBtn.disabled = isVerified;
+        verifyBtn.innerText = isVerified ? '{% trans "Verified" %}' : verifyBtnLabel;
       }
 
       function setStatus(text, isError) {
@@ -640,6 +647,7 @@
           otpVerifyBtn.innerText = '{% trans "Verify Code" %}';
           if (r.json.success) {
             window.checkoutWhatsAppVerifiedPhone = phone;
+            setVerifyBtnVerified(true);
             otpRow.classList.add('d-none');
             setStatus('{% trans "✓ WhatsApp number verified." %}', false);
           } else {
@@ -658,6 +666,7 @@
 
       if (window.checkoutWhatsAppVerifiedPhone) {
         setStatus('{% trans "✓ WhatsApp number verified." %}', false);
+        setVerifyBtnVerified(true);
       }
 
       // editing the number after verifying invalidates the verified state client-side;
@@ -665,6 +674,7 @@
       phoneInput.addEventListener('input', function () {
         if (window.checkoutWhatsAppVerifiedPhone && phoneInput.value.trim() !== window.checkoutWhatsAppVerifiedPhone) {
           window.checkoutWhatsAppVerifiedPhone = null;
+          setVerifyBtnVerified(false);
           otpRow.classList.add('d-none');
           setStatus('{% trans "Number changed — please verify again." %}', true);
         }

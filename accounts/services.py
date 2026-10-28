@@ -508,6 +508,14 @@ def delete_saved_payment_method(
     ).delete()
 
 
+PHONE_PLACEHOLDER_EMAIL_DOMAIN = "phone.samruddhi.local"
+
+
+def is_placeholder_email(email: str | None) -> bool:
+    """True for the synthetic email given to phone-only customers (never shown to users)."""
+    return bool(email) and email.lower().endswith("@" + PHONE_PLACEHOLDER_EMAIL_DOMAIN)
+
+
 @transaction.atomic
 def login_or_create_customer_by_phone(*, phone: str) -> CustomerProfile:
     """
@@ -526,7 +534,7 @@ def login_or_create_customer_by_phone(*, phone: str) -> CustomerProfile:
         return profile
 
     currency = get_default_currency()
-    email = f"{normalized_phone.replace('+', '')}@phone.samruddhi.local"
+    email = f"{normalized_phone.replace('+', '')}@{PHONE_PLACEHOLDER_EMAIL_DOMAIN}"
     user = UserModel(username=email, email=email)
     user.set_unusable_password()
     user.save()

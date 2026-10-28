@@ -106,6 +106,23 @@ def checkout_fix_stock_view(request: HttpRequest) -> HttpResponse:
     return redirect("checkout:checkout")
 
 
+def _checkout_contact_prefill(request: HttpRequest, session) -> dict[str, str]:
+    """Name/email to prefill on checkout, hiding the synthetic phone-only placeholder email."""
+    from accounts.services import is_placeholder_email
+
+    if session.customer_profile:
+        user = session.customer_profile.user
+    elif request.user.is_authenticated:
+        user = request.user
+    else:
+        return {"checkout_prefill_name": "", "checkout_prefill_email": ""}
+    username = "" if is_placeholder_email(user.username) else user.username
+    return {
+        "checkout_prefill_name": user.get_full_name() or user.first_name or username,
+        "checkout_prefill_email": "" if is_placeholder_email(user.email) else user.email,
+    }
+
+
 @never_cache  
 @require_GET
 def checkout_view(request: HttpRequest) -> HttpResponse:
@@ -202,6 +219,7 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             "has_active_coupons": has_any_active_coupons(),
             "is_buy_now": is_buy_now,
             "checkout_verified_phone": request.session.get("checkout_verified_phone", ""),
+            **_checkout_contact_prefill(request, session),
         },
     )
 
@@ -312,6 +330,10 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
 
     guest_name = request.POST.get("guest_name", "").strip()
     guest_email = request.POST.get("guest_email", "").strip()
+    from accounts.services import is_placeholder_email
+    if is_placeholder_email(guest_email):
+        # never treat the synthetic phone only placeholder as a real email
+        guest_email = ""
     guest_phone = request.POST.get("guest_phone", "").strip()
 
     errors = {}
