@@ -30,7 +30,7 @@
 
 <div class="row">
   <div class="col-12">
-    <form method="get" class="row g-2 align-items-end mb-3">
+    <form method="get" id="reports-filter-form" class="row g-2 align-items-end mb-3">
       <div class="col-6 col-md-auto">
         <label class="form-label small mb-1">From</label>
         <input type="date" name="start" value="{{ start|date:'Y-m-d' }}" class="form-control" />
@@ -40,7 +40,7 @@
         <input type="date" name="end" value="{{ end|date:'Y-m-d' }}" class="form-control" />
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
-        <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Apply</button>
+        <button type="submit" id="reports-filter-apply" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Apply</button>
         {% if request.GET.start or request.GET.end or request.session.reports_start or request.session.reports_end %}
         <a href="{% url 'dashboard:reports' %}?clear=1" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
@@ -105,4 +105,31 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var form = document.getElementById('reports-filter-form');
+    var btn = document.getElementById('reports-filter-apply');
+    if (!form || !btn) return;
+    var inputs = form.querySelectorAll('input[name="start"], input[name="end"]');
+    var applied = Array.prototype.map.call(inputs, function (el) { return el.defaultValue; }).join('|'); 
+    function sync() {
+      var current = Array.prototype.map.call(inputs, function (el) { return el.value; }).join('|');
+      btn.disabled = current === applied;
+    }
+    Array.prototype.forEach.call(inputs, function (el) {
+      el.addEventListener('input', sync);
+      el.addEventListener('change', sync);
+    });
+    form.addEventListener('submit', function (e) {
+      if (btn.disabled) { e.preventDefault(); return; }
+      btn.disabled = true; 
+    });
+   
+    window.addEventListener('pageshow', sync);
+    sync();
+  })();
+</script>
 {% endblock %}

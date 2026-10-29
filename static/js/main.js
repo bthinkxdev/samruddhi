@@ -1027,6 +1027,30 @@
     }
   }
 
+  var atcStockRefreshing = false;
+  function refreshAtcMaxStock(done) {
+    var qtyInput = document.getElementById('jm-atc-qty');
+    var pidEl = document.getElementById('jm-atc-product-id');
+    var vidEl = document.getElementById('jm-atc-variant-id');
+    var pid = pidEl ? pidEl.value : '';
+    var vid = vidEl ? vidEl.value : '';
+    if (!qtyInput || !pid || atcStockRefreshing) { done(null); return; }
+    atcStockRefreshing = true;
+    var url = '/shop/products/' + pid + '/variant-price/' + (vid ? '?variant_id=' + encodeURIComponent(vid) : '');
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        atcStockRefreshing = false;
+        var st = data ? parseInt(data.stock_quantity, 10) : NaN;
+        if (isNaN(st)) { done(null); return; }
+        qtyInput.setAttribute('data-max-stock', String(st));
+        var checkedRadio = document.querySelector('.atc-variant-radio:checked');
+        if (checkedRadio) checkedRadio.dataset.stock = String(st);
+        done(st);
+      })
+      .catch(function () { atcStockRefreshing = false; done(null); });
+  }
+
   window.handleAtcQtyChange = function (delta) {
     var qtyInput = document.getElementById('jm-atc-qty');
     if (!qtyInput) return;
@@ -1035,10 +1059,17 @@
     var errorMsg = document.getElementById('jm-atc-stock-error-msg');
 
     if (delta > 0 && !isNaN(maxStock) && currQty >= maxStock) {
-      if (errorMsg) {
-        errorMsg.textContent = maxStock <= 0 ? 'Out of stock' : 'Only ' + maxStock + ' items available in stock.';
-        errorMsg.classList.remove('d-none');
-      }
+      refreshAtcMaxStock(function (liveStock) {
+        if (liveStock !== null && currQty < liveStock) {
+          window.handleAtcQtyChange(delta); 
+          return;
+        }
+        var limit = liveStock !== null ? liveStock : maxStock;
+        if (errorMsg) {
+          errorMsg.textContent = limit <= 0 ? 'Out of stock' : 'Only ' + limit + ' items available in stock.';
+          errorMsg.classList.remove('d-none');
+        }
+      });
       return;
     }
 
