@@ -1,15 +1,26 @@
 :root {
-  /* Red & White — minimalist palette (pure white canvas, crimson accent) */
+  /* Maroon & Gold — heritage jewellery palette, carried in from the brand
+     photography/logo instead of the old flat sale-red. --jm-red is kept as
+     the variable NAME (hundreds of existing rules reference it) but now
+     holds the brand maroon value, so the whole theme recolors from this one
+     place. --jm-sale is the separate, deliberately vivid red reserved for
+     flash-sale badges/pricing only — genuine time-boxed offers, not the
+     brand color. Bootstrap's own danger/error red is untouched. */
   --jm-white: #ffffff;
-  --jm-ink: #141414;
-  --jm-red: #C1121F;
-  --jm-red-dark: #8E0B15;
-  --jm-red-rgb: 193, 18, 31;
+  --jm-ivory: #FAF6F0;
+  --jm-ink: #1E1A17;
+  --jm-red: #7A1F2B;
+  --jm-red-dark: #55161E;
+  --jm-red-rgb: 122, 31, 43;
+  --jm-gold: #B8924A;
+  --jm-gold-dark: #9C7A3A;
+  --jm-gold-rgb: 184, 146, 74;
+  --jm-sale: #C1121F;
   --jm-accent: var(--jm-red);
   --jm-accent-dark: var(--jm-red-dark);
-  --jm-accent-soft: #FDECEE;
+  --jm-accent-soft: #F2E6E7;
   --jm-surface: #FAFAFA;
-  --jm-slate: #5C5C5C;
+  --jm-slate: #6B625B;
   --jm-muted: #8A8A8A;
   --jm-border: #ECECEC;
   --jm-border-light: #F5F5F5;
@@ -50,8 +61,8 @@
   --theme-header-h: 72px;
   --theme-trust-h: 40px;
   --font-sans: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  --font-serif: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  --font-display: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
 }
 
 *,
@@ -64,12 +75,17 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Reserve scrollbar space permanently so the page doesn't shift ~15-17px
+     horizontally whenever content height crosses the scroll threshold
+     (e.g. after an HTMX add-to-cart/wishlist swap changes page height). */
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
 }
 
 body.theme-body {
   font-family: var(--font-sans);
   color: var(--theme-text);
-  background: var(--theme-white);
+  background: var(--jm-ivory);
   line-height: 1.5;
   margin: 0;
   padding-bottom: env(safe-area-inset-bottom);
@@ -111,13 +127,24 @@ img {
 }
 
 .section-title {
+  position: relative;
+  display: inline-block;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.85rem);
-  line-height: 1.25;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.6rem, 1.3rem + 1.3vw, 2.35rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
   color: var(--jm-ink);
-  margin: 0;
+  margin: 0 0 0.6rem;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 42px;
+  height: 2px;
+  margin-top: 0.5rem;
+  background: var(--jm-gold);
 }
 
 .section-subtitle {
@@ -186,6 +213,16 @@ img {
 
 .btn-ghost:hover {
   background: var(--theme-bg);
+}
+
+.jm-cart-remove {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 
@@ -824,7 +861,7 @@ body.mobile-search-open {
 }
 
 .carousel-fade .carousel-item {
-  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .carousel-indicators [data-bs-target] {
@@ -2496,6 +2533,16 @@ body.mobile-search-open {
   box-shadow: var(--theme-shadow-lg);
   font-size: 0.875rem;
   color: var(--theme-text);
+  animation: jm-toast-in 0.25s ease-out;
+}
+
+.htmx-toast--success {
+  border-left-color: var(--jm-success);
+}
+
+@keyframes jm-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .htmx-toast__message {
@@ -3762,6 +3809,65 @@ body.mobile-search-open .jm-wa-float {
   margin-top: 0.35rem;
 }
 
+.jm-mobile-nav__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.jm-mobile-nav__group-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.15rem;
+}
+
+.jm-mobile-nav__group-link {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  color: var(--jm-ink);
+  border-radius: var(--jm-radius);
+}
+
+.jm-mobile-nav__group-link:hover {
+  background: var(--jm-accent-soft);
+  color: var(--jm-accent);
+}
+
+.jm-mobile-nav__group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  color: var(--jm-slate);
+  border-radius: var(--jm-radius);
+  transition: background var(--jm-transition), transform 0.2s ease;
+}
+
+.jm-mobile-nav__group-toggle:hover {
+  background: var(--jm-accent-soft);
+  color: var(--jm-accent);
+}
+
+.jm-mobile-nav__group-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.jm-mobile-nav__group-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.jm-mobile-nav__group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-left: 0.5rem;
+}
+
 @media (max-width: 991.98px) {
   .jm-header__main-inner {
     grid-template-columns: auto 1fr auto;
@@ -3850,6 +3956,14 @@ body.mobile-search-open .jm-wa-float {
   letter-spacing: -0.03em;
   color: #fff;
   text-shadow: 0 1px 16px rgba(0, 0, 0, 0.28);
+}
+
+.jm-hero__subtitle {
+  margin: 0 0 1rem;
+  max-width: 30rem;
+  font-size: clamp(0.875rem, 0.8rem + 0.4vw, 1.0625rem);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
 }
 
 .jm-hero__ctas {
@@ -4275,7 +4389,7 @@ body.mobile-search-open .jm-wa-float {
 
 .jm-product-card__media {
   position: relative;
-  background: #FFFFFF;
+  background: var(--jm-surface);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -5941,12 +6055,12 @@ button.jm-product-card__atc--in-cart:hover {
    ========================================================================== */
 
 .product-badge--flash {
-  background: var(--jm-accent);
+  background: var(--jm-sale);
   color: #fff;
 }
 
 .jm-product-card__price--sale {
-  color: var(--jm-accent) !important;
+  color: var(--jm-sale) !important;
 }
 
 .jm-collection-scroll {

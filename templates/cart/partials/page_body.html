@@ -60,7 +60,7 @@
               <form method="post" action="{% url 'cart:page-remove' %}">
                 {% csrf_token %}
                 <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
-                <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:page-remove' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Delete item' %}" title="{% trans 'Delete item' %}">
+                <button class="btn btn-sm btn-ghost text-danger jm-cart-remove" type="button" hx-post="{% url 'cart:page-remove' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Delete item' %}" title="{% trans 'Delete item' %}">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                 </button>
               </form>

@@ -37,7 +37,7 @@
           {% include "shared/image_captcha.html" with scope="contact" field_id="image_captcha_contact" label="Security check" captcha_bust=captcha_bust %}
 
           <button type="submit" class="btn btn-theme">
-            {% trans "Enquiry" %}
+            {% trans "Send message" %}
           </button>
         </form>
       </div>
@@ -55,7 +55,7 @@
 
         <div class="card p-4">
           <h6 class="mb-3">{% trans "Need quick answers?" %}</h6>
-          <p class="mb-3">{% trans "Check our frequently asked questions for common queries about ordering, delivery,and payments." %}</p>
+          <p class="mb-3">{% trans "Check our frequently asked questions for common queries about ordering, delivery, and payments." %}</p>
           <a href="{% url 'core:faq' %}" class="btn btn-outline-theme">{% trans "Visit FAQ" %}</a>
         </div>
       </div>

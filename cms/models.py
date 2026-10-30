@@ -93,6 +93,24 @@ class HeroSlide(TimeStampedModel):
         verbose_name="Title",
         help_text="Shown over the banner when set. Also used as media alt text.",
     )
+    subtitle = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Subtitle",
+        help_text="Short supporting line shown under the title.",
+    )
+    cta_label = models.CharField(
+        max_length=40,
+        blank=True,
+        verbose_name="Button text",
+        help_text='E.g. "Shop Now". Leave blank to show no button.',
+    )
+    cta_url = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Button link",
+        help_text="Where the button goes, e.g. /shop/ or a full https:// URL. Required for the button to appear.",
+    )
     image = models.ImageField(
         upload_to="cms/hero/images/",
         blank=True,

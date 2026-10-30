@@ -36,7 +36,9 @@
 </nav>
 {% endif %}
 
+{% if is_grid_partial %}
 <h1 id="jm-page-title" class="section-title jm-page-title mb-0" hx-swap-oob="true">{% if active_collection %}{{ active_collection.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
 <p id="jm-plp-count" class="section-subtitle jm-plp-count" hx-swap-oob="true">
   {{ plp.total_count|default:"0" }} {% trans "products" %}
 </p>
+{% endif %}

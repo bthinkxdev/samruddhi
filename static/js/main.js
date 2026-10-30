@@ -47,17 +47,19 @@
     progressEl.setAttribute('aria-hidden', 'true');
   }
 
-  function showHtmxToast() {
+  function showToast(message, variant, duration) {
     var root = document.getElementById('htmx-toast-root');
     if (!root) {
       return;
     }
     root.hidden = false;
+    var toastClass = 'htmx-toast' + (variant ? ' htmx-toast--' + variant : '');
     root.innerHTML =
-      '<div class="htmx-toast" role="alert">' +
-      '<span class="htmx-toast__message">Something went wrong, please try again.</span>' +
+      '<div class="' + toastClass + '" role="status">' +
+      '<span class="htmx-toast__message"></span>' +
       '<button type="button" class="htmx-toast__close btn-ghost" aria-label="Dismiss">&times;</button>' +
       '</div>';
+    root.querySelector('.htmx-toast__message').textContent = message;
     var closeBtn = root.querySelector('.htmx-toast__close');
     if (closeBtn) {
       closeBtn.addEventListener('click', function () {
@@ -70,8 +72,14 @@
         root.hidden = true;
         root.innerHTML = '';
       }
-    }, 6000);
+    }, duration || 6000);
   }
+
+  function showHtmxToast() {
+    showToast('Something went wrong, please try again.', null, 6000);
+  }
+
+  window.jmShowToast = showToast;
 
   document.body.addEventListener('htmx:configRequest', function (event) {
     if (csrfToken) {
@@ -1492,7 +1500,8 @@
 
     // Success animation on the Add to Cart modal's submit button, then close.
     var atcModalEl = document.getElementById('jmAddToCartModal');
-    if (atcModalEl && atcModalEl.classList.contains('show')) {
+    var atcModalOpen = atcModalEl && atcModalEl.classList.contains('show');
+    if (atcModalOpen) {
       var addBtn = document.getElementById('jm-atc-add-btn');
       if (addBtn && !addBtn.classList.contains('is-success')) {
         addBtn.disabled = true;
@@ -1503,6 +1512,14 @@
       setTimeout(function () {
         if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(atcModalEl).hide();
       }, 650);
+    }
+
+    // Plain adds (PDP buy box, direct card button) get no other feedback —
+    // show a toast so the most important action on the site isn't silent.
+    var qvModalEl = document.getElementById('jmQuickViewModal');
+    var qvModalOpen = qvModalEl && qvModalEl.classList.contains('show');
+    if (!atcModalOpen && !qvModalOpen && window.jmShowToast) {
+      window.jmShowToast('Added to cart.', 'success', 3000);
     }
   });
 
@@ -1847,11 +1864,74 @@
     });
   }
 
+  function initNavOverflow() {
+    var list = document.querySelector('[data-jm-nav-list]');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.querySelectorAll('[data-jm-nav-item]'));
+    var moreLi = list.querySelector('[data-jm-nav-more]');
+    var moreList = moreLi ? moreLi.querySelector('[data-jm-nav-more-list]') : null;
+    if (!items.length || !moreLi || !moreList) return;
+
+    function layout() {
+      // Reset to the full, un-collapsed state before re-measuring.
+      items.forEach(function (li) { li.hidden = false; });
+      moreLi.hidden = true;
+      moreList.innerHTML = '';
+
+      var pinned = Array.prototype.slice.call(list.querySelectorAll('[data-jm-nav-pin]'));
+      var containerWidth = list.clientWidth;
+      var used = pinned.reduce(function (sum, li) { return sum + li.offsetWidth; }, 0);
+      var moreReserve = moreLi.offsetWidth || 90;
+      var overflowed = [];
+
+      items.forEach(function (li) {
+        var w = li.offsetWidth;
+        if (used + w > containerWidth - moreReserve) {
+          overflowed.push(li);
+        } else {
+          used += w;
+        }
+      });
+
+      if (!overflowed.length) return;
+
+      overflowed.forEach(function (li) {
+        li.hidden = true;
+        var trigger = li.querySelector('a, button');
+        if (!trigger) return;
+        var href = trigger.tagName === 'A' ? trigger.href : null;
+        if (!href) {
+          // A collapsed collection dropdown — fall back to its "All X" link.
+          var firstLink = li.querySelector('.dropdown-menu .dropdown-item');
+          href = firstLink ? firstLink.href : '#';
+        }
+        var wrapLi = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'dropdown-item';
+        a.href = href;
+        a.textContent = trigger.textContent.trim();
+        wrapLi.appendChild(a);
+        moreList.appendChild(wrapLi);
+      });
+
+      moreLi.hidden = false;
+    }
+
+    layout();
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(layout, 120);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     syncHeaderStickyOffset();
     initHeaderScrollHide();
     initTrustAutoSlide(document);
     initNavDropdowns();
+    initNavOverflow();
     initInfoPageTOC();
     initRevealOnScroll();
   });

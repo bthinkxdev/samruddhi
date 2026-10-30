@@ -411,16 +411,37 @@
 
     const purchaseActionsWrap = document.getElementById("purchase-actions-wrap");
     const stickyBar = document.querySelector(".jm-pdp-sticky");
+    const siteFooter = document.querySelector(".jm-footer");
     if (purchaseActionsWrap && stickyBar) {
+      let pastBuyBox = false;
+      let footerVisible = false;
+
+      function syncStickyBar() {
+        const show = pastBuyBox && !footerVisible;
+        stickyBar.classList.toggle("is-visible", show);
+        stickyBar.setAttribute("aria-hidden", show ? "false" : "true");
+        document.body.classList.toggle("jm-pdp-sticky-open", show);
+      }
+
       const observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
-          const show = !entry.isIntersecting;
-          stickyBar.classList.toggle("is-visible", show);
-          stickyBar.setAttribute("aria-hidden", show ? "false" : "true");
-          document.body.classList.toggle("jm-pdp-sticky-open", show);
+          pastBuyBox = !entry.isIntersecting;
         });
+        syncStickyBar();
       }, { root: null, threshold: 0, rootMargin: "0px 0px -40px 0px" });
       observer.observe(purchaseActionsWrap);
+
+      // Hide the sticky bar once the footer scrolls into view so it never
+      // sits on top of the footer content/copyright line.
+      if (siteFooter) {
+        const footerObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            footerVisible = entry.isIntersecting;
+          });
+          syncStickyBar();
+        }, { root: null, threshold: 0 });
+        footerObserver.observe(siteFooter);
+      }
     }
   });
 

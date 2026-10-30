@@ -518,9 +518,27 @@ def invalidate_collection_tree_cache() -> None:
     cache.delete(COLLECTION_TREE_CACHE_KEY)
 
 
+# Common jewellery search terms that don't literally appear in product names
+# (e.g. a jhumka-style earring is named "... Chandelier Drop Earrings").
+# Maps a searched term to the words actually used in product names.
+SEARCH_SYNONYMS: dict[str, list[str]] = {
+    "jhumka": ["drop", "chandelier"],
+    "jhumki": ["drop", "chandelier"],
+    "haram": ["necklace", "mala", "chain"],
+    "kada": ["bangle"],
+    "mangalsutra": ["necklace", "pendant"],
+    "choker": ["choker", "collar"],
+    "rani haar": ["long necklace", "heritage chain"],
+}
+
+
 def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
     """
     Return product and collection matches for HTMX live search.
+
+    Expands a handful of common jewellery search terms (e.g. "jhumka") to
+    the words actually used in product names, so a real product type still
+    returns results even when it's not literally in any product's name.
     """
     if not query or len(query.strip()) < 2:
         return {
@@ -529,8 +547,13 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
         }
 
     clean_query = query.strip()
+    name_match = Q(name__icontains=clean_query)
+    for synonym in SEARCH_SYNONYMS.get(clean_query.lower(), []):
+        name_match |= Q(name__icontains=synonym)
+
     products = list(
-        Product.objects.filter(is_active=True, name__icontains=clean_query)
+        Product.objects.filter(is_active=True)
+        .filter(name_match)
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), _label_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
     )

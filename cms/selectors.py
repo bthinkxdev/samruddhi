@@ -44,7 +44,8 @@ def get_hero_slides() -> list[dict[str, Any]]:
     Query guarantee: exactly 1 SELECT on cms_heroslide.
 
     Returns:
-        List of slide dicts with keys: type, src, poster, title.
+        List of slide dicts with keys: type, src, poster, title, subtitle,
+        cta_label, cta_url.
         Slides without any media file are skipped.
     """
     from cms.models import HeroSlide
@@ -60,6 +61,9 @@ def get_hero_slides() -> list[dict[str, Any]]:
                 "src": src,
                 "poster": slide.poster_src,
                 "title": slide.title,
+                "subtitle": slide.subtitle,
+                "cta_label": slide.cta_label,
+                "cta_url": slide.cta_url,
             }
         )
     return slides

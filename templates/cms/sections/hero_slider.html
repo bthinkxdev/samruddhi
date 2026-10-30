@@ -31,7 +31,14 @@
               {% if slide.title %}
               <h2 class="jm-hero__title">{{ slide.title }}</h2>
               {% endif %}
-
+              {% if slide.subtitle %}
+              <p class="jm-hero__subtitle">{{ slide.subtitle }}</p>
+              {% endif %}
+              {% if slide.cta_label and slide.cta_url %}
+              <div class="jm-hero__ctas">
+                <a href="{{ slide.cta_url }}" class="btn btn-outline-theme">{{ slide.cta_label }}</a>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>

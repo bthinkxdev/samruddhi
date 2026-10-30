@@ -815,7 +815,17 @@ class HomepageSectionForm(forms.ModelForm):
 class HeroSlideForm(forms.ModelForm):
     class Meta:
         model = HeroSlide
-        fields = ["title", "image", "video", "poster", "display_order", "is_active"]
+        fields = [
+            "title",
+            "subtitle",
+            "cta_label",
+            "cta_url",
+            "image",
+            "video",
+            "poster",
+            "display_order",
+            "is_active",
+        ]
 
     def clean_image(self):
         image = self.cleaned_data.get("image")

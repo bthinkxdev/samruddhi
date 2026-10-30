@@ -58,18 +58,19 @@
       </div>
 
       <nav class="jm-nav d-none d-lg-flex" aria-label="{% trans 'Primary' %}">
-        <ul class="jm-nav__links">
+        <ul class="jm-nav__links" data-jm-nav-list>
           {# Keep in sync with the mobile menu (#jmMainNav) below: Home, Shop All, collections, About Us, Contact Us #}
-          <li><a
+          {# Home/Shop All always stay visible; everything else may collapse into the "More" menu — see initNavOverflow in main.js #}
+          <li data-jm-nav-pin><a
               class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' %}is-active{% endif %}"
               href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
-          <li><a
+          <li data-jm-nav-pin><a
               class="jm-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
               href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
           {% for collection in collection_tree %}
           {% with children=collection.children.all current=request.resolver_match.kwargs.collection_slug %}
           {% if children %}
-          <li class="dropdown jm-nav__dropdown">
+          <li class="dropdown jm-nav__dropdown" data-jm-nav-item>
             <button type="button"
               class="jm-nav__link jm-nav__link--toggle dropdown-toggle {% if current == collection.slug %}is-active{% else %}{% for child in children %}{% if current == child.slug %}is-active{% endif %}{% endfor %}{% endif %}"
               data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">{{ collection.name }}</button>
@@ -84,18 +85,23 @@
             </ul>
           </li>
           {% else %}
-          <li><a
+          <li data-jm-nav-item><a
               class="jm-nav__link {% if current == collection.slug %}is-active{% endif %}"
               href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>
           {% endif %}
           {% endwith %}
           {% endfor %}
-          <li><a
+          <li data-jm-nav-item><a
               class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
               href="{% url 'core:about-us' %}">{% trans "About Us" %}</a></li>
-          <li><a
+          <li data-jm-nav-item><a
               class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' %}is-active{% endif %}"
               href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a></li>
+          <li class="dropdown jm-nav__dropdown jm-nav__more" data-jm-nav-more hidden>
+            <button type="button" class="jm-nav__link jm-nav__link--toggle dropdown-toggle"
+              data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">{% trans "More" %}</button>
+            <ul class="dropdown-menu jm-nav__menu" data-jm-nav-more-list></ul>
+          </li>
         </ul>
       </nav>
 
@@ -218,12 +224,30 @@
         href="{% url 'cms:homepage' %}">{% trans "Home" %}</a>
       <a class="{% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}" href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a>
       {% for collection in collection_tree %}
-      <a class="{% if request.resolver_match.kwargs.collection_slug == collection.slug %}is-active{% endif %}"
+      {% with children=collection.children.all current=request.resolver_match.kwargs.collection_slug %}
+      {% if children %}
+      <div class="jm-mobile-nav__group">
+        <div class="jm-mobile-nav__group-row">
+          <a class="jm-mobile-nav__group-link {% if current == collection.slug %}is-active{% endif %}"
+            href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a>
+          <button type="button" class="jm-mobile-nav__group-toggle" data-bs-toggle="collapse"
+            data-bs-target="#mnav-{{ collection.pk }}" aria-expanded="false"
+            aria-controls="mnav-{{ collection.pk }}" aria-label="{% blocktrans with name=collection.name %}Toggle {{ name }} sub-collections{% endblocktrans %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+        <div class="collapse jm-mobile-nav__group-body" id="mnav-{{ collection.pk }}">
+          {% for child in children %}
+          <a class="jm-mobile-nav__child {% if current == child.slug %}is-active{% endif %}"
+            href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">{{ child.name }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <a class="{% if current == collection.slug %}is-active{% endif %}"
         href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a>
-      {% for child in collection.children.all %}
-      <a class="jm-mobile-nav__child {% if request.resolver_match.kwargs.collection_slug == child.slug %}is-active{% endif %}"
-        href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">{{ child.name }}</a>
-      {% endfor %}
+      {% endif %}
+      {% endwith %}
       {% endfor %}
 
       <a class="{% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"

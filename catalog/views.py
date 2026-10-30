@@ -160,6 +160,7 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
 
     #the HTMX grid partial (filters / pagination) is not a new page view
     is_grid_partial = request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request")
+    context["is_grid_partial"] = is_grid_partial
     if not is_grid_partial:
         context["mpx_events"] = _plp_pixel_events(
             request=request, plp_data=plp_data, active_collection=active_collection

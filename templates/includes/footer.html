@@ -32,7 +32,7 @@
         <a href="{% url 'core:about-us' %}">{% trans "About Us" %}</a>
         <a href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a>
         <a href="{% url 'core:faq' %}">{% trans "FAQ" %}</a>
-        <a href="{% url 'core:blog' %}">{% trans "Blog" %}</a>
+        {% if has_blog_posts %}<a href="{% url 'core:blog' %}">{% trans "Blog" %}</a>{% endif %}
       </div>
 
       <div>
@@ -41,7 +41,6 @@
         <a href="{% url 'core:shipping-policy' %}">{% trans "Shipping Policy" %}</a>
         <a href="{% url 'core:terms-of-service' %}">{% trans "Terms of Service" %}</a>
         <a href="{% url 'core:refund-policy' %}">{% trans "Refund Policy" %}</a>
-        <a href="{% url 'core:contact-us' %}">{% trans "Support" %}</a>
         {% for p in cms_pages %}
           <a href="{% url 'core:page' p.slug %}">{{ p.title|title }}</a>
         {% endfor %}

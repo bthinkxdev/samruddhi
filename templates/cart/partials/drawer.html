@@ -59,7 +59,7 @@
     <form method="post" action="{% url 'cart:remove' %}">
       {% csrf_token %}
       <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
-      <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:remove' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Remove' %}">×</button>
+      <button class="btn btn-sm btn-ghost text-danger jm-cart-remove" type="button" hx-post="{% url 'cart:remove' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Remove' %}">×</button>
     </form>
     </li>
     {% endfor %}
