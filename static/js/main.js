@@ -129,36 +129,87 @@
     });
   }
 
-  function loadCartDrawerIfNeeded() {
-    var body = document.getElementById('cart-drawer-body');
-    // always refetch on open: stock/price may have changed since the last render
-    if (!body || !window.htmx) {
-      return;
-    }
-    var url = body.getAttribute('hx-get');
-    if (!url) {
-      return;
-    }
-    htmx.ajax('GET', url, { target: '#cart-drawer-body', swap: 'innerHTML' });
-    body.dataset.drawerHydrated = 'true';
-  }
+  
+var cartDrawerSavedScrollTop = 0;
 
-  var cartOffcanvas = document.getElementById('cartOffcanvas');
-  if (cartOffcanvas) {
-    cartOffcanvas.addEventListener('show.bs.offcanvas', function () {
-      loadCartDrawerIfNeeded();
+function loadCartDrawerIfNeeded() {
+  var body = document.getElementById('cart-drawer-body');
+
+  if (!body || !window.htmx) {
+    return;
+  }
+  var url = body.getAttribute('hx-get');
+  if (!url) {
+    return;
+  }
+  htmx.ajax('GET', url, { target: '#cart-drawer-body', swap: 'innerHTML' });
+  body.dataset.drawerHydrated = 'true';
+}
+
+var cartOffcanvas = document.getElementById('cartOffcanvas');
+if (cartOffcanvas) {
+  cartOffcanvas.addEventListener('show.bs.offcanvas', function () {
+    loadCartDrawerIfNeeded();
+  });
+}
+
+document.body.addEventListener('htmx:beforeRequest', function (event) {
+  var target = event.detail.target;
+
+  if (target && target.id === 'cart-drawer-body') {
+    var scrollElement = target.querySelector('.cart-drawer-scroll');
+
+    if (scrollElement) {
+      cartDrawerSavedScrollTop = scrollElement.scrollTop;
+    }
+  }
+});
+var cartPageSavedScrollTop = 0;
+
+
+document.body.addEventListener('htmx:beforeRequest', function (event) {
+  var target = event.detail.target;
+
+  if (target && target.id === 'cart-page-body') {
+    cartPageSavedScrollTop = window.scrollY;
+  }
+});
+
+
+document.body.addEventListener('htmx:afterSettle', function (event) {
+  var target = event.detail.target;
+
+  if (target && target.id === 'cart-page-body') {
+    requestAnimationFrame(function () {
+      window.scrollTo(0, cartPageSavedScrollTop);
     });
   }
+});
 
-  document.body.addEventListener('htmx:afterSwap', function (event) {
-    if (event.detail.target && event.detail.target.id === 'cart-drawer-body') {
-      event.detail.target.dataset.drawerHydrated = 'true';
+
+document.body.addEventListener('htmx:afterSettle', function (event) {
+  var target = event.detail.target;
+
+  if (target && target.id === 'cart-drawer-body') {
+    var scrollElement = target.querySelector('.cart-drawer-scroll');
+
+    if (scrollElement) {
+      scrollElement.scrollTop = cartDrawerSavedScrollTop;
     }
-    if (event.detail.target && event.detail.target.id === 'search-suggestions') {
-      initSearchSuggestionsKeyboard();
-      updateSearchDropdownState();
-    }
-  });
+  }
+});
+
+document.body.addEventListener('htmx:afterSwap', function (event) {
+  if (event.detail.target && event.detail.target.id === 'cart-drawer-body') {
+    event.detail.target.dataset.drawerHydrated = 'true';
+  }
+
+  if (event.detail.target && event.detail.target.id === 'search-suggestions') {
+    initSearchSuggestionsKeyboard();
+    updateSearchDropdownState();
+  }
+});
+
 
   function updateSearchDropdownState() {
     var input = document.getElementById('site-search-input');

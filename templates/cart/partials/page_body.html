@@ -1,6 +1,6 @@
 {% load i18n %}
 {% load static %}
-<div id="cart-page-body" hx-get="{% url 'cart:page' %}" hx-trigger="cartUpdated from:body" hx-select="#cart-page-body" hx-swap="outerHTML">
+<div id="cart-page-body">
 {% if error and not error_item_id %}
 <div class="alert alert-danger py-2 small mb-3" role="alert">{{ error }}</div>
 {% endif %}

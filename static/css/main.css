@@ -127,24 +127,24 @@ img {
 }
 
 .section-title {
-  position: relative;
   display: inline-block;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(1.6rem, 1.3rem + 1.3vw, 2.35rem);
-  line-height: 1.2;
-  letter-spacing: -0.015em;
-  color: var(--jm-ink);
+  flex: 1;
+  min-width: 0;
   margin: 0 0 0.6rem;
 }
 
 .section-title::after {
+  width: 100%;
   content: "";
   display: block;
-  width: 42px;
   height: 2px;
   margin-top: 0.5rem;
   background: var(--jm-gold);
+}
+
+.section-cta {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .section-subtitle {
@@ -888,11 +888,9 @@ body.mobile-search-open {
 
 .section-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0 0.25rem;
 }
 
 .section-header .section-cta {
@@ -6895,23 +6893,19 @@ html.jm-header-is-hidden {
 }
 
 .jm-info-page__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--jm-accent);
-  margin-bottom: 0.6rem;
+  display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--jm-accent);
+    margin-bottom: 0.6rem;
+    border-bottom: 2px solid var(--jm-gold);
+    padding-bottom: 4px;
 }
 
 .jm-info-page__eyebrow::before {
-  content: "";
-  display: inline-block;
-  width: 22px;
-  height: 2px;
-  background: var(--jm-accent);
+    content: none;
 }
 
 .jm-info-page__title {
@@ -7059,6 +7053,9 @@ html.jm-header-is-hidden {
   border: 1px solid rgba(var(--jm-red-rgb), 0.12);
   border-radius: var(--jm-radius-lg);
   padding: calc(var(--jm-space) * 3);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .jm-info-card h2 {
@@ -7109,10 +7106,9 @@ html.jm-header-is-hidden {
 }
 
 .jm-info-card__item-value {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--jm-ink);
-  line-height: 1.4;
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .jm-info-card__item-value a {

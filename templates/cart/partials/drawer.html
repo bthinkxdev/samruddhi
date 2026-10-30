@@ -7,7 +7,7 @@
 <div class="cart-drawer-scroll">
   <ul class="list-unstyled mb-0">
     {% for line in summary.lines %}
-    <li class="cart-line">
+    <li class="cart-line" id="cart-line-{{ line.item.pk }}">
     <div class="cart-line__img-wrap">
       {% with line.product.primary_images|first as primary_image %}
       {% if primary_image %}
