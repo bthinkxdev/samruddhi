@@ -7,6 +7,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 
 from accounts.models import CustomerProfile
+from orders.models import OrderStatus
 from core.models import ContactInquiry
 from dashboard import forms
 from dashboard.access import dashboard_required
@@ -48,7 +49,9 @@ def customer_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "page_title": str(profile),
         "profile": profile,
         "addresses": profile.addresses.all(),
-        "orders": profile.orders.order_by(F("success_at").desc(nulls_last=True), "-created_at")[:10],
+        # unpaid online checkouts (CHECKOUT_PENDING) aren't orders yet - see Abandoned Checkouts
+        "orders": profile.orders.exclude(order_status=OrderStatus.CHECKOUT_PENDING)
+        .order_by(F("success_at").desc(nulls_last=True), "-created_at")[:10],
     }
     return render(request, "dashboard/customers/detail.html", context)
 

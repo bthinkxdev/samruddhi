@@ -23,10 +23,17 @@
         </select>
       </div>
       <div class="col-6 col-md-auto d-flex align-items-center gap-2">
+        {% if show_all_attempts %}<input type="hidden" name="attempts" value="all">{% endif %}
         <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0" data-filter-submit>Filter</button>
-        {% if search_query or current_status %}
+        {% if search_query or current_status or show_all_attempts %}
         <a href="{% url 'dashboard:payment-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
+      </div>
+      <div class="col-12 col-md-auto ms-md-auto">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" id="show-all-attempts" name="attempts" value="all" {% if show_all_attempts %}checked{% endif %} onchange="this.form.querySelectorAll('input[type=hidden][name=attempts]').forEach(function (el) { el.remove(); }); this.form.submit();">
+          <label class="form-check-label small" for="show-all-attempts">Show every payment attempt</label>
+        </div>
       </div>
     </form>
 
@@ -36,7 +43,14 @@
         <tbody>
           {% for pay in objects %}
           <tr>
-            <td><a href="{% url 'dashboard:order-detail' pay.order_id %}">{{ pay.order.order_number }}</a></td>
+            <td>
+              <a href="{% url 'dashboard:order-detail' pay.order_id %}">{{ pay.order.order_number }}</a>
+              {% if show_all_attempts %}
+                {% if pay.pk != pay.latest_pk %}<span class="badge bg-light text-secondary border ms-1" title="Superseded by a later payment attempt on this order">Earlier attempt</span>{% endif %}
+              {% elif pay.attempt_count > 1 %}
+                <a href="?attempts=all&amp;q={{ pay.order.order_number|urlencode }}" class="badge bg-light text-secondary border ms-1 text-decoration-none" title="This order had {{ pay.attempt_count }} payment attempts">{{ pay.attempt_count }} attempts</a>
+              {% endif %}
+            </td>
             <td>{{ pay.gateway_key }}</td>
             <td>{{ pay.amount|floatformat:2 }} {{ pay.currency.code }}</td>
             <td><span class="badge bg-secondary-subtle text-secondary">{{ pay.get_status_display }}</span></td>

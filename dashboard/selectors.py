@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from accounts.models import CustomerProfile
 from catalog.models import Product
-from orders.models import Order
+from orders.models import Order, OrderStatus
 from orders.services import REVENUE_ORDER_STATUSES
 from reports.models import (
     DailyCustomerReport,
@@ -154,6 +154,8 @@ def get_recent_orders(*, limit: int = 6) -> list[Order]:
     """
     return list(
         Order.objects.select_related("customer_profile__user", "currency")
+        # unpaid online checkouts belong under Abandoned Checkouts, not Orders
+        .exclude(order_status=OrderStatus.CHECKOUT_PENDING)
         .order_by(F("success_at").desc(nulls_last=True), "-created_at")[:limit]
     )
 
@@ -163,5 +165,5 @@ def get_dashboard_counts() -> dict[str, int]:
     return {
         "product_count": Product.objects.filter(is_active=True).count(),
         "customer_count": CustomerProfile.objects.count(),
-        "order_count": Order.objects.count(),
+        "order_count": Order.objects.exclude(order_status=OrderStatus.CHECKOUT_PENDING).count(),
     }

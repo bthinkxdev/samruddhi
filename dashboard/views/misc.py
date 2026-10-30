@@ -40,7 +40,19 @@ def settings_view(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def payment_list(request: HttpRequest) -> HttpResponse:
     """Read-only list of payment transactions."""
-    qs = PaymentTransaction.objects.select_related("order", "currency").order_by("-created_at")
+    from django.db.models import Count, OuterRef, Subquery
+
+    same_order = PaymentTransaction.objects.filter(order_id=OuterRef("order_id"))
+    latest_pk = same_order.order_by("-created_at", "-pk").values("pk")[:1]
+    attempt_count = same_order.values("order_id").annotate(c=Count("pk")).values("c")[:1]
+    qs = (
+        PaymentTransaction.objects.select_related("order", "currency")
+        .annotate(latest_pk=Subquery(latest_pk), attempt_count=Subquery(attempt_count))
+        .order_by("-created_at")
+    )
+    show_all_attempts = request.GET.get("attempts") == "all"
+    if not show_all_attempts:
+        qs = qs.filter(pk=Subquery(latest_pk))
     status = request.GET.get("status", "").strip()
     if status:
         qs = qs.filter(status=status)
@@ -64,6 +76,7 @@ def payment_list(request: HttpRequest) -> HttpResponse:
             "statuses": PaymentStatus.choices,
             "current_status": status,
             "search_query": query,
+            "show_all_attempts": show_all_attempts,
             "querystring": params.urlencode(),
         },
     )
