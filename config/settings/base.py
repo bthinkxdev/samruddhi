@@ -22,6 +22,11 @@ DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
+#comma-separated IPs/CIDR ranges allowed to reach /dashboard/ (e.g. "203.0.113.4,10.0.0.0/24").
+#empty by default — the restriction only turns on once this is explicitly set, so it can
+#never silently lock the real admin out. See dashboard/middleware.py.
+DASHBOARD_ALLOWED_IPS = env.list("DASHBOARD_ALLOWED_IPS", default=[])
+
 LOCAL_APPS = [
     "core",
     "accounts",
@@ -52,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "dashboard.middleware.DashboardIPAllowlistMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

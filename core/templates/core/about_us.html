@@ -13,11 +13,23 @@
   </header>
 
   <div class="container">
-    <div class="jm-info-page__content" style="max-width: 44rem; margin-inline: auto;">
+    <div class="jm-info-page__content" style="max-width: {% if site_settings.about_image %}64rem{% else %}44rem{% endif %}; margin-inline: auto;">
+      {% if site_settings.about_image %}
+      <div class="jm-about-intro jm-reveal">
+        <div class="jm-about-intro__media">
+          <img src="{{ site_settings.about_image.url }}" alt="{{ site_settings.site_name }}" loading="lazy">
+        </div>
+        <p class="jm-info-intro jm-about-intro__text mb-0">{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings exquisite, finely crafted jewellery to customers.{% endblocktrans %}
+          {% trans "Have questions about who we are? Reach out any time — our team is here to help." %}
+          <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
+        </p>
+      </div>
+      {% else %}
       <p class="jm-info-intro jm-reveal">{% blocktrans with name=site_settings.site_name domain=request.get_host %}{{ name }} brings exquisite, finely crafted jewellery to customers.{% endblocktrans %}
         {% trans "Have questions about who we are? Reach out any time — our team is here to help." %}
         <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
       </p>
+      {% endif %}
 
       <div class="jm-info-card jm-reveal">
         <h2>{% trans "Company Details" %}</h2>

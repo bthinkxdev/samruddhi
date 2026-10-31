@@ -75,12 +75,14 @@ class Coupon(TimeStampedModel):
 
 
 class CouponRedemption(TimeStampedModel):
-    """Tracks coupon usage per customer."""
+    """Tracks coupon usage; guest checkouts have no customer profile."""
 
     coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name="redemptions")
     customer_profile = models.ForeignKey(
         "accounts.CustomerProfile",
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="coupon_redemptions",
     )
     order = models.ForeignKey(

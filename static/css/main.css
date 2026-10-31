@@ -3030,32 +3030,17 @@ body.mobile-search-open {
 }
 
 @media (min-width: 992px) {
-  .jm-header__main-inner {
-    transition: grid-template-columns 0.35s ease;
-  }
-
-  .jm-nav {
-    transition: opacity 0.2s ease;
-  }
-
-  .jm-search {
-    transition: max-width 0.35s ease;
-  }
-
-  /* Scrolled down: collapse the category nav and let the search bar grow
-     into the freed space, instead of hiding the whole header. */
-  html.jm-header-is-hidden .jm-header__main-inner {
-    grid-template-columns: auto 0fr minmax(420px, 680px) auto;
-  }
-
-  html.jm-header-is-hidden .jm-nav {
-    opacity: 0;
-    pointer-events: none;
+  .jm-header__nav-row {
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+    max-height: 60px;
     overflow: hidden;
   }
 
-  html.jm-header-is-hidden .jm-search {
-    max-width: 680px;
+  /* Scrolled down: collapse the category nav row instead of hiding the whole header. */
+  html.jm-header-is-hidden .jm-header__nav-row {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
@@ -3065,84 +3050,68 @@ body.mobile-search-open {
 }
 
 .jm-topbar {
-  background: #FAFAFA;
-  border-bottom: 1px solid var(--jm-border-light);
+  background: var(--jm-accent);
+  border-bottom: 1px solid var(--jm-accent-dark);
   font-size: 0.75rem;
-  color: var(--jm-slate);
+  color: #fff;
 }
 
 .jm-topbar__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
-  min-height: 40px;
+  min-height: 36px;
   padding-block: 0.35rem;
 }
 
-.jm-topbar__trust,
-.jm-topbar__meta {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
+.jm-topbar__trust {
+  position: relative;
+  width: 100%;
+  min-height: 1.25rem;
 }
 
-.jm-topbar__item,
-.jm-topbar__link {
-  display: inline-flex;
+.jm-topbar__item {
+  position: absolute;
+  inset: 0;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   white-space: nowrap;
   color: inherit;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
 }
 
-.jm-topbar__item svg,
-.jm-topbar__link svg {
+.jm-topbar__item.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.jm-topbar__item svg {
   width: 14px;
   height: 14px;
-  color: var(--jm-accent);
+  color: #fff;
   flex-shrink: 0;
 }
 
-.jm-topbar__cta {
-  color: var(--jm-accent);
-  font-weight: 700;
-}
-
-.jm-topbar__cta:hover {
-  color: var(--jm-accent-dark);
-}
-
 @media (max-width: 991.98px) {
-  .jm-topbar {
-    overflow: hidden;
-  }
-  .jm-topbar__inner {
-    display: flex;
-    flex-wrap: nowrap;
-    width: max-content;
-    padding-inline: 0;
-    justify-content: flex-start;
-    animation: jm-marquee 25s linear infinite;
-  }
-  .jm-topbar__inner:hover, .jm-topbar__inner:active {
-    animation-play-state: paused;
-  }
-  .jm-topbar__trust, .jm-topbar__meta {
-    display: flex;
-    flex-wrap: nowrap;
-  }
-  @keyframes jm-marquee {
-    0% { transform: translateX(100vw); }
-    100% { transform: translateX(-100%); }
+  .jm-topbar__item {
+    white-space: normal;
+    text-align: center;
+    padding-inline: 2.5rem;
   }
 }
 
 .jm-header__main-inner {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(200px, 320px) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 0;
+  gap: 1rem;
   min-height: 76px;
   padding-block: 0;
 }
@@ -3152,6 +3121,24 @@ body.mobile-search-open {
   align-items: center;
   gap: 0;
   min-width: 0;
+}
+
+@media (min-width: 992px) {
+  /* Desktop: both children of .jm-header__start are d-lg-none (toggle + mobile
+     logo); drop it from the grid entirely so search/logo/actions get the 3
+     explicit columns below instead of it claiming an implicit 4th. */
+  .jm-header__start {
+    display: none;
+  }
+}
+
+.jm-header__nav-row {
+  border-top: 1px solid var(--jm-border-light);
+}
+
+.jm-header__nav-row .jm-nav {
+  justify-content: center;
+  min-height: 48px;
 }
 
 .jm-menu-toggle {
@@ -3202,23 +3189,28 @@ body.mobile-search-open {
   border-radius: 50%;
 }
 
+.jm-logo--center {
+  justify-self: center;
+}
+
 .jm-search {
   display: flex;
   align-items: stretch;
   width: 100%;
-  max-width: 480px;
-  margin-inline: auto;
-  border: 1px solid var(--jm-border);
+  max-width: 420px;
+  justify-self: start;
+  border: 0;
   border-radius: var(--jm-radius);
-  background: var(--jm-white);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
   overflow: visible;
   position: relative;
   z-index: 30;
-  transition: border-color var(--jm-transition), box-shadow var(--jm-transition);
+  transition: box-shadow var(--jm-transition);
 }
 
 .jm-search:focus-within {
-  border-color: var(--jm-accent);
   box-shadow: 0 0 0 3px rgba(var(--jm-red-rgb), 0.12);
 }
 
@@ -3273,6 +3265,7 @@ body.mobile-search-open {
 .jm-header__actions {
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 0.15rem;
 }
 
@@ -3396,9 +3389,6 @@ body.mobile-search-open {
   display: flex;
   align-items: center;
   min-width: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
 }
 
 .jm-mega__trigger {
@@ -3514,15 +3504,20 @@ body.mobile-search-open {
   outline: none;
 }
 
+/* Fade only — never transition `transform`: Popper positions this element
+   via an inline `transform`, so animating that property raced Popper's own
+   placement and made the menu visibly slide in from the wrong spot (and,
+   worse, dragged the cursor outside the menu mid-slide, triggering a
+   spurious mouseleave that closed it again almost instantly). */
 .jm-nav__menu.show {
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+  pointer-events: none;
+  transition: opacity 0.16s ease-out;
 }
 
 .jm-nav__menu.show.jm-nav__menu--ready {
   opacity: 1;
-  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .jm-nav__menu {
@@ -3549,6 +3544,77 @@ body.mobile-search-open {
 .jm-nav__menu .dropdown-item:active {
   background: var(--jm-accent);
   color: var(--jm-white);
+}
+
+/* Mega-menu: a grid of larger category tiles on the left, one big
+   collection photo on the right — replaces the old narrow text dropdown. */
+.jm-nav__mega.show {
+  display: flex !important;
+  align-items: stretch;
+  gap: 1.5rem;
+  width: max-content;
+  max-width: min(640px, calc(100vw - 2rem));
+  padding: 1.25rem;
+}
+
+.jm-nav__mega-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 0.4rem;
+  align-content: start;
+  flex: 1 1 auto;
+}
+
+.jm-nav__mega-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 64px;
+  padding: 0.5rem;
+  border-radius: 10px;
+  color: var(--jm-ink);
+}
+
+.jm-nav__mega-item:hover,
+.jm-nav__mega-item:focus,
+.jm-nav__mega-item.active {
+  background: var(--jm-surface);
+}
+
+.jm-nav__mega-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--jm-surface);
+}
+
+.jm-nav__mega-feature {
+  position: relative;
+  flex: 0 0 220px;
+  border-radius: var(--jm-radius-lg);
+  overflow: hidden;
+  display: block;
+}
+
+.jm-nav__mega-feature img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.jm-nav__mega-feature__label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.55), transparent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 /* sub-collection links in the mobile menu */
@@ -4472,47 +4538,6 @@ body.mobile-search-open .jm-wa-float {
   height: 16px;
 }
 
-/* Add-to-cart FAB (homepage only) — floating over the image, bottom-right,
-   always visible (unlike the hover-only wishlist/quick-view stack) so it
-   works on touch too. */
-.jm-product-card__fab {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 3;
-}
-
-.jm-product-card__icon-btn--cart {
-  width: 42px;
-  height: 42px;
-  border: 0;
-  background: var(--jm-accent);
-  color: #fff;
-  box-shadow: var(--jm-shadow);
-}
-
-.jm-product-card__icon-btn--cart svg {
-  width: 19px;
-  height: 19px;
-}
-
-.jm-product-card__icon-btn--cart:hover {
-  background: var(--jm-accent-dark);
-  color: #fff;
-  transform: scale(1.06);
-}
-
-.jm-product-card__icon-btn--cart:disabled {
-  background: var(--jm-muted, #94a3b8);
-  box-shadow: none;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.jm-product-card__icon-btn--cart.jm-dynamic-view-cart {
-  background: var(--jm-ink, #1a1a1a);
-}
-
 /* Add-to-cart click feedback — a quick press/pop on the trigger (FAB icon or
    full button), and a pop-in for the "View Cart" swap once the add succeeds. */
 @keyframes jm-btn-press {
@@ -4569,6 +4594,8 @@ body.mobile-search-open .jm-wa-float {
 }
 
 .jm-product-card__atc {
+  position: relative;
+  z-index: 2;
   width: 100% !important;
   max-width: 100%;
   box-sizing: border-box;
@@ -4755,9 +4782,8 @@ button.jm-product-card__atc--in-cart:hover {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
-  overflow: hidden;
   flex-shrink: 0;
 }
 
@@ -4770,6 +4796,7 @@ button.jm-product-card__atc--in-cart:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 
 .jm-product-card .product-price {
   font-size: 0.95rem;
@@ -5636,26 +5663,6 @@ button.jm-product-card__atc--in-cart:hover {
     height: 14px;
   }
 
-  .jm-product-card__fab {
-    right: 6px;
-    bottom: 6px;
-  }
-
-  .jm-product-card__icon-btn--cart {
-    width: 34px;
-    height: 34px;
-    background: var(--jm-accent);
-  }
-
-  .jm-product-card__icon-btn--cart.jm-dynamic-view-cart {
-    background: var(--jm-ink, #1a1a1a);
-  }
-
-  .jm-product-card__icon-btn--cart svg {
-    width: 16px;
-    height: 16px;
-  }
-
   /* Keep wishlist only on mobile hover stack; hide quick-view clutter */
   .jm-product-card__hover [data-jm-quick-view] {
     display: none;
@@ -5704,6 +5711,8 @@ button.jm-product-card__atc--in-cart:hover {
 
   .jm-product-card__pricing {
     min-height: 1.15rem;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
   }
 
   .jm-product-card .product-price {
@@ -6697,20 +6706,6 @@ html.jm-header-is-hidden {
     height: 18px;
   }
 
-  .jm-product-card__icon-btn--cart {
-    width: 46px;
-    height: 46px;
-  }
-
-  .jm-product-card__icon-btn--cart svg {
-    width: 21px;
-    height: 21px;
-  }
-
-  .jm-product-card__fab {
-    right: 12px;
-    bottom: 12px;
-  }
 
   .jm-product-card__atc {
     min-height: 44px;
@@ -6813,21 +6808,6 @@ html.jm-header-is-hidden {
   .jm-product-card__icon-btn svg {
     width: 20px;
     height: 20px;
-  }
-
-  .jm-product-card__icon-btn--cart {
-    width: 50px;
-    height: 50px;
-  }
-
-  .jm-product-card__icon-btn--cart svg {
-    width: 23px;
-    height: 23px;
-  }
-
-  .jm-product-card__fab {
-    right: 14px;
-    bottom: 14px;
   }
 
   .jm-product-card__atc {
@@ -7045,6 +7025,32 @@ html.jm-header-is-hidden {
   font-size: 1.0625rem;
   color: var(--jm-ink);
   line-height: 1.75;
+}
+
+.jm-about-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: calc(var(--jm-space) * 2);
+}
+
+.jm-about-intro__media {
+  border-radius: var(--jm-radius-lg);
+  overflow: hidden;
+}
+
+.jm-about-intro__media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+@media (min-width: 768px) {
+  .jm-about-intro {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 /* ---- Contact / details card ---- */

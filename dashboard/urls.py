@@ -33,6 +33,7 @@ def _crud(basename, list_v, create_v, update_v, delete_v):
 urlpatterns = [
     path("login/", auth.login_view, name="login"),
     path("logout/", auth.logout_view, name="logout"),
+    path("change-password/", auth.change_password_view, name="change-password"),
     path("", home.home_view, name="home"),
     path("orders/", orders.order_list, name="order-list"),
     path("orders/<int:pk>/", orders.order_detail, name="order-detail"),

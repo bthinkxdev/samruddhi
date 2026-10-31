@@ -182,9 +182,11 @@ def get_wishlist_product_ids(*, request: HttpRequest) -> set[int]:
     return set(_wishlist_items_qs(request=request).values_list("product_id", flat=True))
 
 
-def get_cart_collection_ids(lines: list[CartSummaryLine]) -> list[int]:
-    """Distinct collection ids across cart lines (products must carry prefetched collections)."""
-    return list({c.pk for line in lines for c in line.product.collections.all()})
+def get_cart_coupon_lines(lines: list[CartSummaryLine]) -> list[tuple[Decimal, set[int]]]:
+    """``(line_subtotal, collection_ids)`` per line for coupon scoping (collections must be prefetched)."""
+    return [
+        (line.line_subtotal, {c.pk for c in line.product.collections.all()}) for line in lines
+    ]
 
 
 def get_cart_summary(*, cart: Cart) -> CartSummary:
@@ -273,13 +275,13 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
     if coupon_code:
         from marketing.services import validate_coupon_for_cart
         from marketing.exceptions import InvalidCouponError
-        collection_ids = get_cart_collection_ids(lines)
         try:
             result = validate_coupon_for_cart(
                 code=coupon_code,
                 cart_subtotal=subtotal,
+                cart_lines=get_cart_coupon_lines(lines),
                 customer_profile_id=cart.customer_profile_id,
-                cart_collection_ids=collection_ids,
+                cart_id=cart.pk,
             )
             coupon_discount = result["discount_amount"]
         except InvalidCouponError:

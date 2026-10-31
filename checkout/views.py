@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from accounts.selectors import get_address_by_id, get_saved_addresses
 from cart.selectors import get_cart_for_request, get_cart_summary
 from cart.services import get_or_create_cart
+from checkout.exceptions import CheckoutSessionError
 from checkout.forms import CheckoutAddressForm, CheckoutDeliveryForm, CheckoutPaymentForm
 from checkout.selectors import get_checkout_session_by_id
 from checkout.services import create_checkout_session, place_order, update_checkout_session
@@ -532,6 +533,13 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         response["HX-Trigger"] = "stockChanged"
         return response
+    except CheckoutSessionError as exc:
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": [str(exc)]}},
+            status=200,
+        )
 
     if meta_pixel.is_enabled():
         #stored on the order so a webhook-confirmed payment (no browser in the request) can

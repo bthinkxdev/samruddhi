@@ -6,6 +6,7 @@ import copy
 from datetime import timedelta
 
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
 from django.forms.models import InlineForeignKeyField
 from django.utils import timezone
 from django.utils.text import slugify
@@ -26,12 +27,21 @@ from dashboard.uploads import RetainUploadsMixin
 from cms.models import AnnouncementBarItem, BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
 from core.models import SiteSettings, Currency
 
-from marketing.models import Coupon, FlashSale, NewsletterSubscriber
+from marketing.models import Coupon, CouponDiscountType, FlashSale, NewsletterSubscriber
 from whatsapp.models import WhatsAppTemplate
 
 _DATE = forms.DateInput(attrs={"type": "date"})
 _DATETIME = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
 _TIME = forms.TimeInput(attrs={"type": "time"})
+
+
+class DashboardPasswordChangeForm(PasswordChangeForm):
+    """PasswordChangeForm with Bootstrap classes, for the dashboard's own change-password page."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
 
 
 class FutureDateRangeMixin:
@@ -541,6 +551,16 @@ class CouponForm(FutureDateRangeMixin, forms.ModelForm):
             "applicable_collections",
             "is_active",
         ]
+
+    def clean(self):
+        cleaned = super().clean()
+        value = cleaned.get("discount_value")
+        if value is not None:
+            if value <= 0:
+                self.add_error("discount_value", "Value must be greater than zero.")
+            elif cleaned.get("discount_type") == CouponDiscountType.PERCENTAGE and value > 100:
+                self.add_error("discount_value", "A percentage discount can't exceed 100.")
+        return cleaned
         widgets = {"valid_from": _DATETIME, "valid_until": _DATETIME}
 
     def __init__(self, *args, **kwargs):
@@ -586,7 +606,11 @@ class FlashSaleForm(FutureDateRangeMixin, forms.ModelForm):
         cleaned_data = super().clean()
         ends_at = cleaned_data.get("ends_at")
         is_active = cleaned_data.get("is_active")
-        
+
+        pct = cleaned_data.get("discount_percentage")
+        if pct is not None and not (0 < pct < 100):
+            self.add_error("discount_percentage", "Discount must be above 0 and below 100.")
+
         from django.utils import timezone
         now = timezone.now()
         
@@ -969,6 +993,7 @@ class SiteSettingsForm(forms.ModelForm):
         "logo",
         "favicon",
         "og_image",
+        "about_image",
         "contact_phone",
         "address",
         "primary_color",
@@ -989,6 +1014,7 @@ class SiteSettingsForm(forms.ModelForm):
         "meta_capi_access_token",
         "clear_meta_capi_access_token",
         "whatsapp_otp_template_id",
+        "dashboard_allowed_ips",
     ]
 
     clear_meta_capi_access_token = forms.BooleanField(
@@ -1004,6 +1030,7 @@ class SiteSettingsForm(forms.ModelForm):
             "logo",
             "favicon",
             "og_image",
+            "about_image",
             "contact_phone",
             "address",
             "primary_color",
@@ -1022,6 +1049,7 @@ class SiteSettingsForm(forms.ModelForm):
             "meta_pixel_id",
             "meta_capi_access_token",
             "whatsapp_otp_template_id",
+            "dashboard_allowed_ips",
         ]
         labels = {
             "vendor_email": "Email",
@@ -1029,6 +1057,7 @@ class SiteSettingsForm(forms.ModelForm):
         }
         widgets = {
             "address": forms.Textarea(attrs={"rows": 3}),
+            "dashboard_allowed_ips": forms.Textarea(attrs={"rows": 2}),
             #never echo the stored token back into the page source
             "meta_capi_access_token": forms.PasswordInput(render_value=False, attrs={"autocomplete": "off"}),
         }

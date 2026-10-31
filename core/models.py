@@ -229,6 +229,13 @@ class SiteSettings(TimeStampedModel):
         verbose_name="Social share image (OG)",
         help_text="Default image shown when pages are shared (recommended 1200x630). Falls back to the logo.",
     )
+    about_image = models.ImageField(
+        upload_to="site/",
+        blank=True,
+        null=True,
+        verbose_name="About page image",
+        help_text="Shown beside the text on the About Us page.",
+    )
     contact_phone = models.CharField(max_length=30, blank=True)
     address = models.TextField(
         blank=True,
@@ -279,6 +286,16 @@ class SiteSettings(TimeStampedModel):
         default="",
         verbose_name="WhatsApp OTP Template ID",
         help_text="Gupshup template ID (UUID) used to send WhatsApp OTP verification codes.",
+    )
+    dashboard_allowed_ips = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Dashboard allowed IPs",
+        help_text=(
+            "Restrict admin dashboard access to these IPs/ranges, comma-separated "
+            "(e.g. 203.0.113.4, 198.51.100.0/24). Leave blank to allow anyone to "
+            "reach the dashboard login."
+        ),
     )
     razorpay_key_id = models.CharField(
         max_length=120,

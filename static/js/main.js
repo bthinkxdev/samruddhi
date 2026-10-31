@@ -1477,33 +1477,24 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
     document.querySelectorAll('.jm-product-card[data-product-id="' + productId + '"]').forEach(function (card) {
       var fullyInCart = isCardFullyInCart(card, inCart);
       card.dataset.inCart = fullyInCart ? 'true' : 'false';
-      // homepage uses the icon FAB (.jm-product-card__fab); PLP/PDP use the full button (.jm-product-card__cart)
-      var fab = card.querySelector('.jm-product-card__fab');
-      var form = fab || card.querySelector('.jm-product-card__cart');
+      var form = card.querySelector('.jm-product-card__cart');
       var viewCartLink = card.querySelector('.jm-dynamic-view-cart');
 
       if (fullyInCart) {
-        if (form && !form.classList.contains('d-none')) {
+        if (viewCartLink) {
+          // Already showing View Cart — just make sure Add to Cart stays hidden.
+          if (form) form.classList.add('d-none');
+        } else if (form) {
           var newLink = document.createElement('a');
           var cartUrl = '/cart/';
           var existingLink = document.querySelector('a[href*="/cart/"]');
           if (existingLink) cartUrl = existingLink.getAttribute('href');
           newLink.href = cartUrl;
-
-          if (fab) {
-            newLink.className = 'jm-product-card__fab jm-product-card__icon-btn jm-product-card__icon-btn--cart jm-dynamic-view-cart';
-            newLink.setAttribute('aria-label', 'View Cart');
-            newLink.setAttribute('title', 'View Cart');
-            newLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
-          } else {
-            newLink.className = 'btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart';
-            newLink.innerHTML = '<span>View Cart</span>';
-          }
-          newLink.classList.add('jm-pop-in');
+          newLink.className = 'btn btn-outline-theme jm-product-card__atc jm-product-card__atc--in-cart mt-auto jm-dynamic-view-cart jm-pop-in';
+          newLink.innerHTML = '<span>View Cart</span>';
 
           form.classList.add('d-none');
-          if (viewCartLink) viewCartLink.replaceWith(newLink);
-          else form.parentNode.insertBefore(newLink, form.nextSibling);
+          form.parentNode.insertBefore(newLink, form.nextSibling);
         }
       } else {
         if (viewCartLink) viewCartLink.remove();
@@ -1689,8 +1680,13 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
     if (!header || header.dataset.jmScrollHideReady === '1') return;
     header.dataset.jmScrollHideReady = '1';
 
-    var lastScrollY = window.scrollY;
+    // The point the header last flipped state at — direction is measured from
+    // here, not frame-to-frame, so a few px of scroll jitter (trackpad
+    // momentum, mouse-wheel micro-steps) can't flip it back and forth and
+    // make the header/nav row visibly vibrate.
+    var lastToggleY = window.scrollY;
     var hideThreshold = 80; // don't hide until scrolled past the top-of-page area
+    var directionThreshold = 10; // px of travel required before flipping state
     var ticking = false;
 
     function isBlockingOverlayOpen() {
@@ -1703,20 +1699,19 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
 
     function update() {
       var currentScrollY = window.scrollY;
-      if (isBlockingOverlayOpen()) {
+      if (isBlockingOverlayOpen() || currentScrollY <= hideThreshold) {
         header.classList.remove('jm-header--hidden');
         document.documentElement.classList.remove('jm-header-is-hidden');
-      } else if (currentScrollY <= hideThreshold) {
-        header.classList.remove('jm-header--hidden');
-        document.documentElement.classList.remove('jm-header-is-hidden');
-      } else if (currentScrollY > lastScrollY) {
+        lastToggleY = currentScrollY;
+      } else if (currentScrollY - lastToggleY > directionThreshold) {
         header.classList.add('jm-header--hidden');
         document.documentElement.classList.add('jm-header-is-hidden');
-      } else if (currentScrollY < lastScrollY) {
+        lastToggleY = currentScrollY;
+      } else if (lastToggleY - currentScrollY > directionThreshold) {
         header.classList.remove('jm-header--hidden');
         document.documentElement.classList.remove('jm-header-is-hidden');
+        lastToggleY = currentScrollY;
       }
-      lastScrollY = currentScrollY;
       ticking = false;
     }
 
@@ -1781,6 +1776,91 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
     start();
   }
 
+  function initSearchTypewriter() {
+    var phrases = [
+      'Search necklaces...',
+      'Search earrings...',
+      'Search bangles...',
+      'Search rings...',
+      'Search bridal collection...'
+    ];
+    var inputs = Array.prototype.slice.call(
+      document.querySelectorAll('#site-search-input, #mobile-search-input')
+    );
+    if (!inputs.length) return;
+
+    var phraseIndex = 0;
+    var charIndex = 0;
+    var deleting = false;
+    var cursorOn = true;
+
+    function activeInputs() {
+      return inputs.filter(function (el) { return el.value === '' && document.activeElement !== el; });
+    }
+
+    // Pure paint — never schedules anything itself, so it can't stack up
+    // duplicate timers when called from both the type-step and the blink tick.
+    function render() {
+      var phrase = phrases[phraseIndex];
+      var text = phrase.slice(0, charIndex) + (cursorOn ? '|' : '');
+      activeInputs().forEach(function (el) { el.placeholder = text; });
+    }
+
+    function step() {
+      var phrase = phrases[phraseIndex];
+      var delay = 400;
+
+      if (!deleting && charIndex < phrase.length) {
+        charIndex++;
+        delay = 70;
+      } else if (!deleting && charIndex === phrase.length) {
+        deleting = true;
+        delay = 1200;
+      } else if (deleting && charIndex > 0) {
+        charIndex--;
+        delay = 35;
+      } else if (deleting && charIndex === 0) {
+        deleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        delay = 300;
+      }
+
+      cursorOn = true;
+      render();
+      setTimeout(step, delay);
+    }
+
+    // Separate, steady blink tick so the cursor keeps blinking even during
+    // the long pause at the end of a fully-typed phrase.
+    setInterval(function () {
+      cursorOn = !cursorOn;
+      render();
+    }, 500);
+
+    inputs.forEach(function (el) {
+      el.addEventListener('focus', function () { el.placeholder = ''; });
+      el.addEventListener('blur', function () { if (el.value === '') render(); });
+    });
+
+    step();
+  }
+
+  function initAnnouncementRotator() {
+    var wrap = document.querySelector('[data-jm-announce]');
+    if (!wrap || wrap.dataset.jmAnnounceReady === '1') return;
+    wrap.dataset.jmAnnounceReady = '1';
+
+    var items = Array.prototype.slice.call(wrap.querySelectorAll('[data-jm-announce-item]'));
+    if (items.length <= 1) return;
+
+    var idx = 0;
+    window.setInterval(function () {
+      items[idx].classList.remove('is-active');
+      idx = (idx + 1) % items.length;
+      items[idx].classList.add('is-active');
+    }, 3500);
+  }
+
   function initNavDropdowns() {
     if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) return;
     var canHover = window.matchMedia('(hover: hover) and (min-width: 992px)').matches;
@@ -1793,16 +1873,11 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
       var dropdown = bootstrap.Dropdown.getOrCreateInstance(toggle);
       instances.push({ item: item, toggle: toggle, menu: menu, dropdown: dropdown });
 
-      // .jm-nav clips overflow (for its edge fade-mask), which also clips a
-      // position:fixed Popper menu nested inside it — so while the dropdown
-      // is open, move the menu to <body> (outside the clipping ancestor) and
-      // put it back once closed.
-      toggle.addEventListener('show.bs.dropdown', function () {
-        document.body.appendChild(menu);
-        menu.classList.remove('jm-nav__menu--ready');
-      });
       // Popper positions the menu asynchronously; reveal it only once that's
       // done so it never flashes at its unpositioned (top-left) default spot.
+      toggle.addEventListener('show.bs.dropdown', function () {
+        menu.classList.remove('jm-nav__menu--ready');
+      });
       toggle.addEventListener('shown.bs.dropdown', function () {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
@@ -1812,7 +1887,6 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
       });
       toggle.addEventListener('hidden.bs.dropdown', function () {
         menu.classList.remove('jm-nav__menu--ready');
-        item.appendChild(menu);
       });
     });
 
@@ -1953,7 +2027,7 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
         var href = trigger.tagName === 'A' ? trigger.href : null;
         if (!href) {
           // A collapsed collection dropdown — fall back to its "All X" link.
-          var firstLink = li.querySelector('.dropdown-menu .dropdown-item');
+          var firstLink = li.querySelector('.dropdown-menu a');
           href = firstLink ? firstLink.href : '#';
         }
         var wrapLi = document.createElement('li');
@@ -1980,6 +2054,8 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
   document.addEventListener('DOMContentLoaded', function () {
     syncHeaderStickyOffset();
     initHeaderScrollHide();
+    initAnnouncementRotator();
+    initSearchTypewriter();
     initTrustAutoSlide(document);
     initNavDropdowns();
     initNavOverflow();

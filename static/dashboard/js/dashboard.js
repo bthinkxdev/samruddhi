@@ -463,6 +463,24 @@
     });
   }
 
+  function initPasswordToggles() {
+    document.querySelectorAll("[data-password-toggle]").forEach(function (btn) {
+      var group = btn.closest(".input-group");
+      var input = group ? group.querySelector("input") : null;
+      if (!input) return;
+      btn.addEventListener("click", function () {
+        var showing = input.type === "text";
+        input.type = showing ? "password" : "text";
+        var icon = btn.querySelector("i");
+        if (icon) {
+          icon.classList.toggle("ti-eye", showing);
+          icon.classList.toggle("ti-eye-off", !showing);
+        }
+        btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
     initSubmitLock();
@@ -472,5 +490,6 @@
     initTableLabels();
     initFilterForms();
     initDateRanges();
+    initPasswordToggles();
   });
 })();

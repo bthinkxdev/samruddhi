@@ -39,8 +39,13 @@
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input id="password" name="password" type="password" class="form-control" placeholder="Password" required />
-            <div class="invalid-feedback">Please enter your password.</div>
+            <div class="input-group">
+              <input id="password" name="password" type="password" class="form-control" placeholder="Password" required />
+              <button type="button" class="btn btn-outline-secondary" data-password-toggle aria-label="Show password">
+                <i class="ti ti-eye"></i>
+              </button>
+              <div class="invalid-feedback">Please enter your password.</div>
+            </div>
           </div>
           <button class="btn btn-primary w-100" type="submit">Sign in</button>
         </form>

@@ -11,12 +11,13 @@ from django.utils import timezone
 from accounts.models import Address, CustomerProfile
 from cart.models import Cart, CartItem
 from cart.selectors import get_cart_summary
+from catalog.exceptions import InsufficientStockError
 from catalog.services import adjust_stock
 from checkout.exceptions import CheckoutSessionError
 from checkout.models import CheckoutSession, CheckoutSessionStatus
 from core import meta_pixel
 
-from marketing.models import Coupon
+from marketing.exceptions import InvalidCouponError
 from marketing.services import record_coupon_redemption
 from orders.models import Order, OrderItem, OrderStatus
 from orders.services import generate_order_number, transition_order_status
@@ -88,6 +89,8 @@ def _sync_checkout_pending_order(
     summary = get_cart_summary(cart=session.cart)
     if not summary.lines:
         raise CheckoutSessionError("Cart is empty.")
+    if summary.has_stock_issues:
+        raise InsufficientStockError("Some items in your cart are no longer available in the requested quantity.")
 
     order.items.all().delete()
 
@@ -218,6 +221,8 @@ def place_order(
     summary = get_cart_summary(cart=session.cart)
     if not summary.lines:
         raise CheckoutSessionError("Cart is empty.")
+    if summary.has_stock_issues:
+        raise InsufficientStockError("Some items in your cart are no longer available in the requested quantity.")
 
     # Stock will be reduced only when the order is successfully placed (PLACED_COD or payment success)
 
@@ -276,17 +281,19 @@ def place_order(
             unit_price=line.unit_price_at_add,
         )
 
-    if session.cart.coupon_code:
-        coupon = Coupon.objects.filter(
-            code__iexact=session.cart.coupon_code.strip(),
-            is_active=True,
-        ).first()
-        if coupon is not None and customer_profile is not None:
+    #summary.coupon_code is blank when the coupon was dropped as no longer valid
+    if summary.coupon_code:
+        try:
             record_coupon_redemption(
-                coupon_id=coupon.pk,
-                customer_profile_id=customer_profile.pk,
+                code=summary.coupon_code,
+                customer_profile_id=customer_profile.pk if customer_profile else None,
                 order_id=order.pk,
+                cart_id=session.cart_id,
             )
+        except InvalidCouponError as exc:
+            #rolls back the whole placement so the customer never pays a discount
+            #the coupon no longer grants; the cart re-prices on the next load
+            raise CheckoutSessionError(str(exc)) from exc
 
     session.order = order
     session.idempotency_key = idempotency_key

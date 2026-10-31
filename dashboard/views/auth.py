@@ -6,12 +6,14 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.contrib.auth import update_session_auth_hash
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
-from dashboard.access import user_can_access_dashboard
+from dashboard.access import dashboard_required, user_can_access_dashboard
+from dashboard.forms import DashboardPasswordChangeForm
 
 User = get_user_model()
 
@@ -54,3 +56,22 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     """Log the user out and return to the dashboard login page."""
     auth_logout(request)
     return redirect("dashboard:login")
+
+
+@never_cache
+@dashboard_required
+def change_password_view(request: HttpRequest) -> HttpResponse:
+    """Let a logged-in dashboard staff member change their own password."""
+    if request.method == "POST":
+        form = DashboardPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            #save() rotates the password hash, which would otherwise invalidate
+            #the current session and force a re-login
+            update_session_auth_hash(request, form.user)
+            messages.success(request, "Password updated.")
+            return redirect("dashboard:change-password")
+    else:
+        form = DashboardPasswordChangeForm(user=request.user)
+
+    return render(request, "dashboard/change_password.html", {"form": form})

@@ -10,7 +10,7 @@ from django.http import HttpRequest
 
 from cart.exceptions import CartItemNotFoundError, InsufficientStockError
 from cart.models import Cart, CartItem
-from cart.selectors import get_cart_collection_ids, get_cart_for_request, get_cart_summary
+from cart.selectors import get_cart_coupon_lines, get_cart_for_request, get_cart_summary
 from catalog.models import Product, ProductVariant
 from catalog.selectors import get_variant_price
 from core.selectors import get_default_currency
@@ -188,12 +188,12 @@ def apply_coupon(*, cart: Cart, code: str) -> Cart:
         InvalidCouponError: Propagated from marketing.services.
     """
     summary = get_cart_summary(cart=cart)
-    collection_ids = get_cart_collection_ids(summary.lines)
     result = validate_coupon_for_cart(
         code=code,
         cart_subtotal=summary.subtotal,
+        cart_lines=get_cart_coupon_lines(summary.lines),
         customer_profile_id=cart.customer_profile_id,
-        cart_collection_ids=collection_ids,
+        cart_id=cart.pk,
     )
     cart.coupon_code = result["code"]
     cart.coupon_discount = result["discount_amount"]

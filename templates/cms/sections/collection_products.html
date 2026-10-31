@@ -1,10 +1,10 @@
 {% load i18n %}
-<div class="container py-5" id="explore-collections-section">
+<div class="container pt-5" id="explore-collections-section">
   {% for grid in section_context.collection_sections %}
-  <div class="mb-5">
-    <div class="d-flex justify-content-between align-items-baseline mb-4">
+  <div class="{% if not forloop.last %}mb-5{% endif %}">
+    <div class="section-header mb-4">
       <h2 class="section-title mb-0">{{ grid.collection.name }}</h2>
-      <a href="{% url 'catalog:plp-collection' collection_slug=grid.collection.slug %}" class="small fw-semibold">{% trans "View all" %}</a>
+      <a href="{% url 'catalog:plp-collection' collection_slug=grid.collection.slug %}" class="section-cta">{% trans "View All" %}</a>
     </div>
     <div class="row g-0 jm-home-product-grid">
       {% for product in grid.products %}
