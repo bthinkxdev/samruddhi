@@ -487,26 +487,34 @@ def get_recently_viewed(
 
 def get_collection_tree() -> list:
     """
-    Return active root collections with prefetched children for the navigation menu.
+    Return active root collections with prefetched children (and grandchildren,
+    for the nav dropdown) for the navigation menu.
 
-    Query guarantee: 2 queries (roots + children prefetch); cached 5 minutes.
+    Query guarantee: 3 queries (roots + children + grandchildren prefetch);
+    cached 5 minutes. The grandchildren prefetch must stay nested here —
+    letting the header template call child.children.all() itself turned into
+    a ~25-query N+1 on every single page load (one query per child collection,
+    site-wide, uncached), since no view/template loop can reuse a prefetch it
+    wasn't given.
     """
     cached = cache.get(COLLECTION_TREE_CACHE_KEY)
     if cached is not None:
         return cached
 
     non_empty = collections_with_products_q()
+    grandchildren_qs = (
+        Collection.objects.filter(is_active=True).filter(non_empty).order_by("display_order", "name")
+    )
+    children_qs = (
+        Collection.objects.filter(is_active=True)
+        .filter(non_empty)
+        .prefetch_related(Prefetch("children", queryset=grandchildren_qs))
+        .order_by("display_order", "name")
+    )
     tree = list(
         Collection.objects.filter(visible_root_collections_q())
         .filter(non_empty)
-        .prefetch_related(
-            Prefetch(
-                "children",
-                queryset=Collection.objects.filter(is_active=True)
-                .filter(non_empty)
-                .order_by("display_order", "name"),
-            )
-        )
+        .prefetch_related(Prefetch("children", queryset=children_qs))
         .order_by("display_order", "name")
     )
     cache.set(COLLECTION_TREE_CACHE_KEY, tree, COLLECTION_TREE_TTL)
