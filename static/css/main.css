@@ -1147,8 +1147,9 @@ body.mobile-search-open {
 }
 
 .jm-plp-toolbar__logo img {
-  width: 36px;
-  height: 36px;
+  width: auto;
+  height: 48px;
+  max-height: 100%;
   object-fit: contain;
 }
 
