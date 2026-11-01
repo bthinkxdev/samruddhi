@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}{{ seo_title|default:site_settings.site_name }}{% endblock %}
 
@@ -24,6 +24,9 @@
       {% endif %}
       <p id="jm-plp-count" class="section-subtitle jm-plp-count">{{ plp.total_count|default:"0" }} {% trans "products" %}</p>
     </div>
+    <a href="{% url 'cms:homepage' %}" class="jm-plp-toolbar__logo d-lg-none" aria-label="{{ site_settings.site_name }}">
+      <img src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}" alt="">
+    </a>
     <div class="d-flex gap-2 align-items-center">
       <button type="button" class="btn btn-outline-theme btn-sm plp-filter-toggle jm-filter-btn" data-bs-toggle="offcanvas" data-bs-target="#plpFilters">
         {% trans "Filters" %}

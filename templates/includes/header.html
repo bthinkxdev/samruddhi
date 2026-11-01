@@ -229,11 +229,11 @@
 </header>
 
 <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="jmMainNav" aria-labelledby="jmMainNavLabel">
-  <div class="offcanvas-header">
-    <a class="jm-logo" href="{% url 'cms:homepage' %}" aria-label="{{ site_settings.site_name }}" id="jmMainNavLabel">
+  <div class="offcanvas-header jm-mobile-nav__header">
+    <a class="jm-logo jm-logo--drawer" href="{% url 'cms:homepage' %}" aria-label="{{ site_settings.site_name }}" id="jmMainNavLabel">
       <img
         src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}"
-        alt="" width="44" height="44" class="jm-logo__mark">
+        alt="" width="72" height="72" class="jm-logo__mark">
     </a>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
   </div>
@@ -247,8 +247,11 @@
       {% if children %}
       <div class="jm-mobile-nav__group">
         <div class="jm-mobile-nav__group-row">
-          <a class="jm-mobile-nav__group-link {% if current == collection.slug %}is-active{% endif %}"
-            href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a>
+          <a class="jm-mobile-nav__group-link jm-mobile-nav__link-with-image {% if current == collection.slug %}is-active{% endif %}"
+            href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">
+            {% if collection.image %}<img src="{{ collection.image.url }}" alt="" class="jm-mobile-nav__thumb" loading="lazy">{% endif %}
+            <span>{{ collection.name }}</span>
+          </a>
           <button type="button" class="jm-mobile-nav__group-toggle" data-bs-toggle="collapse"
             data-bs-target="#mnav-{{ collection.pk }}" aria-expanded="false"
             aria-controls="mnav-{{ collection.pk }}" aria-label="{% blocktrans with name=collection.name %}Toggle {{ name }} sub-collections{% endblocktrans %}">
@@ -257,14 +260,20 @@
         </div>
         <div class="collapse jm-mobile-nav__group-body" id="mnav-{{ collection.pk }}">
           {% for child in children %}
-          <a class="jm-mobile-nav__child {% if current == child.slug %}is-active{% endif %}"
-            href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">{{ child.name }}</a>
+          <a class="jm-mobile-nav__child jm-mobile-nav__link-with-image {% if current == child.slug %}is-active{% endif %}"
+            href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">
+            {% if child.image %}<img src="{{ child.image.url }}" alt="" class="jm-mobile-nav__thumb" loading="lazy">{% endif %}
+            <span>{{ child.name }}</span>
+          </a>
           {% endfor %}
         </div>
       </div>
       {% else %}
-      <a class="{% if current == collection.slug %}is-active{% endif %}"
-        href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a>
+      <a class="jm-mobile-nav__link-with-image {% if current == collection.slug %}is-active{% endif %}"
+        href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">
+        {% if collection.image %}<img src="{{ collection.image.url }}" alt="" class="jm-mobile-nav__thumb" loading="lazy">{% endif %}
+        <span>{{ collection.name }}</span>
+      </a>
       {% endif %}
       {% endwith %}
       {% endfor %}
