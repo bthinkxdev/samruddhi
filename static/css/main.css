@@ -80,6 +80,14 @@ html {
      (e.g. after an HTMX add-to-cart/wishlist swap changes page height). */
   scrollbar-gutter: stable;
   overflow-x: hidden;
+  /* The sticky header's nav row collapses/expands its height on scroll
+     (see .jm-header__nav-row). Without this, the browser's scroll-anchoring
+     reflexively nudges scrollY to compensate for that height change, which
+     fires another scroll event, which flips the collapse state back — an
+     infinite open/close loop ("vibrating" nav) once scrolling stops near the
+     threshold. Scroll anchoring isn't needed here (nothing loads above the
+     viewport on this site the way infinite-scroll/lazy-images would). */
+  overflow-anchor: none;
 }
 
 body.theme-body {
