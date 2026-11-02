@@ -70,6 +70,7 @@ class CartSummaryLine:
     max_stock: int = 0
     is_out_of_stock: bool = False
     exceeds_stock: bool = False
+    has_product_changed: bool = False
 
 
 @dataclass
@@ -87,6 +88,7 @@ class CartSummary:
     has_stock_issues: bool = False
     has_out_of_stock_items: bool = False
     has_exceeds_stock_items: bool = False
+    has_changed_items: bool = False
 
 
 def get_cart_by_id(*, cart_id: int) -> Optional[Cart]:
@@ -254,6 +256,11 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
         if is_out or exceeds:
             has_stock_issues = True
 
+        prod_up = getattr(item.product, 'updated_at', None)
+        item_cr = getattr(item, 'created_at', None)
+        var_up = getattr(item.variant, 'updated_at', None) if item.variant else None
+        has_chg = bool((prod_up and item_cr and prod_up > item_cr) or (var_up and item_cr and var_up > item_cr))
+
         lines.append(
             CartSummaryLine(
                 item=item,
@@ -265,6 +272,7 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
                 max_stock=max_stock,
                 is_out_of_stock=is_out,
                 exceeds_stock=exceeds,
+                has_product_changed=has_chg,
             )
         )
 
@@ -302,4 +310,5 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
         has_stock_issues=has_stock_issues,
         has_out_of_stock_items=has_out_of_stock_items,
         has_exceeds_stock_items=has_exceeds_stock_items,
+        has_changed_items=any(l.has_product_changed for l in lines),
     )

@@ -4,6 +4,20 @@
 {% block title %}{% trans "Verify OTP Code" %} | {{ site_settings.site_name }}{% endblock %}
 
 {% block content %}
+<script>
+  (function() {
+    function redirectIfBack(e) {
+      var nav = window.performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      var isBack = (e && e.persisted) || (nav && nav.type === 'back_forward') || sessionStorage.getItem('jm_authenticated') === '1';
+      if (isBack) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('{% if next %}{{ next|escapejs }}{% else %}{% url "accounts:dashboard" %}{% endif %}');
+      }
+    }
+    redirectIfBack();
+    window.addEventListener('pageshow', redirectIfBack);
+  })();
+</script>
 <div class="container page-container py-5 d-flex align-items-center justify-content-center" style="min-height: 75vh;">
   <div class="row justify-content-center w-100">
     <div class="col-md-6 col-lg-5">
@@ -326,6 +340,11 @@
     var hiddenOtpInput = document.querySelector('#id_otp_code');
     var digitFields = document.querySelectorAll('.otp-digit-field');
     var otpForm = document.querySelector('#otp-verify-form');
+    if (otpForm) {
+      otpForm.addEventListener('submit', function() {
+        sessionStorage.setItem('jm_authenticated', '1');
+      });
+    }
 
     if (digitFields.length > 0) {
       digitFields[0].focus();

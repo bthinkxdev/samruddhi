@@ -1802,6 +1802,19 @@ body.mobile-search-open {
 }
 
 
+html:has(.offcanvas.show),
+body:has(.offcanvas.show) {
+  overflow: hidden !important;
+  height: 100vh !important;
+  touch-action: none;
+}
+
+.offcanvas.show .offcanvas-body {
+  touch-action: pan-y;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .offcanvas {
   border-left: 1px solid var(--theme-border);
   max-width: 400px;
@@ -1840,6 +1853,12 @@ body.mobile-search-open {
   gap: 0.75rem;
   padding: 0.875rem 0;
   border-bottom: 1px solid var(--theme-border-light);
+}
+
+.cart-line:has(.text-warning) .qty-stepper,
+.cart-page-line:has(.text-warning) .qty-stepper {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
 }
 
 .cart-line__info {
@@ -1905,6 +1924,8 @@ body.mobile-search-open {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: 0 1rem;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 .cart-drawer-footer {

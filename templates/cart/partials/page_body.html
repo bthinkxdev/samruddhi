@@ -27,6 +27,12 @@
               <span class="fw-semibold flex-shrink-0">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
             </div>
             {% if line.variant %}<div class="cart-line__meta">{{ line.variant.name }}</div>{% endif %}
+            {% if line.has_product_changed %}
+            <div class="text-warning small mt-1 fw-semibold">
+              {% trans "Product has a change. Please revisit the product." %}
+              <a href="{% url 'catalog:pdp' slug=line.product.slug %}{% if line.variant %}?variant_id={{ line.variant.id }}{% endif %}" class="text-decoration-underline ms-1">{% trans "Revisit" %}</a>
+            </div>
+            {% endif %}
             {% with max_stock=line.max_stock %}
             {% if line.is_out_of_stock %}
             <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
@@ -38,12 +44,12 @@
             {% if line.gift_snapshot %}<div class="small text-theme mb-1">{% trans "Gift customized" %}</div>{% endif %}
 
             <div class="d-flex align-items-center justify-content-between mt-2">
-              <div class="qty-stepper d-flex align-items-center border rounded-pill overflow-hidden" style="width: fit-content;">
+              <div class="qty-stepper d-flex align-items-center border rounded-pill overflow-hidden" style="width: fit-content;{% if line.has_product_changed %} opacity: 0.45; pointer-events: none;{% endif %}">
                 <form method="post" action="{% url 'cart:quantity' %}">
                   {% csrf_token %}
                   <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
                   <input type="hidden" name="delta" value="-1">
-                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Decrease quantity' %}" {% if line.quantity <= 1 %}disabled{% endif %}>
+                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Decrease quantity' %}" {% if line.quantity <= 1 or line.has_product_changed %}disabled{% endif %}>
                     &minus;
                   </button>
                 </form>
@@ -52,7 +58,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
                   <input type="hidden" name="delta" value="1">
-                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" {% if line.quantity >= max_stock %}disabled{% endif %}>&plus;</button>
+                  <button class="qty-stepper__btn" type="button" hx-post="{% url 'cart:quantity' %}" hx-target="#cart-page-body" hx-swap="outerHTML" hx-include="closest form" aria-label="{% trans 'Increase quantity' %}" {% if line.quantity >= max_stock or line.has_product_changed %}disabled{% endif %}>&plus;</button>
                 </form>
               </div>
               {% endwith %}
@@ -111,6 +117,12 @@
         <span>{{ display_currency.symbol }} {{ summary.grand_total }}</span>
       </button>
       <div class="text-danger small mt-2 text-center">{% trans "Some items are out of stock. Please remove them to checkout." %}</div>
+      {% elif summary.has_changed_items %}
+      <button class="btn btn-theme w-100 py-2 mt-3 d-flex justify-content-between align-items-center px-3" disabled style="cursor: not-allowed; opacity: 0.65;" onclick="event.preventDefault();">
+        <span>{% trans "Proceed to Checkout" %}</span>
+        <span>{{ display_currency.symbol }} {{ summary.grand_total }}</span>
+      </button>
+      <div class="text-warning small mt-2 text-center">{% trans "Some items have changed. Please revisit or remove them to checkout." %}</div>
       {% else %}
       <a href="{% url 'checkout:checkout' %}?mode=cart" class="btn btn-theme w-100 py-2 mt-3 d-flex justify-content-between align-items-center px-3">
         <span>{% trans "Proceed to Checkout" %}</span>

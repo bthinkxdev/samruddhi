@@ -82,6 +82,10 @@ def add_to_cart(
         else None
     )
 
+    if variant is not None:
+        #auto-remove non-variant item of the same product
+        CartItem.objects.filter(cart=cart, product=product, variant__isnull=True).delete()
+
     item = CartItem.objects.filter(cart=cart, product=product, variant=variant).first()
     
     if item:

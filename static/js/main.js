@@ -187,21 +187,13 @@ document.body.addEventListener('htmx:afterSettle', function (event) {
 });
 
 
-document.body.addEventListener('htmx:afterSettle', function (event) {
-  var target = event.detail.target;
-
-  if (target && target.id === 'cart-drawer-body') {
-    var scrollElement = target.querySelector('.cart-drawer-scroll');
-
-    if (scrollElement) {
-      scrollElement.scrollTop = cartDrawerSavedScrollTop;
-    }
-  }
-});
-
 document.body.addEventListener('htmx:afterSwap', function (event) {
   if (event.detail.target && event.detail.target.id === 'cart-drawer-body') {
     event.detail.target.dataset.drawerHydrated = 'true';
+    var scrollElement = event.detail.target.querySelector('.cart-drawer-scroll');
+    if (scrollElement) {
+      scrollElement.scrollTop = cartDrawerSavedScrollTop;
+    }
   }
 
   if (event.detail.target && event.detail.target.id === 'search-suggestions') {
@@ -803,6 +795,7 @@ document.body.addEventListener('htmx:afterSwap', function (event) {
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data) return;
+        var outOfStock = data.is_in_stock === false || (data.stock_quantity !== undefined && data.stock_quantity <= 0);
         var priceEl = document.getElementById('jm-qv-price');
         var stockEl = document.getElementById('jm-qv-stock');
 
