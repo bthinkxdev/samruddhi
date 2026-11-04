@@ -12,7 +12,7 @@
           {% csrf_token %}
           <div class="row">
             {% for field in form %}
-            {% if field.name == 'razorpay_key_id' %}
+            {% if field.name == 'stripe_publishable_key' %}
             <div class="col-12 mt-3 mb-2">
               <h5 class="border-bottom pb-2 fw-semibold text-dark">Payment Integration</h5>
             </div>

@@ -107,6 +107,35 @@ def checkout_fix_stock_view(request: HttpRequest) -> HttpResponse:
     return redirect("checkout:checkout")
 
 
+def _assert_order_access(request: HttpRequest, order) -> None:
+    """
+    Raise Http404 unless the requester actually owns ``order``.
+
+    Same ownership check used by accounts/views.py::customer_invoice_detail —
+    signed-in users must be the order's own customer; guests must be browsing
+    from the same session that created the order's cart (including the
+    "bn_" prefixed buy-now session variant).
+    """
+    if request.user.is_authenticated:
+        if order.customer_profile and order.customer_profile.user != request.user:
+            raise Http404("Order not found.")
+    else:
+        session_key = request.session.session_key
+        allowed_keys = {session_key, f"bn_{session_key}"[:40]} if session_key else set()
+        cart_key = order.cart.session_key if order.cart else None
+        if not cart_key or cart_key not in allowed_keys:
+            raise Http404("Order not found.")
+
+
+def _order_contact_email(order) -> str:
+    """Best-effort customer email for an order, same precedence razorpay_pay_view used."""
+    if order.customer_profile and order.customer_profile.user:
+        return order.customer_profile.user.email or ""
+    if order.delivery_address_snapshot:
+        return order.delivery_address_snapshot.get("email", "")
+    return ""
+
+
 def _checkout_contact_prefill(request: HttpRequest, session) -> dict[str, str]:
     """Name/email to prefill on checkout, hiding the synthetic phone-only placeholder email."""
     from accounts.services import is_placeholder_email
@@ -162,14 +191,9 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
         if last_tx:
             selected_gateway_key = last_tx.gateway_key
 
-    from payments.adapters.concrete import _get_razorpay_credentials
-    razorpay_key, razorpay_secret = _get_razorpay_credentials()
-    
-    available_gateways = {}
-    for key, adapter in PAYMENT_GATEWAYS.items():
-        if key.startswith("razorpay") and (not razorpay_key or not razorpay_secret):
-            continue
-        available_gateways[key] = adapter
+    available_gateways = {
+        key: adapter for key, adapter in PAYMENT_GATEWAYS.items() if adapter.is_configured()
+    }
         
     if not selected_gateway_key and available_gateways:
         selected_gateway_key = list(available_gateways.keys())[0]
@@ -196,6 +220,12 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from marketing.selectors import has_any_active_coupons
     is_buy_now = request.session.get("checkout_mode") == "buy_now"
     mpx_events = []
+    if request.GET.get("payment_cancelled") == "1" and session.order:
+        #Stripe sends the browser back here on cancel — there's no client JS
+        #left to hold a modal.ondismiss handler, since Checkout is hosted.
+        cancel_params = meta_pixel.order_params(session.order)
+        cancel_params["payment_method"] = "online"
+        mpx_events.append(meta_pixel.event("PaymentCancelled", cancel_params, custom=True))
     if summary.lines:
         initiate_params = meta_pixel.lines_params(
             summary.lines, value=summary.grand_total, currency=cart.currency
@@ -555,15 +585,42 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         order.save(update_fields=["invoice_details", "updated_at"])
 
     payment_data = {}
+    if gateway_key == "stripe":
+        payment_data = {
+            "success_url": request.build_absolute_uri(reverse("checkout:stripe-return"))
+            + "?session_id={CHECKOUT_SESSION_ID}",
+            "cancel_url": request.build_absolute_uri(reverse("checkout:checkout")) + "?payment_cancelled=1",
+            "customer_email": _order_contact_email(order),
+        }
 
-    process_payment(
-        order=order,
-        gateway_key=gateway_key,
-        payment_data=payment_data,
-    )
+    try:
+        process_payment(
+            order=order,
+            gateway_key=gateway_key,
+            payment_data=payment_data,
+        )
+    except Exception:
+        #order already exists (place_order committed above) at CHECKOUT_PENDING —
+        #a gateway outage/bad credentials here must not 500 a customer who just
+        #placed a real order. The same idempotency_key on retry reuses this
+        #same order rather than creating a duplicate (see place_order).
+        logger.exception("Payment gateway failed to initialize: order_id=%s gateway_key=%s", order.pk, gateway_key)
+        from django.utils.translation import gettext as _
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {
+                "errors": {
+                    "__all__": [
+                        _("Online payment is temporarily unavailable. Please try again, or choose Cash on Delivery.")
+                    ]
+                }
+            },
+            status=200,
+        )
 
-    if gateway_key.startswith("razorpay"):
-        pay_url = reverse("checkout:razorpay-pay", kwargs={"order_id": order.pk})
+    if gateway_key == "stripe":
+        pay_url = reverse("checkout:stripe-pay", kwargs={"order_id": order.pk})
         if request.headers.get("HX-Request"):
             response = HttpResponse()
             response["HX-Redirect"] = pay_url
@@ -584,7 +641,10 @@ def checkout_confirmation_view(request: HttpRequest, order_id: int) -> HttpRespo
     request.session["checkout_mode"] = "cart"
     from orders.models import Order
     from django.shortcuts import get_object_or_404
-    order = get_object_or_404(Order, pk=order_id)
+    order = get_object_or_404(
+        Order.objects.select_related("customer_profile__user", "cart"), pk=order_id
+    )
+    _assert_order_access(request, order)
     #Purchase only for a real sale (order.success_at) — never for a pending / failed payment
     purchase_event = meta_pixel.purchase_page_event(order)
     return render(
@@ -601,79 +661,48 @@ from django.views.decorators.cache import never_cache
 
 @never_cache
 @require_GET
-def razorpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
-    """Render Razorpay checkout payment page."""
+def stripe_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
+    """Redirect the browser to the Stripe-hosted Checkout Session for this order."""
+    import stripe
     from orders.models import Order, OrderStatus
     from payments.models import PaymentTransaction
-    from payments.adapters.concrete import _get_razorpay_credentials
+    from payments.adapters.concrete import _get_stripe_credentials
     from django.shortcuts import get_object_or_404
 
-    order = get_object_or_404(Order, pk=order_id)
-    
+    order = get_object_or_404(
+        Order.objects.select_related("customer_profile__user", "cart"), pk=order_id
+    )
+    _assert_order_access(request, order)
+
     if order.order_status != OrderStatus.CHECKOUT_PENDING:
-        from django.shortcuts import redirect
         return redirect("catalog:plp")
 
-    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key__startswith="razorpay").last()
-    key_id, _ = _get_razorpay_credentials()
+    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key="stripe").last()
+    _, secret_key = _get_stripe_credentials()
+    if not payment_tx or not payment_tx.external_intent_id or not secret_key:
+        return redirect("checkout:checkout")
 
-    customer_name = ""
-    customer_email = ""
-    customer_phone = ""
-    if order.customer_profile:
-        customer_name = f"{order.customer_profile.user.first_name} {order.customer_profile.user.last_name}".strip() or order.customer_profile.user.username
-        customer_email = order.customer_profile.user.email
-        customer_phone = order.customer_profile.phone
-    elif order.delivery_address_snapshot:
-        customer_name = order.delivery_address_snapshot.get("recipient_name", "")
-        customer_email = order.delivery_address_snapshot.get("email", "")
-        customer_phone = order.delivery_address_snapshot.get("phone", "")
+    try:
+        session = stripe.checkout.Session.retrieve(payment_tx.external_intent_id, api_key=secret_key)
+    except Exception:
+        logger.exception("Failed to retrieve Stripe Checkout Session for order_id=%s", order.pk)
+        return redirect("checkout:checkout")
 
-    amount_in_paise = int(order.total_amount * 100)
-    from core.selectors import get_default_currency
-    default_curr = get_default_currency()
-    currency_code = order.currency.code if order.currency else (default_curr.code if default_curr else "AED")
-    razorpay_order_id = payment_tx.external_intent_id if payment_tx else f"rzp_order_{order.pk}"
+    checkout_url = session.get("url")
+    if not checkout_url:
+        #session already completed/expired on Stripe's side — nothing to redirect to.
+        return redirect("checkout:checkout")
 
-    # single generic online-payment entry point — let Razorpay's own widget
-    # show its default method tab rather than forcing one.
-    prefill_method = ""
-    payment_method_name = "Online Payment"
-
-    #store order_id in session so the callback can retrieve it
-    request.session["razorpay_order_pk"] = order.pk
-
-    #build absolute callback URL for Razorpay redirect
-    callback_url = request.build_absolute_uri(reverse("checkout:razorpay-callback"))
-    cancel_url = request.build_absolute_uri(reverse("checkout:checkout"))
-
-    #an unpaid order now exists: the customer is past checkout but has NOT bought anything yet
+    #an unpaid order now exists: the customer is past checkout but has NOT bought anything yet.
+    #Queued (not rendered inline) because this response is a bare redirect to an
+    #external domain — there's no page of ours left to render pixel JS into; it
+    #flushes on whichever of our pages the browser next loads (return or cancel).
     pending_params = meta_pixel.order_params(order)
     pending_params["payment_method"] = "online"
-    pending_params["payment_gateway"] = payment_tx.gateway_key if payment_tx else ""
-    return render(
-        request,
-        "checkout/razorpay_pay.html",
-        {
-            "mpx_events": [meta_pixel.event("OnlinePaymentStarted", pending_params, custom=True)],
-            "mpx_failure_params": pending_params,
-            "order": order,
-            "razorpay_key_id": key_id or "rzp_test_mock",
-            "razorpay_order_id": razorpay_order_id,
-            "amount_in_paise": amount_in_paise,
-            "currency_code": currency_code,
-            "customer_name": customer_name,
-            "customer_email": customer_email,
-            "customer_phone": customer_phone,
-            "callback_url": callback_url,
-            "cancel_url": cancel_url,
-            "prefill_method": prefill_method,
-            "payment_method_name": payment_method_name,
-        },
-    )
+    pending_params["payment_gateway"] = "stripe"
+    meta_pixel.queue_event(request, "OnlinePaymentStarted", pending_params, custom=True)
 
-
-from django.views.decorators.csrf import csrf_exempt
+    return redirect(checkout_url)
 
 
 def _queue_payment_failed(request: HttpRequest, *, order, reason: str) -> None:
@@ -684,79 +713,67 @@ def _queue_payment_failed(request: HttpRequest, *, order, reason: str) -> None:
     meta_pixel.queue_event(request, "PaymentFailed", params, custom=True)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def razorpay_callback_view(request: HttpRequest) -> HttpResponse:
+@never_cache
+@require_GET
+def stripe_return_view(request: HttpRequest) -> HttpResponse:
     """
-    Handle POST callback from Razorpay after payment.
+    Handle the browser returning from Stripe's hosted Checkout page.
 
-    Razorpay redirects the full browser here with razorpay_payment_id,
-    razorpay_order_id, and razorpay_signature as POST parameters.
+    Stripe redirects here with ``?session_id={CHECKOUT_SESSION_ID}`` on
+    success. The redirect itself is only a UX signal, not proof of payment
+    (Stripe's own guidance) — we retrieve the Session server-side and check
+    its ``payment_status`` before confirming anything. The webhook
+    (payments.views.stripe_webhook_view) is the authoritative, independent
+    confirmation path; both converge on the same idempotent
+    confirm_payment_success/failed, so whichever arrives first wins and the
+    other is a no-op.
     """
+    import stripe
     from payments.models import PaymentTransaction
-    from payments.adapters.concrete import RazorpayAdapter
+    from payments.adapters.concrete import _get_stripe_credentials
     from payments.services import confirm_payment_success, confirm_payment_failed
-    from django.shortcuts import get_object_or_404
-    from orders.models import Order
-    from core.selectors import get_default_currency
 
-    razorpay_payment_id = request.POST.get("razorpay_payment_id", "")
-    razorpay_order_id = request.POST.get("razorpay_order_id", "")
-    razorpay_signature = request.POST.get("razorpay_signature", "")
-
-    #try order_id from POST (JS form submit) or session (Razorpay redirect)
-    order_id = request.POST.get("order_id") or request.session.get("razorpay_order_pk")
-
-    if not order_id:
-        #fallback: look up order via Razorpay order ID stored in PaymentTransaction
-        payment_tx = PaymentTransaction.objects.filter(
-            external_intent_id=razorpay_order_id,
-            gateway_key__startswith="razorpay",
-        ).last()
-        if payment_tx:
-            order_id = payment_tx.order_id
-        else:
-            return redirect("checkout:checkout")
-
-    order = get_object_or_404(Order, pk=order_id)
-    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key__startswith="razorpay").last()
-
-    #clean up session
-    request.session.pop("razorpay_order_pk", None)
-
-    adapter = RazorpayAdapter()
-    is_valid = adapter.verify_payment_signature(
-        razorpay_order_id=razorpay_order_id,
-        razorpay_payment_id=razorpay_payment_id,
-        razorpay_signature=razorpay_signature,
-    )
-
-    if is_valid and payment_tx:
-        if not payment_tx.currency:
-            default_curr = get_default_currency()
-        currency_code = payment_tx.currency.code if payment_tx.currency else (default_curr.code if default_curr else "AED")
-        capture_succeeded = adapter.capture_payment(
-            razorpay_payment_id=razorpay_payment_id,
-            amount=payment_tx.amount,
-            currency=currency_code,
-        )
-        if not capture_succeeded:
-            logger.error(
-                "Razorpay capture failed after valid signature: order_id=%s "
-                "razorpay_payment_id=%s razorpay_order_id=%s",
-                order.pk, razorpay_payment_id, razorpay_order_id,
-            )
-            confirm_payment_failed(payment_transaction=payment_tx)
-            _queue_payment_failed(request, order=order, reason="capture_failed")
-            return redirect("checkout:checkout")
-
-        confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=razorpay_payment_id)
-        return redirect("checkout:confirmation", order_id=order.pk)
-    else:
-        if payment_tx:
-            confirm_payment_failed(payment_transaction=payment_tx)
-        _queue_payment_failed(request, order=order, reason="verification_failed")
+    session_id = request.GET.get("session_id", "")
+    if not session_id:
         return redirect("checkout:checkout")
+
+    payment_tx = (
+        PaymentTransaction.objects.filter(external_intent_id=session_id, gateway_key="stripe")
+        .select_related("order", "order__customer_profile__user", "order__cart")
+        .last()
+    )
+    if not payment_tx or not payment_tx.order:
+        return redirect("checkout:checkout")
+
+    order = payment_tx.order
+    _assert_order_access(request, order)
+
+    _, secret_key = _get_stripe_credentials()
+    if not secret_key:
+        return redirect("checkout:checkout")
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, api_key=secret_key)
+    except Exception:
+        logger.exception("Failed to retrieve Stripe Checkout Session on return: session_id=%s", session_id)
+        #can't verify yet — webhook may still confirm it; show processing, not failure.
+        return redirect("checkout:confirmation", order_id=order.pk)
+
+    payment_status = session.get("payment_status")
+    if payment_status in ("paid", "no_payment_required"):
+        payment_intent_id = str(session.get("payment_intent") or "")
+        confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=payment_intent_id)
+        return redirect("checkout:confirmation", order_id=order.pk)
+
+    if payment_status == "unpaid" and session.get("status") == "expired":
+        confirm_payment_failed(payment_transaction=payment_tx)
+        _queue_payment_failed(request, order=order, reason="session_expired")
+        return redirect("checkout:checkout")
+
+    #still unpaid but open (e.g. an async payment method awaiting confirmation) —
+    #don't assert failure; let the confirmation page show a processing state
+    #until the webhook (async_payment_succeeded/failed) converges it.
+    return redirect("checkout:confirmation", order_id=order.pk)
 
 
 @require_POST

@@ -301,13 +301,25 @@ class SiteSettings(TimeStampedModel):
         max_length=120,
         blank=True,
         verbose_name="Razorpay Key ID",
-        help_text="Razorpay Key ID / Test Key ID for payment processing.",
+        help_text="Deprecated — retained for historical records only, no longer used by checkout.",
     )
     razorpay_key_secret = models.CharField(
         max_length=120,
         blank=True,
         verbose_name="Razorpay Key Secret",
-        help_text="Razorpay Key Secret / Test Key Secret for payment signature verification.",
+        help_text="Deprecated — retained for historical records only, no longer used by checkout.",
+    )
+    stripe_publishable_key = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Stripe Publishable Key",
+        help_text="Stripe publishable key (pk_live_... or pk_test_...).",
+    )
+    stripe_secret_key = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Stripe Secret Key",
+        help_text="Stripe secret key (sk_live_... or sk_test_...). Never shared with the browser.",
     )
 
     meta_pixel_id = models.CharField(

@@ -12,6 +12,7 @@ django-modeltranslation>=0.18.12
 gunicorn>=21.2.0
 google-auth>=2.28.0
 requests>=2.31.0
+stripe>=16.1,<17
 
 # Dev / CI / Phase 10 tooling
 pytest>=8.0.0

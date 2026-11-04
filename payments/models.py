@@ -66,6 +66,64 @@ class PaymentTransaction(TimeStampedModel):
         return f"{self.gateway_key} {self.amount} ({self.status})"
 
 
+class StripeWebhookEventStatus(models.TextChoices):
+    """
+    Terminal outcome of the first time a Stripe event_id was processed.
+
+    Deliberately has no "duplicate" member: a redelivery is a runtime fact
+    (get_or_create's ``created`` flag), not something that should overwrite the
+    original outcome recorded here.
+    """
+
+    PROCESSED = "processed", "Processed"
+    UNKNOWN_TRANSACTION = "unknown_transaction", "Unknown transaction"
+    AMOUNT_MISMATCH = "amount_mismatch", "Amount mismatch"
+    CURRENCY_MISMATCH = "currency_mismatch", "Currency mismatch"
+    INTENT_ID_MISMATCH = "intent_id_mismatch", "Intent ID mismatch"
+    IGNORED_EVENT_TYPE = "ignored_event_type", "Ignored event type"
+    ERROR = "error", "Error"
+
+
+class StripeWebhookEvent(TimeStampedModel):
+    """
+    Durable, DB-backed dedup + audit record for one Stripe webhook delivery.
+
+    ``event_id`` (Stripe's own Event ``id``, e.g. ``evt_...``) is unique per
+    event — this is the permanent idempotency gate for webhook retries,
+    independent of the PaymentTransaction-level status guard in
+    payments.services which handles the separate case of two *different*
+    event_ids (e.g. a webhook delivery racing the browser return-view
+    confirmation) referring to the same payment.
+    """
+
+    event_id = models.CharField(max_length=80, unique=True, db_index=True, verbose_name="Stripe event ID")
+    event_type = models.CharField(max_length=60, db_index=True, verbose_name="Event type")
+    checkout_session_id = models.CharField(max_length=120, blank=True, db_index=True, verbose_name="Checkout Session ID")
+    payment_intent_id = models.CharField(max_length=120, blank=True, verbose_name="PaymentIntent ID")
+    payload = models.JSONField(default=dict, verbose_name="Payload")
+    payment_transaction = models.ForeignKey(
+        PaymentTransaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stripe_webhook_events",
+        verbose_name="Payment transaction",
+    )
+    status = models.CharField(
+        max_length=24,
+        choices=StripeWebhookEventStatus.choices,
+        db_index=True,
+        verbose_name="Status",
+    )
+
+    class Meta:
+        verbose_name = "Stripe webhook event"
+        verbose_name_plural = "Stripe webhook events"
+
+    def __str__(self) -> str:
+        return f"{self.event_type} {self.event_id} ({self.status})"
+
+
 class RazorpayWebhookEventStatus(models.TextChoices):
     """
     Terminal outcome of the first time an event_id was processed.

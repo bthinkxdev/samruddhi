@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from payments.adapters.concrete import CashOnDeliveryAdapter, RazorpayUPIAdapter
+from payments.adapters.concrete import CashOnDeliveryAdapter, StripeAdapter
 
 if TYPE_CHECKING:
     from payments.adapters.base import PaymentGatewayAdapter
 
 PAYMENT_GATEWAYS: dict[str, PaymentGatewayAdapter] = {
-    RazorpayUPIAdapter.key: RazorpayUPIAdapter(),
+    StripeAdapter.key: StripeAdapter(),
     CashOnDeliveryAdapter.key: CashOnDeliveryAdapter(),
 }
 

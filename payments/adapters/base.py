@@ -38,6 +38,10 @@ class PaymentGatewayAdapter(ABC):
     display_name: str = ""
     is_async: bool = False
 
+    def is_configured(self) -> bool:
+        """Whether this adapter has everything it needs to go live (credentials, etc.)."""
+        return True
+
     @abstractmethod
     def create_payment_intent(
         self,

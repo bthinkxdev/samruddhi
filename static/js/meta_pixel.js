@@ -5,7 +5,7 @@
  * built server-side (core/meta_pixel.py) and reach the browser three ways:
  *   1. <script id="mpx-events"> JSON rendered by base.html on full page loads
  *   2. an `mpxEvent` HX-Trigger on HTMX responses (cart / wishlist actions)
- *   3. window.mpx.track() calls from inline page scripts (Razorpay result)
+ *   3. window.mpx.track() calls from inline page scripts (e.g. newsletter signup)
  * Event shape: { name, params, custom, event_id }.
  */
 (function () {

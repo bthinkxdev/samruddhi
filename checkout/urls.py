@@ -20,6 +20,6 @@ urlpatterns = [
     path("coupon/apply/", views.checkout_coupon_apply_view, name="coupon-apply"),
     path("coupon/remove/", views.checkout_coupon_remove_view, name="coupon-remove"),
     path("confirmation/<int:order_id>/", views.checkout_confirmation_view, name="confirmation"),
-    path("pay/razorpay/<int:order_id>/", views.razorpay_pay_view, name="razorpay-pay"),
-    path("pay/razorpay/callback/", views.razorpay_callback_view, name="razorpay-callback"),
+    path("pay/stripe/<int:order_id>/", views.stripe_pay_view, name="stripe-pay"),
+    path("pay/stripe/return/", views.stripe_return_view, name="stripe-return"),
 ]

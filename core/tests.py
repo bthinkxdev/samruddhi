@@ -48,6 +48,10 @@ class MetaPixelTestBase(TestCase):
         )
         self.profile.phone = "9876543210"
         self.profile.save(update_fields=["phone"])
+        #the confirmation page now checks order ownership (IDOR fix) — these
+        #orders all belong to self.profile, so the test client must actually
+        #be that customer to view them, same as a real logged-in buyer would be.
+        self.client.force_login(self.profile.user)
         collection = Collection.objects.create(name="Gym Wear", slug="gym-wear")
         self.product = Product.objects.create(
             name="Test Hoodie",
@@ -149,7 +153,7 @@ class PurchaseGatingTests(MetaPixelTestBase):
     """Only orders that actually became a sale may ever count as a Purchase."""
 
     def test_pending_online_order_is_not_a_purchase(self):
-        order = self.make_order("razorpay_upi", "pending-1")
+        order = self.make_order("stripe", "pending-1")
         self.assertEqual(order.order_status, OrderStatus.CHECKOUT_PENDING)
         self.assertIsNone(meta_pixel.purchase_page_event(order))
         self.assertEqual(_page_events(self.confirmation(order)), [])
@@ -201,14 +205,14 @@ class ServerSidePurchaseTests(MetaPixelTestBase):
     def test_pending_online_order_does_not_dispatch(self):
         with patch("core.tasks.send_meta_purchase_event.apply_async") as apply_async:
             with self.captureOnCommitCallbacks(execute=True):
-                self.make_order("razorpay_upi", "pending-capi")
+                self.make_order("stripe", "pending-capi")
         apply_async.assert_not_called()
 
     def test_payment_confirmation_dispatches_once_even_if_confirmed_twice(self):
-        order = self.make_order("razorpay_upi", "online-capi")
+        order = self.make_order("stripe", "online-capi")
         tx = PaymentTransaction.objects.create(
             order=order,
-            gateway_key="razorpay_upi",
+            gateway_key="stripe",
             amount=order.total_amount,
             currency=order.currency,
             status=PaymentStatus.PENDING,
@@ -287,7 +291,7 @@ class ServerSidePurchaseTests(MetaPixelTestBase):
         self.assertNotIn("pixel.buyer@example.com", json.dumps(body).lower())
 
     def test_unsuccessful_order_is_never_sent(self):
-        order = self.make_order("razorpay_upi", "pending-no-send")
+        order = self.make_order("stripe", "pending-no-send")
         with patch("core.meta_pixel.requests.post") as post:
             self.assertFalse(meta_pixel.send_purchase_event(order_id=order.pk))
         post.assert_not_called()
@@ -308,7 +312,7 @@ class StorefrontEventTests(MetaPixelTestBase):
         view_content = next(e for e in events if e["name"] == "ViewContent")
         self.assertEqual(view_content["params"]["content_ids"], [str(self.product.pk)])
         self.assertEqual(view_content["params"]["content_name"], "Test Hoodie")
-        self.assertEqual(view_content["params"]["currency"], "INR")
+        self.assertEqual(view_content["params"]["currency"], "AED")
 
     def test_plp_fires_view_collection_and_search(self):
         events = _page_events(self.client.get(reverse("catalog:plp"), {"q": "hoodie"}))

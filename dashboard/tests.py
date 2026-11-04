@@ -53,7 +53,7 @@ class OrderListTabsTests(TestCase):
         self.confirmed_order = self._place_order("confirmed")
         tx = PaymentTransaction.objects.create(
             order=self.confirmed_order,
-            gateway_key="razorpay_upi",
+            gateway_key="stripe",
             amount=self.confirmed_order.total_amount,
             currency=self.confirmed_order.currency,
             status=PaymentStatus.PENDING,
@@ -73,7 +73,7 @@ class OrderListTabsTests(TestCase):
         return place_order(
             checkout_session_id=session.pk,
             idempotency_key=f"dash-order-test-{suffix}",
-            gateway_key="razorpay_upi",
+            gateway_key="stripe",
             customer_profile=self.profile,
         )
 

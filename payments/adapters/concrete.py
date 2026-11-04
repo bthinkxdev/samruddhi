@@ -9,52 +9,9 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
+from django.conf import settings
+
 from payments.adapters.base import PaymentCaptureResult, PaymentGatewayAdapter, PaymentIntentResult
-
-
-class CardGatewayAdapter(PaymentGatewayAdapter):
-    """
-    Generic card processor sandbox adapter.
-
-    Uses a vendor-neutral interface (Stripe-like intent/capture shape) without
-    coupling to a specific SDK — swap the internals when a processor is chosen.
-    """
-
-    key = "card"
-    display_name = "Credit / Debit Card"
-    is_async = False
-
-    def create_payment_intent(
-        self,
-        *,
-        amount: Decimal,
-        currency: str,
-        metadata: dict[str, Any],
-    ) -> PaymentIntentResult:
-        intent_id = f"card_pi_{uuid.uuid4().hex[:16]}"
-        return PaymentIntentResult(
-            intent_id=intent_id,
-            client_secret=f"{intent_id}_secret",
-            metadata={"amount": str(amount), "currency": currency, **metadata},
-        )
-
-    def verify_webhook(self, *, payload: bytes, signature: str) -> dict[str, Any]:
-        expected = hmac.new(b"sandbox-card", payload, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, signature):
-            raise ValueError("Invalid card webhook signature.")
-        return json.loads(payload.decode())
-
-    def capture(self, *, intent_id: str) -> PaymentCaptureResult:
-        if intent_id.startswith("card_fail"):
-            return PaymentCaptureResult(success=False, transaction_id=intent_id)
-        return PaymentCaptureResult(
-            success=True,
-            transaction_id=f"card_tx_{intent_id}",
-            metadata={"gateway": self.key},
-        )
-
-    def refund(self, *, transaction_id: str, amount: Decimal) -> PaymentCaptureResult:
-        return PaymentCaptureResult(success=True, transaction_id=f"refund_{transaction_id}")
 
 
 class QatarLocalGatewayAdapter(PaymentGatewayAdapter):
@@ -187,28 +144,45 @@ class CashOnDeliveryAdapter(PaymentGatewayAdapter):
         return PaymentCaptureResult(success=True, transaction_id=f"cod_refund_{transaction_id}")
 
 
-def _get_razorpay_credentials() -> tuple[str, str]:
+def _get_stripe_credentials() -> tuple[str, str]:
+    """
+    Resolve Stripe (publishable_key, secret_key) — DB first (dashboard-editable
+    SiteSettings fields), env var fallback. Mirrors the credential-resolution
+    pattern the Razorpay adapter used.
+    """
     try:
         from core.models import SiteSettings
         settings_inst = SiteSettings.objects.first()
         if settings_inst:
-            key_id = settings_inst.razorpay_key_id.strip()
-            key_secret = settings_inst.razorpay_key_secret.strip()
-            if key_id and key_secret:
-                return key_id, key_secret
+            pub_key = settings_inst.stripe_publishable_key.strip()
+            secret_key = settings_inst.stripe_secret_key.strip()
+            if pub_key and secret_key:
+                return pub_key, secret_key
     except Exception:
         pass
     import os
-    return os.getenv("RAZORPAY_KEY_ID", ""), os.getenv("RAZORPAY_KEY_SECRET", "")
+    return os.getenv("STRIPE_PUBLISHABLE_KEY", ""), os.getenv("STRIPE_SECRET_KEY", "")
 
 
-class RazorpayAdapter(PaymentGatewayAdapter):
+class StripeAdapter(PaymentGatewayAdapter):
     """
-    Razorpay payment gateway base adapter.
+    Stripe Checkout (hosted) adapter.
+
+    ``create_payment_intent`` creates a Stripe Checkout Session — the
+    ``intent_id`` stored on PaymentTransaction.external_intent_id is the
+    Session ID (``cs_...``), not a PaymentIntent ID, so checkout views can
+    retrieve the session later (e.g. to redirect to its ``.url``) purely from
+    that one stored value, the same way the old Razorpay adapter let
+    razorpay_pay_view rebuild everything from just the Razorpay order ID.
     """
-    key = "razorpay"
-    display_name = "Razorpay (UPI, Credit/Debit Card, Net Banking, Wallets)"
+
+    key = "stripe"
+    display_name = "Card, Apple Pay & Google Pay"
     is_async = True
+
+    def is_configured(self) -> bool:
+        _, secret_key = _get_stripe_credentials()
+        return bool(secret_key)
 
     def create_payment_intent(
         self,
@@ -217,143 +191,94 @@ class RazorpayAdapter(PaymentGatewayAdapter):
         currency: str,
         metadata: dict[str, Any],
     ) -> PaymentIntentResult:
-        key_id, key_secret = _get_razorpay_credentials()
-        amount_in_paise = int(amount * 100)
+        import stripe
 
-        if key_id and key_secret:
-            try:
-                import requests
-                response = requests.post(
-                    "https://api.razorpay.com/v1/orders",
-                    auth=(key_id, key_secret),
-                    json={
-                        "amount": amount_in_paise,
-                        "currency": currency,
-                        "receipt": f"ord_{metadata.get('order_id', '')}",
-                        "notes": {
-                            "order_id": str(metadata.get("order_id", "")),
-                            "order_number": str(metadata.get("order_number", "")),
-                        },
+        _, secret_key = _get_stripe_credentials()
+        amount_in_minor_unit = int((amount * 100).to_integral_value())
+
+        order_id = str(metadata.get("order_id", ""))
+        order_number = str(metadata.get("order_number", ""))
+        success_url = metadata.get("success_url", "")
+        cancel_url = metadata.get("cancel_url", "")
+        customer_email = metadata.get("customer_email") or None
+
+        if not secret_key:
+            #no live credentials configured — local mock id so checkout flow
+            #doesn't crash in dev; is_configured() keeps this gateway hidden
+            #from checkout_view until real keys are set.
+            return PaymentIntentResult(
+                intent_id=f"cs_mock_{uuid.uuid4().hex[:16]}",
+                requires_webhook=True,
+                metadata={"order_id": order_id, "order_number": order_number},
+            )
+
+        session = stripe.checkout.Session.create(
+            api_key=secret_key,
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": currency.lower(),
+                        "unit_amount": amount_in_minor_unit,
+                        "product_data": {"name": f"Order {order_number}" if order_number else "Order"},
                     },
-                    timeout=10,
-                )
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    intent_id = data.get("id")
-                    return PaymentIntentResult(
-                        intent_id=intent_id,
-                        requires_webhook=True,
-                        metadata={"key_id": key_id, "razorpay_order_id": intent_id, **metadata},
-                    )
-            except Exception:
-                pass
-
-        intent_id = f"rzp_order_{uuid.uuid4().hex[:16]}"
-        return PaymentIntentResult(
-            intent_id=intent_id,
-            requires_webhook=True,
-            metadata={"key_id": key_id or "rzp_test_mock", "razorpay_order_id": intent_id, **metadata},
+                    "quantity": 1,
+                }
+            ],
+            client_reference_id=order_id,
+            customer_email=customer_email,
+            success_url=success_url or "https://example.com/",
+            cancel_url=cancel_url or "https://example.com/",
+            metadata={"order_id": order_id, "order_number": order_number},
+            payment_intent_data={"metadata": {"order_id": order_id, "order_number": order_number}},
+            idempotency_key=f"checkout_{order_id}_{metadata.get('attempt', 1)}",
         )
-
-    def verify_payment_signature(
-        self,
-        *,
-        razorpay_order_id: str,
-        razorpay_payment_id: str,
-        razorpay_signature: str,
-    ) -> bool:
-        key_id, key_secret = _get_razorpay_credentials()
-        if not key_secret:
-            return True
-        msg = f"{razorpay_order_id}|{razorpay_payment_id}".encode("utf-8")
-        expected = hmac.new(key_secret.encode("utf-8"), msg, hashlib.sha256).hexdigest()
-        return hmac.compare_digest(expected, razorpay_signature)
+        return PaymentIntentResult(
+            intent_id=session.id,
+            client_secret=session.get("client_secret") or "",
+            requires_webhook=True,
+            metadata={"order_id": order_id, "order_number": order_number, "checkout_url": session.get("url") or ""},
+        )
 
     def verify_webhook(self, *, payload: bytes, signature: str) -> dict[str, Any]:
-        key_id, key_secret = _get_razorpay_credentials()
-        if key_secret:
-            expected = hmac.new(key_secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(expected, signature):
-                raise ValueError("Invalid Razorpay webhook signature.")
-        return json.loads(payload.decode())
+        import stripe
 
-    def capture_payment(
-        self,
-        *,
-        razorpay_payment_id: str,
-        amount: Any = 0,
-        currency: str = None,
-    ) -> bool:
-        """
-        Capture a Razorpay payment, or confirm it was already captured.
-
-        Returns True only when Razorpay confirms the payment is actually
-        captured — never on ambiguity. Two cases require care beyond a bare
-        HTTP-status check on the capture call itself:
-
-        - Already captured: when auto-capture is enabled (Razorpay's default),
-          the payment may already be captured by the time this runs. Calling
-          /capture again then returns HTTP 400 "This payment has already been
-          captured" — a legitimate success, not a failure. We disambiguate by
-          fetching the payment directly rather than parsing error text.
-        - Any network/exception failure now returns False instead of silently
-          assuming success — a blocked confirmation here is still recoverable
-          via the Razorpay webhook, but a wrongly-confirmed order is not.
-        """
-        if not currency:
-            from core.selectors import get_default_currency
-            default_curr = get_default_currency()
-            currency = default_curr.code if default_curr else "AED"
-        key_id, key_secret = _get_razorpay_credentials()
-        if not (key_id and key_secret and razorpay_payment_id) or razorpay_payment_id.startswith("pay_test_"):
-            return True
-
-        import requests
+        secret = getattr(settings, "STRIPE_WEBHOOK_SECRET", "")
+        if not secret:
+            raise ValueError("Stripe webhook secret is not configured.")
         try:
-            amount_in_paise = int(amount * 100)
-            resp = requests.post(
-                f"https://api.razorpay.com/v1/payments/{razorpay_payment_id}/capture",
-                auth=(key_id, key_secret),
-                json={"amount": amount_in_paise, "currency": currency},
-                timeout=10,
-            )
-        except Exception:
-            return False
-
-        if resp.status_code in (200, 201):
-            return True
-
-        return self._fetch_payment_is_captured(
-            razorpay_payment_id=razorpay_payment_id, key_id=key_id, key_secret=key_secret,
-        )
-
-    def _fetch_payment_is_captured(self, *, razorpay_payment_id: str, key_id: str, key_secret: str) -> bool:
-        """Authoritative check of a payment's actual status, used when the
-        capture call itself returned a non-2xx (e.g. already captured, or a
-        genuine failure — only GET /payments/{id} can tell them apart)."""
-        import requests
-        try:
-            resp = requests.get(
-                f"https://api.razorpay.com/v1/payments/{razorpay_payment_id}",
-                auth=(key_id, key_secret),
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                return resp.json().get("status") == "captured"
-        except Exception:
-            pass
-        return False
+            event = stripe.Webhook.construct_event(payload, signature, secret)
+        except stripe.error.SignatureVerificationError as exc:
+            raise ValueError("Invalid Stripe webhook signature.") from exc
+        return event.to_dict()
 
     def capture(self, *, intent_id: str) -> PaymentCaptureResult:
         return PaymentCaptureResult(
             success=True,
-            transaction_id=f"rzp_tx_{intent_id}",
+            transaction_id=f"stripe_tx_{intent_id}",
             metadata={"gateway": self.key},
         )
 
     def refund(self, *, transaction_id: str, amount: Decimal) -> PaymentCaptureResult:
-        return PaymentCaptureResult(success=True, transaction_id=f"razorpay_refund_{transaction_id}")
+        import stripe
 
-class RazorpayUPIAdapter(RazorpayAdapter):
-    key = "razorpay_upi"
-    display_name = "Online Payment"
+        _, secret_key = _get_stripe_credentials()
+        if not secret_key or not transaction_id:
+            return PaymentCaptureResult(success=False, transaction_id=transaction_id)
+
+        amount_in_minor_unit = int((amount * 100).to_integral_value())
+        try:
+            refund = stripe.Refund.create(
+                api_key=secret_key,
+                payment_intent=transaction_id,
+                amount=amount_in_minor_unit,
+            )
+        except Exception:
+            return PaymentCaptureResult(success=False, transaction_id=transaction_id)
+
+        return PaymentCaptureResult(
+            success=refund.status in ("succeeded", "pending"),
+            transaction_id=refund.id,
+            metadata={"gateway": self.key, "stripe_refund_status": refund.status},
+        )

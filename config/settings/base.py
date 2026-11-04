@@ -261,9 +261,9 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="desertmobiles@gmail.com"
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
-#razorpay webhook — separate from the razorpay_key_id/secret stored on SiteSettings,
-#this is deployment-only config for verifying payments.views.razorpay_webhook_view
-RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
+#stripe webhook — separate from the stripe_publishable_key/stripe_secret_key stored
+#on SiteSettings, this is deployment-only config for verifying payments.views.stripe_webhook_view
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 
 #meta pixel — empty META_PIXEL_ID disables every browser event; the Conversions API
 #(server-side Purchase) additionally needs META_CAPI_ACCESS_TOKEN. See core/meta_pixel.py.
