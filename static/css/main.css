@@ -6137,6 +6137,7 @@ button.jm-product-card__atc--in-cart:hover {
 .jm-collection-scroll {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  justify-items: center;
   gap: 5px;
   padding: 0.25rem 0 0.5rem;
 }
